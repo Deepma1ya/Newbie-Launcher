@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process'
 import type { CreateServerInput, ServerRecord, UpdateServerInput } from '@shared/types'
 import { FABRIC_META, QUILT_META } from '@shared/constants'
 import { SERVER_PROPERTY_FIELDS } from '@shared/serverProperties'
+import { DEFAULT_RESTART_SCHEDULE, nextRestartAt, normalizeRestartSchedule } from '@shared/serverSchedule'
 import { serverTypeLabel } from '@shared/serverTypes'
 import { getVersionJson, type VersionJson } from './mojang'
 import { listLoaderVersions } from './loaders'
@@ -101,7 +102,8 @@ export async function createServer(input: CreateServerInput): Promise<ServerReco
       launchKind: installer.launchKind,
       launchFile: installer.launchFile,
       paperBuild: installer.paperBuild,
-      addons: []
+      addons: [],
+      restartSchedule: { ...DEFAULT_RESTART_SCHEDULE }
     }
     await saveServer(record)
     await task.done('Server ready')
@@ -128,6 +130,13 @@ export async function updateServer(
   }
   if (patch.memoryMb !== undefined && Number.isFinite(patch.memoryMb)) {
     next.memoryMb = Math.max(1024, Math.min(65536, Math.round(patch.memoryMb)))
+  }
+  if (patch.restartSchedule !== undefined) {
+    const schedule = normalizeRestartSchedule(patch.restartSchedule)
+    next.restartSchedule = {
+      ...schedule,
+      nextRestartAt: nextRestartAt(schedule) ?? undefined
+    }
   }
   return saveServer(next)
 }

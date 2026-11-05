@@ -8,6 +8,7 @@ import {
   DownloadSimple,
   FolderSimple,
   GearSix,
+  Globe,
   HardDrives,
   Info,
   Key,
@@ -17,7 +18,7 @@ import {
   WarningCircle
 } from '@phosphor-icons/react'
 import type { PerformanceProfile } from '@shared/types'
-import { APP_VERSION, GITHUB_URL, JAVA_MAJORS } from '@shared/constants'
+import { APP_VERSION, GITHUB_URL, JAVA_MAJORS, WEBSITE_URL } from '@shared/constants'
 import { useDiskUsage, useJavaRuntimes, useSettings, useSystemInfo, qk } from '../hooks/queries'
 import { toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
@@ -543,6 +544,9 @@ function AboutSection() {
             </div>
           </div>
           <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => void window.newbie.app.openExternal(WEBSITE_URL)} icon={<Globe size={14} />}>
+              Website
+            </Button>
             <Button variant="secondary" size="sm" onClick={() => void window.newbie.app.openExternal(GITHUB_URL)} icon={<ArrowSquareOut size={14} />}>
               GitHub
             </Button>
@@ -581,7 +585,7 @@ function AboutSection() {
       <div className="flex items-start gap-2 rounded-xl border border-line/40 bg-card/30 p-3 text-[10.5px] leading-relaxed text-muted/65">
         <Info size={14} className="mt-0.5 shrink-0" />
         Newbie Launcher is not affiliated with Mojang, Microsoft, TLauncher or Modrinth. Minecraft is a trademark of Mojang
-        Synergies AB. Bedrock support is planned for a later release.
+        Synergies AB. Java and Bedrock are managed as separate editions with their own worlds and settings.
       </div>
     </>
   )

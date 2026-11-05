@@ -6,6 +6,7 @@ export const APP_VERSION: string = packageJson.version
 export const GITHUB_OWNER = 'Deepma1ya'
 export const GITHUB_REPO = 'Newbie-Launcher'
 export const GITHUB_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
+export const WEBSITE_URL = 'https://deepma1ya.github.io/Newbie-Launcher/'
 export const USER_AGENT = `NewbieLauncher/${APP_VERSION} (${GITHUB_URL})`
 
 export const MOJANG_MANIFEST_URL = 'https://piston-meta.mojang.com/mc/game/version_manifest_v2.json'

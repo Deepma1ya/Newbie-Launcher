@@ -18,6 +18,9 @@ import type {
   ServerShareInfo,
   ServerAddressTest,
   ServerSearchQuery,
+  ServerResourcePackSearchQuery,
+  ServerResourcePackState,
+  ServerStats,
   SystemInfo,
   TaskRecord,
   WorldSummary
@@ -47,10 +50,14 @@ export const qk = {
   server: (id: string) => ['servers', id] as const,
   serverStatuses: ['servers', 'statuses'] as const,
   serverStatus: (id: string) => ['servers', id, 'status'] as const,
+  serverStats: (id: string) => ['servers', id, 'stats'] as const,
   serverLogs: (id: string) => ['servers', id, 'logs'] as const,
   serverProperties: (id: string) => ['servers', id, 'properties'] as const,
   serverShare: (id: string) => ['servers', id, 'share'] as const,
-  serverSearch: (query: ServerSearchQuery) => ['server-search', query] as const
+  serverSearch: (query: ServerSearchQuery) => ['server-search', query] as const,
+  serverResourcePack: (id: string) => ['servers', id, 'resource-pack'] as const,
+  serverResourcePackSearch: (query: ServerResourcePackSearchQuery) =>
+    ['server-resource-pack-search', query] as const
 }
 
 export function useInstances(): UseQueryResult<Instance[]> {
@@ -109,6 +116,19 @@ export function useServerStatus(id?: string | null): UseQueryResult<ServerRuntim
   })
 }
 
+export function useServerStats(
+  id?: string | null,
+  enabled = true
+): UseQueryResult<ServerStats> {
+  return useQuery({
+    queryKey: qk.serverStats(id ?? ''),
+    queryFn: () => api.servers.stats(id!),
+    enabled: Boolean(id) && enabled,
+    refetchInterval: enabled ? 30_000 : false,
+    staleTime: 5_000
+  })
+}
+
 export function useServerLogs(
   id?: string | null,
   enabled = true
@@ -145,6 +165,28 @@ export function useServerSearch(
   return useQuery({
     queryKey: qk.serverSearch(query),
     queryFn: () => api.servers.searchAddons(query),
+    enabled,
+    staleTime: 30_000
+  })
+}
+
+export function useServerResourcePack(
+  id?: string | null
+): UseQueryResult<ServerResourcePackState> {
+  return useQuery({
+    queryKey: qk.serverResourcePack(id ?? ''),
+    queryFn: () => api.servers.resourcePack(id!),
+    enabled: Boolean(id)
+  })
+}
+
+export function useServerResourcePackSearch(
+  query: ServerResourcePackSearchQuery,
+  enabled = true
+): UseQueryResult<SearchPage> {
+  return useQuery({
+    queryKey: qk.serverResourcePackSearch(query),
+    queryFn: () => api.servers.searchResourcePacks(query),
     enabled,
     staleTime: 30_000
   })

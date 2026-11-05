@@ -554,6 +554,74 @@ export interface BackupRecord {
 export type ServerType = 'vanilla' | 'paper' | 'fabric' | 'quilt' | 'forge' | 'neoforge'
 export type ServerRuntimeState = 'stopped' | 'starting' | 'running' | 'stopping'
 export type ServerAddonType = 'mod' | 'plugin' | 'datapack'
+export type ServerResourcePackSource = 'modrinth' | 'file' | 'url'
+export type ServerRestartMode = 'interval' | 'daily'
+
+export interface ServerRestartSchedule {
+  enabled: boolean
+  mode: ServerRestartMode
+  /** Used when mode is interval. */
+  intervalMinutes: number
+  /** Local HH:MM used when mode is daily. */
+  time: string
+  lastRestartAt?: string
+  nextRestartAt?: string
+}
+
+export interface ServerResourcePackFile {
+  filename: string
+  size: number
+}
+
+export interface ServerResourcePackInfo {
+  name: string
+  filename: string
+  url: string
+  sha1?: string
+  size?: number
+  source: ServerResourcePackSource
+  projectId?: string
+  versionId?: string
+  installedAt: string
+}
+
+export interface ServerResourcePackState {
+  serverId: string
+  url: string
+  sha1: string
+  required: boolean
+  prompt: string
+  files: ServerResourcePackFile[]
+  activeFilename?: string
+  info?: ServerResourcePackInfo
+}
+
+export interface ServerResourcePackSearchQuery {
+  serverId: string
+  query: string
+  sort?: 'relevance' | 'downloads' | 'follows' | 'newest' | 'updated'
+  offset?: number
+  limit?: number
+}
+
+export interface ServerResourcePackImport {
+  filename: string
+  size: number
+  sha1: string
+}
+
+export interface ServerResourcePackInput {
+  url: string
+  sha1?: string
+  required?: boolean
+  prompt?: string
+  name?: string
+  filename?: string
+  size?: number
+  source?: ServerResourcePackSource
+  projectId?: string
+  versionId?: string
+}
 
 export interface ServerAddonRecord {
   id: string
@@ -597,6 +665,8 @@ export interface ServerRecord {
   launchFile: string
   paperBuild?: number
   addons: ServerAddonRecord[]
+  resourcePack?: ServerResourcePackInfo
+  restartSchedule?: ServerRestartSchedule
 }
 
 export interface ServerRuntimeStatus {
@@ -605,6 +675,21 @@ export interface ServerRuntimeStatus {
   pid?: number
   startedAt?: number
   address?: string
+}
+
+export interface ServerStats {
+  serverId: string
+  online: boolean
+  status: ServerRuntimeState
+  players: string[]
+  maxPlayers?: number
+  tps?: number
+  tps1m?: number
+  tps5m?: number
+  tps15m?: number
+  mspt?: number
+  sampledAt: string
+  message?: string
 }
 
 export interface CreateServerInput {
@@ -624,6 +709,7 @@ export interface CreateServerInput {
 export interface UpdateServerInput {
   name?: string
   memoryMb?: number
+  restartSchedule?: ServerRestartSchedule
 }
 
 export interface ServerSearchQuery {
@@ -671,6 +757,7 @@ export type AppEvent =
   | { type: 'microsoft-auth'; payload: MicrosoftAuthState }
   | { type: 'update'; payload: UpdateState }
   | { type: 'bedrock-progress'; payload: BedrockProgress }
+  | { type: 'server-schedule'; payload: { serverId: string } }
   | { type: 'toast'; payload: { kind: 'success' | 'error' | 'info'; title: string; message?: string } }
   | { type: 'navigate'; payload: { page: string; params?: Record<string, string> } }
 

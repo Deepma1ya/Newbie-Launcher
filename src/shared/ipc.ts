@@ -33,13 +33,18 @@ import type {
   BulkAddonType,
   ServerRecord,
   ServerRuntimeStatus,
+  ServerStats,
   ServerAddonRecord,
   ServerAddonType,
   ServerSearchQuery,
   CreateServerInput,
   ServerShareInfo,
   ServerAddressTest,
-  UpdateServerInput
+  UpdateServerInput,
+  ServerResourcePackState,
+  ServerResourcePackSearchQuery,
+  ServerResourcePackImport,
+  ServerResourcePackInput
 } from './types'
 import type { TlsCapeSyncResult } from './tlskincape'
 import type { CopyInstanceSettingsInput, CopyInstanceSettingsResult } from './instanceSettings'
@@ -104,6 +109,7 @@ export const IPC = {
   serversRestart: 'servers:restart',
   serversStatus: 'servers:status',
   serversStatuses: 'servers:statuses',
+  serversStats: 'servers:stats',
   serversLogs: 'servers:logs',
   serversCommand: 'servers:command',
   serversShare: 'servers:share',
@@ -116,6 +122,12 @@ export const IPC = {
   serversToggleAddon: 'servers:toggle-addon',
   serversCheckAddonUpdates: 'servers:check-addon-updates',
   serversUpdateAllAddons: 'servers:update-all-addons',
+  serversResourcePack: 'servers:resource-pack',
+  serversResourcePackSearch: 'servers:resource-pack-search',
+  serversResourcePackInstall: 'servers:resource-pack-install',
+  serversResourcePackImport: 'servers:resource-pack-import',
+  serversResourcePackSave: 'servers:resource-pack-save',
+  serversResourcePackRemove: 'servers:resource-pack-remove',
   serversOpenFolder: 'servers:open-folder',
 
   addonsSearch: 'addons:search',
@@ -224,6 +236,7 @@ export interface NewbieApi {
     restart(id: string): Promise<void>
     status(id: string): Promise<ServerRuntimeStatus>
     statuses(): Promise<ServerRuntimeStatus[]>
+    stats(id: string): Promise<ServerStats>
     logs(id: string): Promise<string[]>
     command(id: string, command: string): Promise<void>
     share(id: string): Promise<ServerShareInfo>
@@ -239,6 +252,16 @@ export interface NewbieApi {
     toggleAddon(serverId: string, addonId: string, enabled: boolean): Promise<ServerAddonRecord>
     checkAddonUpdates(serverId: string): Promise<ServerAddonRecord[]>
     updateAllAddons(serverId: string): Promise<ServerAddonRecord[]>
+    resourcePack(serverId: string): Promise<ServerResourcePackState>
+    searchResourcePacks(query: ServerResourcePackSearchQuery): Promise<SearchPage>
+    installResourcePack(
+      serverId: string,
+      projectId: string,
+      versionId?: string
+    ): Promise<ServerResourcePackState>
+    importResourcePack(serverId: string, filePath: string): Promise<ServerResourcePackImport>
+    saveResourcePack(serverId: string, input: ServerResourcePackInput): Promise<ServerResourcePackState>
+    removeResourcePack(serverId: string, deleteFile: boolean): Promise<ServerResourcePackState>
     openFolder(id: string, sub?: string): Promise<void>
   }
   versions: {

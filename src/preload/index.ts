@@ -56,6 +56,7 @@ const api: NewbieApi = {
     restart: (id) => ipcRenderer.invoke(IPC.serversRestart, id),
     status: (id) => ipcRenderer.invoke(IPC.serversStatus, id),
     statuses: () => ipcRenderer.invoke(IPC.serversStatuses),
+    stats: (id) => ipcRenderer.invoke(IPC.serversStats, id),
     logs: (id) => ipcRenderer.invoke(IPC.serversLogs, id),
     command: (id, command) => ipcRenderer.invoke(IPC.serversCommand, id, command),
     share: (id) => ipcRenderer.invoke(IPC.serversShare, id),
@@ -70,6 +71,16 @@ const api: NewbieApi = {
       ipcRenderer.invoke(IPC.serversToggleAddon, serverId, addonId, enabled),
     checkAddonUpdates: (serverId) => ipcRenderer.invoke(IPC.serversCheckAddonUpdates, serverId),
     updateAllAddons: (serverId) => ipcRenderer.invoke(IPC.serversUpdateAllAddons, serverId),
+    resourcePack: (serverId) => ipcRenderer.invoke(IPC.serversResourcePack, serverId),
+    searchResourcePacks: (query) => ipcRenderer.invoke(IPC.serversResourcePackSearch, query),
+    installResourcePack: (serverId, projectId, versionId) =>
+      ipcRenderer.invoke(IPC.serversResourcePackInstall, serverId, projectId, versionId),
+    importResourcePack: (serverId, filePath) =>
+      ipcRenderer.invoke(IPC.serversResourcePackImport, serverId, filePath),
+    saveResourcePack: (serverId, input) =>
+      ipcRenderer.invoke(IPC.serversResourcePackSave, serverId, input),
+    removeResourcePack: (serverId, deleteFile) =>
+      ipcRenderer.invoke(IPC.serversResourcePackRemove, serverId, deleteFile),
     openFolder: (id, sub) => ipcRenderer.invoke(IPC.serversOpenFolder, id, sub)
   },
   versions: {

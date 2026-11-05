@@ -14,7 +14,7 @@ A calm, stable Minecraft **Java Edition** and **Bedrock (Minecraft for Windows)*
 
 ## Download
 
-Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-Launcher/releases) page.
+Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-Launcher/releases) page. The [Newbie Launcher website](https://deepma1ya.github.io/Newbie-Launcher/) has a product tour, screenshots and the latest installer.
 
 - Windows 10/11, x64
 - Per-user install; the installer lets you choose the install folder
@@ -31,7 +31,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Game versions** | Every Mojang release, snapshot, beta and alpha, installed from official metadata and verified files |
 | **Bedrock** | Minecraft for Windows versions: download official signed GDK packages, install through Windows/Gaming Services, launch the installed package, and switch versions without touching Java |
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
-| **Servers** | One-click local Vanilla, Paper, Fabric, Quilt, Forge and NeoForge servers with a live console, GUI settings and Modrinth plugins, mods and datapacks |
+| **Servers** | One-click local Vanilla, Paper, Fabric, Quilt, Forge and NeoForge servers with a live console, GUI settings, Modrinth add-ons, server resource packs and scheduled restarts |
 | **Sharing** | Play with friends through playit.gg, port forwarding, Radmin VPN, ngrok or Cloudflare. Detects LAN/Radmin/public addresses, shows difficulty levels, and lets you copy and test the address. |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/11/17/21/25 from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, and generic authlib/Yggdrasil servers |
@@ -103,6 +103,8 @@ The **Servers** page creates and runs Minecraft servers on this PC. It is a laun
 - **Runtime settings** let you rename the server and change its memory allocation without recreating it.
 - **Live console** with launcher-captured logs, server command input and quick commands.
 - **Add-ons from Modrinth:** plugins for Paper, mods for modded servers, datapacks for every type. Required dependencies are installed automatically, add-ons can be enabled/disabled without deleting them, and **Check updates → Update** replaces every outdated file in one click while preserving disabled state.
+- **Resource packs:** pick a pack from Modrinth or add your own `.zip`, then Newbie writes the public URL, SHA-1, required-pack flag and prompt into `server.properties`. Modrinth packs use their public CDN link; custom files are copied into `resourcepacks/` and you paste the public link where the file is hosted.
+- **Scheduled restarts:** restart every few hours or daily at a local time. Newbie warns players in chat 10 seconds before the restart and shows the next run in Server Settings. The launcher must stay open and the server must be online when the timer is due.
 - Datapacks go into the active world's `datapacks` folder, so they keep working after the world folder is renamed.
 
 Servers are stored under `<dataDir>/servers/<id>`. Each folder contains `server.json`, `server.properties`, the installed software, the world, add-on folders and logs. Newbie keeps its captured console in `logs/launcher-console.log` so it does not compete with Minecraft's own `logs/latest.log`.
@@ -224,7 +226,7 @@ The TLauncher installer and its feature surface were inspected with REA for inte
 
 ## Roadmap
 
-- Server backups, scheduled restarts and player management
+- Server backups and player management
 - In-game TLauncher skin provider (optional)
 - OptiFine one-click compatibility
 - Additional UI languages

@@ -9,6 +9,7 @@ import {
   Clock,
   Cube,
   Cpu,
+  Globe,
   HardDrives,
   Stack,
   Lightning,
@@ -19,7 +20,7 @@ import {
   TerminalWindow,
   Wrench
 } from '@phosphor-icons/react'
-import { APP_VERSION, GITHUB_URL } from '@shared/constants'
+import { APP_VERSION, GITHUB_URL, WEBSITE_URL } from '@shared/constants'
 import { useAccounts, useActiveInstance, useDiskUsage, useInstances, useSettings, useSystemInfo, useTasks } from '../hooks/queries'
 import { useUi } from '../store/ui'
 import { loaderLabel, formatPlaytime, relativeTime, formatBytes, cn } from '../lib/utils'
@@ -360,9 +361,11 @@ export function HomePage() {
           <div className="grid gap-2 sm:grid-cols-2">
             {[
               'One-click Java servers with GUI settings',
+              'Server command snippets and TPS dashboard',
+              'Server resource packs and scheduled restarts',
               'Play with friends sharing tools',
               'Silent, automatic launcher updates',
-              'Bedrock install and uninstall manager',
+              'Bedrock install, uninstall and exclusion manager',
               'Bulk add-on cleanup by section',
               'Automatic Java 8–25 setup'
             ].map((item) => (
@@ -375,6 +378,9 @@ export function HomePage() {
           <div className="mt-4 flex items-center gap-2">
             <Button variant="secondary" size="sm" onClick={() => void window.newbie.app.openExternal(`${GITHUB_URL}/releases`)}>
               Release notes
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => void window.newbie.app.openExternal(WEBSITE_URL)} icon={<Globe size={13} />}>
+              Website
             </Button>
             <Button
               variant="ghost"

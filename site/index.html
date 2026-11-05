@@ -1,0 +1,645 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Newbie Launcher — Minecraft, minus the chaos</title>
+    <meta
+      name="description"
+      content="A calm, fast Minecraft launcher for Java and Bedrock. Modrinth add-ons, one-click servers, loadouts, backups and automatic updates — free and open source."
+    />
+    <meta name="theme-color" id="theme-color" content="#070b08" />
+    <meta name="color-scheme" content="dark light" />
+    <link rel="icon" href="./favicon.ico" sizes="any" />
+    <link rel="apple-touch-icon" href="./assets/icon.png" />
+    <link rel="canonical" href="https://deepma1ya.github.io/Newbie-Launcher/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Newbie Launcher" />
+    <meta property="og:title" content="Newbie Launcher — Minecraft, minus the chaos" />
+    <meta
+      property="og:description"
+      content="Java and Bedrock in one calm launcher. Modrinth add-ons, one-click servers, loadouts, backups and automatic updates."
+    />
+    <meta property="og:url" content="https://deepma1ya.github.io/Newbie-Launcher/" />
+    <meta property="og:image" content="https://deepma1ya.github.io/Newbie-Launcher/assets/home.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Newbie Launcher — Minecraft, minus the chaos" />
+    <meta
+      name="twitter:description"
+      content="Java and Bedrock in one calm launcher. Modrinth add-ons, one-click servers, loadouts, backups and automatic updates."
+    />
+    <meta name="twitter:image" content="https://deepma1ya.github.io/Newbie-Launcher/assets/home.png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&family=Sora:wght@500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./styles.css" />
+    <noscript>
+      <style>
+        .js [data-reveal] { opacity: 1 !important; transform: none !important; }
+      </style>
+    </noscript>
+    <script>
+      // Apply the saved theme before first paint to avoid a flash.
+      try {
+        var saved = localStorage.getItem('newbie-theme')
+        var preferred = window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+        document.documentElement.dataset.theme = saved || preferred
+        document.documentElement.classList.add('js')
+        setTimeout(function () {
+          if (!document.documentElement.dataset.ready) document.documentElement.classList.remove('js')
+        }, 2200)
+      } catch {}
+    </script>
+    <script src="./script.js" defer></script>
+  </head>
+  <body>
+    <a class="skip-link" href="#main">Skip to content</a>
+
+    <svg class="svg-sprite" aria-hidden="true" focusable="false">
+      <symbol id="i-arrow-right" viewBox="0 0 24 24"><path d="M4 12h15M13 6l6 6-6 6" /></symbol>
+      <symbol id="i-arrow-down" viewBox="0 0 24 24"><path d="M12 4v15M6 13l6 6 6-6" /></symbol>
+      <symbol id="i-download" viewBox="0 0 24 24">
+        <path d="M12 3v11M7 9l5 5 5-5" /><path d="M5 20h14" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 24 24"><path d="M4 12l5 5L20 6" /></symbol>
+      <symbol id="i-github" viewBox="0 0 24 24">
+        <path
+          class="filled"
+          d="M12 .8a11.2 11.2 0 0 0-3.54 21.83c.56.1.77-.24.77-.54v-1.9c-3.12.68-3.78-1.5-3.78-1.5-.51-1.3-1.25-1.64-1.25-1.64-1.02-.7.08-.69.08-.69 1.13.08 1.73 1.16 1.73 1.16 1 1.72 2.63 1.23 3.27.94.1-.73.39-1.23.71-1.51-2.49-.28-5.11-1.25-5.11-5.54 0-1.22.44-2.22 1.16-3-.12-.28-.5-1.42.11-2.96 0 0 .94-.3 3.09 1.15a10.7 10.7 0 0 1 5.62 0c2.15-1.45 3.09-1.15 3.09-1.15.61 1.54.23 2.68.11 2.96.72.78 1.16 1.78 1.16 3 0 4.3-2.63 5.25-5.13 5.53.4.35.76 1.03.76 2.08v3.08c0 .3.2.65.78.54A11.2 11.2 0 0 0 12 .8Z"
+        />
+      </symbol>
+      <symbol id="i-sun" viewBox="0 0 24 24">
+        <circle cx="12" cy="12" r="4.2" />
+        <path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4" />
+      </symbol>
+      <symbol id="i-moon" viewBox="0 0 24 24"><path d="M20.5 15.6A8.5 8.5 0 0 1 8.4 3.5a8.5 8.5 0 1 0 12.1 12.1Z" /></symbol>
+      <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h16" /></symbol>
+      <symbol id="i-close" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6 6 18" /></symbol>
+      <symbol id="i-copy" viewBox="0 0 24 24">
+        <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+      </symbol>
+      <symbol id="i-external" viewBox="0 0 24 24">
+        <path d="M14 4h6v6M20 4 10 14" /><path d="M20 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V5a1 1 0 0 1 1-1h5" />
+      </symbol>
+      <symbol id="i-server" viewBox="0 0 24 24">
+        <rect x="3" y="4" width="18" height="6" rx="2" /><rect x="3" y="14" width="18" height="6" rx="2" />
+        <path d="M7 7h.01M7 17h.01M11 7h5M11 17h5" />
+      </symbol>
+      <symbol id="i-spark" viewBox="0 0 24 24">
+        <path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8L12 3Z" />
+        <path d="M19 16l.7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z" />
+      </symbol>
+      <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 3l7 3v5c0 4.4-3 8.2-7 10-4-1.8-7-5.6-7-10V6l7-3Z" /><path d="M9 12l2 2 4-4" /></symbol>
+      <symbol id="i-bolt" viewBox="0 0 24 24"><path d="m13 2-8 12h6l-1 8 9-13h-6l0-7Z" /></symbol>
+      <symbol id="i-layers" viewBox="0 0 24 24">
+        <path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5" /><path d="m3 16 9 5 9-5" />
+      </symbol>
+      <symbol id="i-box" viewBox="0 0 24 24">
+        <path d="m12 3 8 4.5v9L12 21l-8-4.5v-9L12 3Z" /><path d="m4 7.5 8 4.5 8-4.5M12 12v9" />
+      </symbol>
+      <symbol id="i-users" viewBox="0 0 24 24">
+        <circle cx="9" cy="8" r="3" /><path d="M3 20a6 6 0 0 1 12 0" />
+        <path d="M16 5a3 3 0 0 1 0 6M18 20a6 6 0 0 0-3-5.2" />
+      </symbol>
+      <symbol id="i-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" /></symbol>
+    </svg>
+
+    <header class="site-header" id="top">
+      <div class="container header-inner">
+        <a class="brand" href="#top" aria-label="Newbie Launcher home">
+          <span class="brand-mark" aria-hidden="true">
+            <svg viewBox="0 0 40 40"><path d="M20 5 34 12.5 20 20 6 12.5 20 5Z" fill="#6ee7a0"/><path d="M6 12.5 20 20v15L6 27.5v-15Z" fill="#5b3a1e"/><path d="M34 12.5 20 20v15l14-7.5v-15Z" fill="#3e2914"/><path d="M6 12.5 20 20v5l-14-7.5v-5Z" fill="#3e8e5c"/><path d="M34 12.5 20 20v5l14-7.5v-5Z" fill="#2c6b43"/></svg>
+          </span>
+          <span class="brand-name">Newbie<span>Launcher</span></span>
+        </a>
+
+        <nav class="desktop-nav" aria-label="Primary">
+          <a href="#features">Features</a>
+          <a href="#tour">Tour</a>
+          <a href="#servers">Servers</a>
+          <a href="#releases">Releases</a>
+          <a href="#faq">FAQ</a>
+        </nav>
+
+        <div class="header-actions">
+          <button class="icon-btn theme-toggle" id="theme-toggle" type="button" aria-label="Switch to light theme" aria-pressed="false">
+            <svg aria-hidden="true" class="icon theme-icon theme-icon--sun"><use href="#i-sun" /></svg>
+            <svg aria-hidden="true" class="icon theme-icon theme-icon--moon"><use href="#i-moon" /></svg>
+          </button>
+          <a class="icon-btn" href="https://github.com/Deepma1ya/Newbie-Launcher" target="_blank" rel="noreferrer" aria-label="Newbie Launcher on GitHub">
+            <svg aria-hidden="true" class="icon icon--fill"><use href="#i-github" /></svg>
+          </a>
+          <a class="btn btn-primary btn-sm download-link" data-download href="https://github.com/Deepma1ya/Newbie-Launcher/releases/latest">
+            <svg aria-hidden="true" class="icon"><use href="#i-download" /></svg>
+            Download
+          </a>
+          <button class="icon-btn menu-btn" id="menu-toggle" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="mobile-nav">
+            <svg aria-hidden="true" class="icon menu-icon-open"><use href="#i-menu" /></svg>
+            <svg aria-hidden="true" class="icon menu-icon-close"><use href="#i-close" /></svg>
+          </button>
+        </div>
+      </div>
+
+      <nav class="mobile-nav" id="mobile-nav" aria-label="Mobile" hidden>
+        <a href="#features">Features</a>
+        <a href="#tour">Tour</a>
+        <a href="#servers">Servers</a>
+        <a href="#releases">Releases</a>
+        <a href="#faq">FAQ</a>
+        <a class="btn btn-primary download-link" data-download href="https://github.com/Deepma1ya/Newbie-Launcher/releases/latest">
+          <svg aria-hidden="true" class="icon"><use href="#i-download" /></svg> Download for Windows
+        </a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-glow" aria-hidden="true"></div>
+        <div class="hero-grid-lines" aria-hidden="true"></div>
+        <div class="container hero-grid">
+          <div class="hero-copy">
+            <a class="eyebrow" href="#releases">
+              <span class="pulse-dot" aria-hidden="true"></span>
+              <span><span data-version>0.1.33</span> is live</span>
+              <svg aria-hidden="true" class="icon"><use href="#i-arrow-right" /></svg>
+            </a>
+            <h1 id="hero-title">Minecraft,<br /><span class="gradient-text">minus the chaos.</span></h1>
+            <p class="lead">
+              Java and Bedrock in one calm launcher. Modrinth add-ons, one-click servers, loadouts that survive updates,
+              and a console that actually helps.
+            </p>
+            <div class="hero-ctas">
+              <a class="btn btn-primary btn-lg download-link" data-download href="https://github.com/Deepma1ya/Newbie-Launcher/releases/latest">
+                <svg aria-hidden="true" class="icon"><use href="#i-download" /></svg>
+                <span>
+                  Download for Windows
+                  <small data-download-meta>Latest release · Windows x64</small>
+                </span>
+              </a>
+              <a class="btn btn-glass btn-lg" href="#tour">
+                See it in action
+                <svg aria-hidden="true" class="icon"><use href="#i-arrow-down" /></svg>
+              </a>
+            </div>
+            <ul class="trust-list" aria-label="Product promises">
+              <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Open source</li>
+              <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> No telemetry</li>
+              <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Windows 10 &amp; 11</li>
+            </ul>
+          </div>
+
+          <div class="hero-visual" data-parallax>
+            <div class="orb orb-a" aria-hidden="true"></div>
+            <div class="orb orb-b" aria-hidden="true"></div>
+            <div class="app-window">
+              <div class="app-window-bar" aria-hidden="true">
+                <span class="window-dots"><i></i><i></i><i></i></span>
+                <span class="window-title">Newbie Launcher</span>
+                <span class="window-pill">v<span data-version>0.1.33</span></span>
+              </div>
+              <img
+                src="./assets/home.png"
+                alt="Newbie Launcher Home dashboard showing the active instance, add-on totals and quick actions"
+                width="1440"
+                height="900"
+                fetchpriority="high"
+              />
+            </div>
+            <div class="float-card float-tps">
+              <span class="float-icon"><svg aria-hidden="true" class="icon"><use href="#i-bolt" /></svg></span>
+              <span><strong>20.0 TPS</strong><small>Server healthy</small></span>
+            </div>
+            <div class="float-card float-update">
+              <span class="float-icon float-icon--gold"><svg aria-hidden="true" class="icon"><use href="#i-spark" /></svg></span>
+              <span><strong>3 updates</strong><small>One click away</small></span>
+            </div>
+            <div class="float-card float-server">
+              <span class="status-dot" aria-hidden="true"></span>
+              <span><strong>localhost:25565</strong><small>Paper 1.21.1</small></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="container stats-strip" data-reveal>
+          <div class="stat"><strong data-count="6">6</strong><span>server types</span></div>
+          <div class="stat"><strong data-count="1">1</strong><span>click installs</span></div>
+          <div class="stat"><strong>MIT</strong><span>open source</span></div>
+          <div class="stat"><strong data-count="0">0</strong><span>ads or telemetry</span></div>
+        </div>
+      </section>
+
+      <section class="section" id="features" aria-labelledby="features-title">
+        <div class="container">
+          <div class="section-head" data-reveal>
+            <span class="kicker">Everything in one place</span>
+            <h2 id="features-title">Built for the way you actually play.</h2>
+            <p>
+              Less time fixing launchers, more time playing. Newbie keeps the technical parts quiet and puts the useful
+              parts one click away.
+            </p>
+          </div>
+
+          <div class="bento">
+            <article class="bento-card bento-card--wide spotlight" data-reveal>
+              <div class="bento-copy">
+                <span class="feature-icon"><svg aria-hidden="true" class="icon"><use href="#i-layers" /></svg></span>
+                <h3>One launcher. Both editions.</h3>
+                <p>
+                  Keep Java worlds, mods and loadouts separate from official Bedrock packages. Install versions, switch
+                  channels and launch — without touching files.
+                </p>
+                <div class="chip-row">
+                  <span class="chip">Java Edition</span>
+                  <span class="chip">Minecraft for Windows</span>
+                  <span class="chip">Microsoft</span>
+                </div>
+              </div>
+              <div class="bento-media">
+                <img src="./assets/home.png" alt="Newbie Launcher dashboard with active instance and stats" width="1440" height="900" loading="lazy" decoding="async" />
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--mods spotlight" data-reveal style="--delay: 80ms">
+              <span class="feature-icon feature-icon--gold"><svg aria-hidden="true" class="icon"><use href="#i-spark" /></svg></span>
+              <h3>Modrinth, built in.</h3>
+              <p>Search, install, update and repair mods, packs, shaders and datapacks without opening a browser.</p>
+              <div class="mini-list">
+                <span><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Dependency resolution</span>
+                <span><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> One-click updates</span>
+                <span><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Duplicate repair</span>
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--servers spotlight" data-reveal>
+              <span class="feature-icon"><svg aria-hidden="true" class="icon"><use href="#i-server" /></svg></span>
+              <h3>Servers that make sense.</h3>
+              <p>
+                Vanilla, Paper, Fabric, Quilt, Forge and NeoForge. Live console, command snippets, TPS, resource packs
+                and scheduled restarts.
+              </p>
+              <div class="mini-terminal" aria-hidden="true">
+                <span class="mini-terminal-line"><em>&gt;</em> tps</span>
+                <span class="mini-terminal-line mini-terminal-muted">TPS: 20.0, 20.0, 19.9</span>
+                <span class="mini-terminal-line"><em>&gt;</em> list</span>
+                <span class="mini-terminal-line mini-terminal-ok">2 of 20 players online</span>
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--packs spotlight" data-reveal style="--delay: 80ms">
+              <span class="feature-icon feature-icon--purple"><svg aria-hidden="true" class="icon"><use href="#i-box" /></svg></span>
+              <h3>Packs without the guesswork.</h3>
+              <p>Add a server resource pack from Modrinth or your own zip. Newbie writes the URL, SHA-1, prompt and required flag.</p>
+              <div class="pack-preview">
+                <span class="pack-swatch"></span>
+                <span><strong>Better Defaults.zip</strong><small>SHA-1 verified · Required</small></span>
+                <span class="badge badge-green">Active</span>
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--updates spotlight" data-reveal>
+              <span class="feature-icon feature-icon--gold"><svg aria-hidden="true" class="icon"><use href="#i-bolt" /></svg></span>
+              <h3>Updates without the wait.</h3>
+              <p>Background downloads, silent installs, release notes in the app and a stable or beta channel.</p>
+              <div class="progress-preview" aria-hidden="true"><span></span></div>
+            </article>
+
+            <article class="bento-card bento-card--loadouts spotlight" data-reveal style="--delay: 60ms">
+              <span class="feature-icon feature-icon--purple"><svg aria-hidden="true" class="icon"><use href="#i-layers" /></svg></span>
+              <h3>Loadouts that stick.</h3>
+              <p>Switch between full offline backups or download-on-demand sets. Worlds, configs and disabled states stay intact.</p>
+              <div class="chip-row">
+                <span class="chip">Offline backup</span>
+                <span class="chip">Download on switch</span>
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--accounts spotlight" data-reveal style="--delay: 120ms">
+              <span class="feature-icon"><svg aria-hidden="true" class="icon"><use href="#i-users" /></svg></span>
+              <h3>Your accounts, your skins.</h3>
+              <p>Microsoft, TLauncher, offline and authlib profiles in one place, with custom skin tools.</p>
+              <div class="chip-row">
+                <span class="chip">Microsoft</span>
+                <span class="chip">TLauncher</span>
+                <span class="chip">Offline</span>
+                <span class="chip">Authlib</span>
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--repair spotlight" data-reveal>
+              <span class="feature-icon feature-icon--gold"><svg aria-hidden="true" class="icon"><use href="#i-shield" /></svg></span>
+              <h3>Repair, not guesswork.</h3>
+              <p>Find duplicate mods, wrong loaders, incompatible dependencies and missing files — then fix them with a backup first.</p>
+              <div class="chip-row">
+                <span class="chip">Duplicate scan</span>
+                <span class="chip">Loader check</span>
+                <span class="chip">Backup first</span>
+              </div>
+            </article>
+
+            <article class="bento-card bento-card--performance spotlight" data-reveal style="--delay: 80ms">
+              <span class="feature-icon"><svg aria-hidden="true" class="icon"><use href="#i-bolt" /></svg></span>
+              <h3>See the health of your world.</h3>
+              <p>TPS, MSPT, player count and server console in one dashboard. Spot lag before your friends do.</p>
+              <div class="tps-gauge" role="img" aria-label="Sample TPS gauge at 20.0">
+                <svg viewBox="0 0 120 66" aria-hidden="true">
+                  <path d="M10 60a50 50 0 0 1 100 0" class="gauge-track" />
+                  <path d="M10 60a50 50 0 0 1 100 0" class="gauge-fill" />
+                </svg>
+                <strong>20.0</strong><small>TPS</small>
+              </div>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--tour" id="tour" aria-labelledby="tour-title">
+        <div class="container">
+          <div class="section-head" data-reveal>
+            <span class="kicker">A quick tour</span>
+            <h2 id="tour-title">Three editions of calm.</h2>
+            <p>Click through the parts of the app that usually cause the most pain.</p>
+          </div>
+
+          <div class="tour" data-tabs data-reveal>
+            <div class="tour-tabs" role="tablist" aria-label="App tour">
+              <button class="tour-tab is-active" role="tab" id="tab-java" aria-selected="true" aria-controls="panel-java" tabindex="0" data-tab="java">
+                <span class="tab-index">01</span> Java play
+              </button>
+              <button class="tour-tab" role="tab" id="tab-bedrock" aria-selected="false" aria-controls="panel-bedrock" tabindex="-1" data-tab="bedrock">
+                <span class="tab-index">02</span> Bedrock
+              </button>
+              <button class="tour-tab" role="tab" id="tab-addons" aria-selected="false" aria-controls="panel-addons" tabindex="-1" data-tab="addons">
+                <span class="tab-index">03</span> Add-ons
+              </button>
+            </div>
+
+            <div class="tour-panels">
+              <div class="tour-panel is-active" id="panel-java" role="tabpanel" aria-labelledby="tab-java" data-panel="java">
+                <div class="tour-copy">
+                  <span class="kicker kicker--small">Java Edition</span>
+                  <h3>Launch a modded world in seconds.</h3>
+                  <p>Accounts, loaders, memory and add-ons are already handled. The active instance card keeps playtime, updates and loadouts visible.</p>
+                  <ul class="check-list">
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Fabric, Quilt, Forge and NeoForge</li>
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Modrinth add-ons and loadouts</li>
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> World backups before launch</li>
+                  </ul>
+                </div>
+                <div class="tour-media">
+                  <img src="./assets/home.png" alt="Newbie Launcher Home page with active Java instance" width="1440" height="900" loading="lazy" decoding="async" />
+                </div>
+              </div>
+
+              <div class="tour-panel" id="panel-bedrock" role="tabpanel" aria-labelledby="tab-bedrock" data-panel="bedrock" hidden>
+                <div class="tour-copy">
+                  <span class="kicker kicker--small">Minecraft for Windows</span>
+                  <h3>Bedrock, without the store dance.</h3>
+                  <p>Browse release and preview builds, download the official signed package and install through Windows. Each version gets its own security-exclusion check before you play.</p>
+                  <ul class="check-list">
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Release and Preview channels</li>
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Consent-based Defender exclusions</li>
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Worlds and Marketplace content preserved</li>
+                  </ul>
+                </div>
+                <div class="tour-media">
+                  <img src="./assets/bedrock.png" alt="Newbie Launcher Bedrock page with installed version and downloads" width="1440" height="900" loading="lazy" decoding="async" />
+                </div>
+              </div>
+
+              <div class="tour-panel" id="panel-addons" role="tabpanel" aria-labelledby="tab-addons" data-panel="addons" hidden>
+                <div class="tour-copy">
+                  <span class="kicker kicker--small">Modrinth inside</span>
+                  <h3>Find it. Install it. Keep it updated.</h3>
+                  <p>Browse mods, resource packs, shaders, datapacks and modpacks with loader and game-version filters. Newbie resolves required dependencies and repairs conflicts.</p>
+                  <ul class="check-list">
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Bulk updates and dependency resolution</li>
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Hash verification for downloads</li>
+                    <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Loadout-aware offline backups</li>
+                  </ul>
+                </div>
+                <div class="tour-media">
+                  <img src="./assets/browse.png" alt="Newbie Launcher Modrinth browse page with mod cards" width="1440" height="900" loading="lazy" decoding="async" />
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--servers" id="servers" aria-labelledby="servers-title">
+        <div class="container servers-grid">
+          <div class="servers-copy" data-reveal>
+            <span class="kicker">Local servers</span>
+            <h2 id="servers-title">A server dashboard that speaks Minecraft.</h2>
+            <p>
+              Create a server in one click, then use the console like a pro. Command snippets fill in player names,
+              coordinates and item IDs for you — and TPS is sampled right next to the log.
+            </p>
+            <ul class="check-list">
+              <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> 80+ console snippets with player pickers</li>
+              <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> TPS, MSPT and online player metrics</li>
+              <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Resource packs and scheduled restarts</li>
+              <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Playit.gg, Radmin, ngrok and port-forward help</li>
+            </ul>
+            <a class="text-link" href="#releases">Download and create a world <svg aria-hidden="true" class="icon"><use href="#i-arrow-right" /></svg></a>
+          </div>
+
+          <div class="terminal-wrap" data-reveal style="--delay: 100ms">
+            <div class="terminal">
+              <div class="terminal-bar">
+                <span class="window-dots" aria-hidden="true"><i></i><i></i><i></i></span>
+                <span class="terminal-title">localhost:25565 · Paper 1.21.1</span>
+                <span class="live-pill"><span class="status-dot"></span> Online</span>
+              </div>
+              <div class="terminal-body">
+                <div class="terminal-log" id="terminal-output" aria-live="polite">
+                  <p><span class="log-time">[12:00:00]</span> <span class="log-info">[Server thread/INFO]</span> Starting minecraft server version 1.21.1</p>
+                  <p><span class="log-time">[12:00:01]</span> <span class="log-info">[Server thread/INFO]</span> Done (1.24s)! For help, type "help"</p>
+                  <p><span class="log-time">[12:00:02]</span> <span class="log-command">[Newbie]</span> Command snippets ready · 20 TPS</p>
+                </div>
+                <div class="terminal-prompt" aria-hidden="true">
+                  <span class="prompt-symbol">&gt;</span>
+                  <span id="terminal-command">tps</span><span class="caret"></span>
+                </div>
+              </div>
+              <div class="terminal-chips" aria-label="Try a server command">
+                <button type="button" data-command="tps">TPS</button>
+                <button type="button" data-command="list">List players</button>
+                <button type="button" data-command="time set day">Time set day</button>
+                <button type="button" data-command="weather clear">Clear weather</button>
+                <button type="button" data-command="whitelist add Alex">Whitelist add</button>
+              </div>
+            </div>
+            <div class="terminal-note">Try a command — this is a safe demo, not a live server.</div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--releases" id="releases" aria-labelledby="releases-title">
+        <div class="container">
+          <div class="release-panel spotlight" data-reveal>
+            <div class="release-main">
+              <span class="kicker">Latest release</span>
+              <div class="release-heading">
+                <span class="release-badge">v<span data-version>0.1.33</span></span>
+                <span class="release-status"><span class="status-dot"></span> Stable</span>
+              </div>
+              <h2 id="releases-title">Newbie Launcher for Windows</h2>
+              <p>
+                The latest stable build, published from GitHub Releases. Installs silently, updates itself, and keeps
+                worlds, instances, servers and settings untouched.
+              </p>
+              <div class="release-actions">
+                <a class="btn btn-primary btn-lg download-link" data-download href="https://github.com/Deepma1ya/Newbie-Launcher/releases/latest">
+                  <svg aria-hidden="true" class="icon"><use href="#i-download" /></svg>
+                  <span>Download installer <small data-download-meta>Windows x64 · .exe</small></span>
+                </a>
+                <button class="btn btn-glass btn-lg" type="button" data-copy-download>
+                  <svg aria-hidden="true" class="icon"><use href="#i-copy" /></svg>
+                  Copy link
+                </button>
+              </div>
+              <div class="release-meta">
+                <span>Released <strong data-release-date>recently</strong></span>
+                <span><a data-release-notes href="https://github.com/Deepma1ya/Newbie-Launcher/releases/latest" target="_blank" rel="noreferrer">Release notes <svg aria-hidden="true" class="icon"><use href="#i-external" /></svg></a></span>
+                <span><a href="https://github.com/Deepma1ya/Newbie-Launcher/releases/latest/download/SHA256SUMS.txt" target="_blank" rel="noreferrer">SHA-256 checksums <svg aria-hidden="true" class="icon"><use href="#i-external" /></svg></a></span>
+              </div>
+            </div>
+
+            <div class="release-side">
+              <div class="release-grid">
+                <div><span>Platform</span><strong>Windows 10 / 11</strong></div>
+                <div><span>Architecture</span><strong>x64</strong></div>
+                <div><span>Java</span><strong>Managed for you</strong></div>
+                <div><span>License</span><strong>MIT</strong></div>
+              </div>
+              <div class="release-highlights">
+                <h3>Highlights</h3>
+                <ul>
+                  <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Java and Bedrock in one launcher</li>
+                  <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Modrinth add-ons, loadouts and repair</li>
+                  <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> One-click servers with a live console</li>
+                  <li><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Silent updates and world backups</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="faq" aria-labelledby="faq-title">
+        <div class="container faq-grid">
+          <div class="faq-copy" data-reveal>
+            <span class="kicker">Questions, answered</span>
+            <h2 id="faq-title">The short version.</h2>
+            <p>Everything you need to know before installing. Still curious? Open an issue on GitHub.</p>
+            <a class="btn btn-glass" href="https://github.com/Deepma1ya/Newbie-Launcher/issues" target="_blank" rel="noreferrer">
+              Ask a question <svg aria-hidden="true" class="icon"><use href="#i-external" /></svg>
+            </a>
+          </div>
+
+          <div class="faq-list" data-reveal style="--delay: 80ms">
+            <details class="faq-item">
+              <summary>Is Newbie Launcher free?<svg aria-hidden="true" class="icon faq-chevron"><use href="#i-chevron" /></svg></summary>
+              <p>Yes. It is free and open source under the MIT license. There are no ads, paid tiers or hidden accounts.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Does it support both Java and Bedrock?<svg aria-hidden="true" class="icon faq-chevron"><use href="#i-chevron" /></svg></summary>
+              <p>Yes. Java instances and Minecraft for Windows (Bedrock) live in separate sections, so worlds, add-ons and settings never mix.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Do I need a Microsoft account?<svg aria-hidden="true" class="icon faq-chevron"><use href="#i-chevron" /></svg></summary>
+              <p>Only for online-mode Java servers and for playing Bedrock. Offline, TLauncher and authlib profiles are supported for the cases where they are allowed.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Can I keep my own worlds and mods?<svg aria-hidden="true" class="icon faq-chevron"><use href="#i-chevron" /></svg></summary>
+              <p>Yes. Newbie uses normal folders and files. You can point it at your data folder, import existing worlds and keep your Modrinth setup.</p>
+            </details>
+            <details class="faq-item">
+              <summary>Do local servers keep running when I close the launcher?<svg aria-hidden="true" class="icon faq-chevron"><use href="#i-chevron" /></svg></summary>
+              <p>No. Servers are stopped gracefully when you quit or relaunch Newbie. Scheduled restarts also require the launcher to stay open.</p>
+            </details>
+            <details class="faq-item">
+              <summary>What data does it collect?<svg aria-hidden="true" class="icon faq-chevron"><use href="#i-chevron" /></svg></summary>
+              <p>No telemetry. Account tokens are encrypted locally with Windows DPAPI, and the renderer never receives raw tokens.</p>
+            </details>
+            <details class="faq-item">
+              <summary>How do updates work?<svg aria-hidden="true" class="icon faq-chevron"><use href="#i-chevron" /></svg></summary>
+              <p>Newbie checks GitHub Releases at startup and every 30 minutes, downloads in the background, then installs silently after a safe restart.</p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section class="section section--cta">
+        <div class="container">
+          <div class="cta-panel" data-reveal>
+            <div class="cta-glow" aria-hidden="true"></div>
+            <span class="kicker">Ready when you are</span>
+            <h2>Play more. Fix less.</h2>
+            <p>One installer. Java, Bedrock, mods, servers and updates — already handled.</p>
+            <div class="hero-ctas">
+              <a class="btn btn-primary btn-lg download-link" data-download href="https://github.com/Deepma1ya/Newbie-Launcher/releases/latest">
+                <svg aria-hidden="true" class="icon"><use href="#i-download" /></svg> Download for Windows
+              </a>
+              <a class="btn btn-glass btn-lg" href="https://github.com/Deepma1ya/Newbie-Launcher" target="_blank" rel="noreferrer">
+                <svg aria-hidden="true" class="icon icon--fill"><use href="#i-github" /></svg> View on GitHub
+              </a>
+            </div>
+            <div class="cta-meta">
+              <span><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Free &amp; open source</span>
+              <span><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> No telemetry</span>
+              <span><svg aria-hidden="true" class="icon"><use href="#i-check" /></svg> Windows x64</span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="container footer-grid">
+        <div class="footer-brand">
+          <a class="brand" href="#top">
+            <span class="brand-mark" aria-hidden="true">
+              <svg viewBox="0 0 40 40"><path d="M20 5 34 12.5 20 20 6 12.5 20 5Z" fill="#6ee7a0"/><path d="M6 12.5 20 20v15L6 27.5v-15Z" fill="#5b3a1e"/><path d="M34 12.5 20 20v15l14-7.5v-15Z" fill="#3e2914"/><path d="M6 12.5 20 20v5l-14-7.5v-5Z" fill="#3e8e5c"/><path d="M34 12.5 20 20v5l14-7.5v-5Z" fill="#2c6b43"/></svg>
+            </span>
+            <span class="brand-name">Newbie<span>Launcher</span></span>
+          </a>
+          <p>A calm, fast Minecraft launcher for Java and Bedrock. Built for playing, not configuring.</p>
+          <span class="footer-version">v<span data-version>0.1.33</span> · MIT</span>
+        </div>
+        <div class="footer-links">
+          <div>
+            <h3>Product</h3>
+            <a href="#features">Features</a>
+            <a href="#tour">Tour</a>
+            <a href="#servers">Servers</a>
+            <a href="#releases">Download</a>
+          </div>
+          <div>
+            <h3>Project</h3>
+            <a href="https://github.com/Deepma1ya/Newbie-Launcher" target="_blank" rel="noreferrer">GitHub</a>
+            <a href="https://github.com/Deepma1ya/Newbie-Launcher/releases" target="_blank" rel="noreferrer">Releases</a>
+            <a href="https://github.com/Deepma1ya/Newbie-Launcher/issues" target="_blank" rel="noreferrer">Issues</a>
+            <a href="https://github.com/Deepma1ya/Newbie-Launcher/blob/main/LICENSE" target="_blank" rel="noreferrer">License</a>
+          </div>
+          <div>
+            <h3>Legal</h3>
+            <a href="https://www.minecraft.net/" target="_blank" rel="noreferrer">Minecraft</a>
+            <a href="https://www.microsoft.com/" target="_blank" rel="noreferrer">Microsoft</a>
+            <a href="https://modrinth.com/" target="_blank" rel="noreferrer">Modrinth</a>
+          </div>
+        </div>
+      </div>
+      <div class="container footer-bottom">
+        <p>Not an official Minecraft product. Not approved by or associated with Mojang or Microsoft. Minecraft is a trademark of Mojang Synergies AB.</p>
+        <a href="#top" class="back-to-top">Back to top <svg aria-hidden="true" class="icon"><use href="#i-arrow-down" /></svg></a>
+      </div>
+    </footer>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  </body>
+</html>

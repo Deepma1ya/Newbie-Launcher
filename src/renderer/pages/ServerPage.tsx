@@ -7,7 +7,9 @@ import {
   CaretRight,
   CheckCircle,
   FolderOpen,
+  Gauge,
   HardDrives,
+  Image,
   Package,
   PaperPlaneTilt,
   Plus,
@@ -21,13 +23,21 @@ import type {
   ServerAddonRecord,
   ServerAddonType,
   ServerRecord,
-  ServerRuntimeStatus
+  ServerRestartSchedule,
+  ServerRuntimeStatus,
+  ServerStats
 } from '@shared/types'
 import {
   SERVER_PROPERTY_FIELDS,
   SERVER_PROPERTY_GROUPS,
   type ServerPropertyField
 } from '@shared/serverProperties'
+import {
+  DEFAULT_RESTART_SCHEDULE,
+  nextRestartAt,
+  normalizeRestartSchedule,
+  restartIntervalLabel
+} from '@shared/serverSchedule'
 import {
   serverSupportsAddon,
   serverTypeLabel
@@ -37,6 +47,7 @@ import {
   useServerLogs,
   useServerProperties,
   useServerSearch,
+  useServerStats,
   useServerStatus,
   useSystemInfo,
   qk
@@ -48,8 +59,10 @@ import { Button, IconButton } from '../components/ui/Button'
 import { ProjectIcon } from '../components/ui/BlockIcon'
 import { PageHeader } from '../components/PageHeader'
 import { ServerSharePanel } from '../components/ServerSharePanel'
+import { ServerResourcePackPanel } from '../components/ServerResourcePackPanel'
+import { ServerCommandSnippets } from '../components/ServerCommandSnippets'
 
-type Tab = 'console' | 'share' | 'settings' | 'addons'
+type Tab = 'console' | 'share' | 'settings' | 'resource-pack' | 'addons'
 
 export function ServerPage() {
   const { id } = useParams<{ id: string }>()
@@ -155,6 +168,12 @@ export function ServerPage() {
         <span className="rounded-md border border-line/50 bg-canvas/30 px-2 py-1 font-mono text-[10px] text-ink/75">
           localhost:{server.port}
         </span>
+        {server.restartSchedule?.enabled && server.restartSchedule.nextRestartAt && (
+          <span className="inline-flex items-center gap-1.5 rounded-md border border-line/50 bg-canvas/30 px-2 py-1 text-[10px] text-muted">
+            <ArrowsClockwise size={11} />
+            Restart {formatRestartTime(server.restartSchedule.nextRestartAt)}
+          </span>
+        )}
         <WarningCircle size={13} className="text-gold/70" />
         <span className="text-[10.5px] text-muted/65">
           Keep Newbie running while the server is on. Servers stop when you quit the launcher.
@@ -169,6 +188,7 @@ export function ServerPage() {
             { value: 'console', label: 'Console', icon: <PaperPlaneTilt size={14} /> },
             { value: 'share', label: 'Share', icon: <UsersThree size={14} /> },
             { value: 'settings', label: 'Settings', icon: <HardDrives size={14} /> },
+            { value: 'resource-pack', label: 'Resource pack', icon: <Image size={14} /> },
             { value: 'addons', label: `Add-ons ${server.addons.length}`, icon: <Package size={14} /> }
           ]}
         />
@@ -196,9 +216,23 @@ export function ServerPage() {
         />
       )}
       {tab === 'settings' && <ServerSettings server={server} running={running} />}
+      {tab === 'resource-pack' && (
+        <ServerResourcePackPanel server={server} running={running} />
+      )}
       {tab === 'addons' && <ServerAddons server={server} running={running} />}
     </div>
   )
+}
+
+function formatRestartTime(iso: string | null | undefined): string {
+  if (!iso) return 'Not scheduled'
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) return 'Not scheduled'
+  return date.toLocaleString(undefined, {
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
 }
 
 function ServerConsole({
@@ -215,9 +249,12 @@ function ServerConsole({
   busy: boolean
 }) {
   const logs = useServerLogs(server.id, true).data ?? []
+  const statsQuery = useServerStats(server.id, running)
   const [command, setCommand] = useState('')
   const [sending, setSending] = useState(false)
+  const [refreshingStats, setRefreshingStats] = useState(false)
   const panelRef = useRef<HTMLDivElement>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
   const stickToBottom = useRef(true)
 
   useEffect(() => {
@@ -240,92 +277,220 @@ function ServerConsole({
     }
   }
 
+  const insert = (next: string): void => {
+    setCommand(next)
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
+
+  const refreshStats = async (): Promise<void> => {
+    setRefreshingStats(true)
+    try {
+      await statsQuery.refetch()
+    } finally {
+      setRefreshingStats(false)
+    }
+  }
+
   return (
     <div className="space-y-3">
-      <Card className="p-4">
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 className="font-display text-[14px] font-semibold text-ink">Live console</h2>
-            <p className="mt-0.5 text-[10.5px] text-muted">
-              {running
-                ? `Server is ${status.status === 'running' ? 'running' : 'starting'} on localhost:${server.port}.`
-                : 'The server is stopped. Start it to run commands.'}
-            </p>
-          </div>
-          <div className="flex items-center gap-1.5">
-            {['list', 'save-all', 'whitelist list'].map((quick) => (
-              <Button
-                key={quick}
-                variant="ghost"
-                size="sm"
-                disabled={!running}
-                onClick={() => void send(quick)}
-              >
-                {quick}
-              </Button>
-            ))}
-          </div>
-        </div>
-        <div
-          ref={panelRef}
-          onScroll={(event) => {
-            const element = event.currentTarget
-            stickToBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 40
-          }}
-          className="h-[430px] overflow-y-auto rounded-xl border border-line/50 bg-[#080d09] p-3 font-mono text-[10.5px] leading-[1.7]"
-        >
-          {logs.length === 0 ? (
-            <div className="text-muted/55">
-              {running ? 'Waiting for server output…' : 'No logs yet. Start the server to see its output.'}
-            </div>
-          ) : (
-            logs.map((line, index) => (
-              <div
-                key={`${index}-${line.slice(0, 24)}`}
-                className={cn(
-                  'whitespace-pre-wrap break-words',
-                  line.includes('[stderr]') || line.includes('ERROR') || line.includes('Exception')
-                    ? 'text-danger/90'
-                    : line.includes('[command]')
-                      ? 'text-grass/90'
-                      : line.includes('[system]')
-                        ? 'text-gold/85'
-                        : 'text-muted/85'
-                )}
-              >
-                {line}
+      <ServerPerformanceCard
+        server={server}
+        running={running}
+        stats={statsQuery.data}
+        refreshing={refreshingStats}
+        onRefresh={() => void refreshStats()}
+      />
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div className="min-w-0 space-y-3">
+          <Card className="p-4">
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h2 className="font-display text-[14px] font-semibold text-ink">Live console</h2>
+                <p className="mt-0.5 text-[10.5px] text-muted">
+                  {running
+                    ? `Server is ${status.status === 'running' ? 'running' : 'starting'} on localhost:${server.port}.`
+                    : 'The server is stopped. Start it to run commands.'}
+                </p>
               </div>
-            ))
+              <div className="flex items-center gap-1.5">
+                {['list', 'save-all', 'whitelist list'].map((quick) => (
+                  <Button
+                    key={quick}
+                    variant="ghost"
+                    size="sm"
+                    disabled={!running}
+                    onClick={() => void send(quick)}
+                  >
+                    {quick}
+                  </Button>
+                ))}
+              </div>
+            </div>
+            <div
+              ref={panelRef}
+              onScroll={(event) => {
+                const element = event.currentTarget
+                stickToBottom.current = element.scrollHeight - element.scrollTop - element.clientHeight < 40
+              }}
+              className="h-[430px] overflow-y-auto rounded-xl border border-line/50 bg-[#080d09] p-3 font-mono text-[10.5px] leading-[1.7]"
+            >
+              {logs.length === 0 ? (
+                <div className="text-muted/55">
+                  {running ? 'Waiting for server output…' : 'No logs yet. Start the server to see its output.'}
+                </div>
+              ) : (
+                logs.map((line, index) => (
+                  <div
+                    key={`${index}-${line.slice(0, 24)}`}
+                    className={cn(
+                      'whitespace-pre-wrap break-words',
+                      line.includes('[stderr]') || line.includes('ERROR') || line.includes('Exception')
+                        ? 'text-danger/90'
+                        : line.includes('[command]')
+                          ? 'text-grass/90'
+                          : line.includes('[system]')
+                            ? 'text-gold/85'
+                            : 'text-muted/85'
+                    )}
+                  >
+                    {line}
+                  </div>
+                ))
+              )}
+            </div>
+            <form
+              className="mt-3 flex items-center gap-2"
+              onSubmit={(event) => {
+                event.preventDefault()
+                void send()
+              }}
+            >
+              <Input
+                ref={inputRef}
+                value={command}
+                onChange={(event) => setCommand(event.target.value)}
+                placeholder={running ? 'Type a server command…' : 'Start the server to use commands'}
+                disabled={!running || sending}
+                className="font-mono"
+              />
+              <Button type="submit" variant="primary" loading={sending} disabled={!running || !command.trim()} icon={<PaperPlaneTilt size={15} />}>
+                Send
+              </Button>
+            </form>
+          </Card>
+          {!running && (
+            <Card className="flex items-center gap-3 p-4 text-[11.5px] text-muted">
+              <HardDrives size={18} className="text-grass" />
+              <span className="flex-1">Start the server when you are ready to play.</span>
+              <Button variant="primary" size="sm" loading={busy} onClick={onStart}>
+                Start server
+              </Button>
+            </Card>
           )}
         </div>
-        <form
-          className="mt-3 flex items-center gap-2"
-          onSubmit={(event) => {
-            event.preventDefault()
-            void send()
-          }}
-        >
-          <Input
-            value={command}
-            onChange={(event) => setCommand(event.target.value)}
-            placeholder={running ? 'Type a server command…' : 'Start the server to use commands'}
-            disabled={!running || sending}
-            className="font-mono"
-          />
-          <Button type="submit" variant="primary" loading={sending} disabled={!running || !command.trim()} icon={<PaperPlaneTilt size={15} />}>
-            Send
+        <ServerCommandSnippets
+          serverType={server.type}
+          players={statsQuery.data?.players ?? []}
+          onInsert={insert}
+        />
+      </div>
+    </div>
+  )
+}
+
+function ServerPerformanceCard({
+  server,
+  running,
+  stats,
+  refreshing,
+  onRefresh
+}: {
+  server: ServerRecord
+  running: boolean
+  stats?: ServerStats
+  refreshing: boolean
+  onRefresh: () => void
+}) {
+  const tps = stats?.tps
+  const tpsTone =
+    tps === undefined ? 'text-muted' : tps >= 19.5 ? 'text-grass' : tps >= 15 ? 'text-gold' : 'text-danger'
+  return (
+    <Card className="p-4">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5">
+          <span className="flex h-8 w-8 items-center justify-center rounded-lg border border-grass/20 bg-grass/10 text-grass">
+            <Gauge size={16} />
+          </span>
+          <div>
+            <h2 className="font-display text-[14px] font-semibold text-ink">Performance</h2>
+            <p className="mt-0.5 text-[10px] text-muted">
+              TPS and online players sampled from the live console every 30 seconds.
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          {stats && (
+            <span className="text-[9.5px] text-muted/60">Updated {relativeTime(stats.sampledAt)}</span>
+          )}
+          <Button
+            variant="ghost"
+            size="sm"
+            loading={refreshing}
+            disabled={!running}
+            onClick={onRefresh}
+            icon={<ArrowsClockwise size={13} />}
+          >
+            Refresh
           </Button>
-        </form>
-      </Card>
-      {!running && (
-        <Card className="flex items-center gap-3 p-4 text-[11.5px] text-muted">
-          <HardDrives size={18} className="text-grass" />
-          <span className="flex-1">Start the server when you are ready to play.</span>
-          <Button variant="primary" size="sm" loading={busy} onClick={onStart}>
-            Start server
-          </Button>
-        </Card>
+        </div>
+      </div>
+      {!running ? (
+        <div className="mt-3 rounded-xl border border-dashed border-line/50 p-3 text-[11px] text-muted">
+          Start the server to measure TPS and online players.
+        </div>
+      ) : (
+        <div className="mt-3 grid gap-3 lg:grid-cols-[160px_minmax(0,1fr)]">
+          <div className="rounded-xl border border-line/45 bg-canvas/30 p-3">
+            <div className="text-[9px] uppercase tracking-[0.1em] text-muted/60">TPS</div>
+            <div className={cn('mt-0.5 font-display text-[30px] font-semibold leading-none', tpsTone)}>
+              {tps === undefined ? '—' : tps.toFixed(1)}
+            </div>
+            <div className="mt-1 text-[9.5px] leading-relaxed text-muted/60">
+              {tps === undefined
+                ? stats?.message ?? 'Waiting for a sample…'
+                : tps >= 19.5
+                  ? 'Healthy'
+                  : tps >= 15
+                    ? 'Under load'
+                    : 'Lagging'}
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            <Metric label="1 min" value={stats?.tps1m !== undefined ? stats.tps1m.toFixed(1) : '—'} />
+            <Metric label="5 min" value={stats?.tps5m !== undefined ? stats.tps5m.toFixed(1) : '—'} />
+            <Metric label="15 min" value={stats?.tps15m !== undefined ? stats.tps15m.toFixed(1) : '—'} />
+            <Metric label="MSPT" value={stats?.mspt !== undefined ? stats.mspt.toFixed(2) : '—'} />
+            <Metric
+              label="Players"
+              value={
+                stats
+                  ? `${stats.players.length}${stats.maxPlayers ? ` / ${stats.maxPlayers}` : ''}`
+                  : '—'
+              }
+            />
+            <Metric label="Server" value={serverTypeLabel(server.type)} />
+          </div>
+        </div>
       )}
+    </Card>
+  )
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-line/40 bg-canvas/20 px-2.5 py-2">
+      <div className="text-[9px] uppercase tracking-[0.08em] text-muted/55">{label}</div>
+      <div className="mt-0.5 truncate font-mono text-[11.5px] text-ink/85">{value}</div>
     </div>
   )
 }
@@ -337,6 +502,9 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [name, setName] = useState(server.name)
   const [memoryMb, setMemoryMb] = useState(server.memoryMb)
+  const [schedule, setSchedule] = useState<ServerRestartSchedule>(
+    server.restartSchedule ?? { ...DEFAULT_RESTART_SCHEDULE }
+  )
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
@@ -346,14 +514,22 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
   useEffect(() => {
     setName(server.name)
     setMemoryMb(server.memoryMb)
-  }, [server.name, server.memoryMb])
+    setSchedule(server.restartSchedule ?? { ...DEFAULT_RESTART_SCHEDULE })
+  }, [server.name, server.memoryMb, server.restartSchedule])
 
   const runtimeDirty = name.trim() !== server.name || memoryMb !== server.memoryMb
+  const scheduleDirty = useMemo(
+    () =>
+      JSON.stringify(schedule) !==
+      JSON.stringify(server.restartSchedule ?? { ...DEFAULT_RESTART_SCHEDULE }),
+    [schedule, server.restartSchedule]
+  )
   const dirty = useMemo(
     () =>
       runtimeDirty ||
+      scheduleDirty ||
       JSON.stringify(draft) !== JSON.stringify(propertiesQuery.data ?? {}),
-    [runtimeDirty, draft, propertiesQuery.data]
+    [runtimeDirty, scheduleDirty, draft, propertiesQuery.data]
   )
 
   const totalMem = system?.totalMemMb ?? 16384
@@ -365,10 +541,10 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
   const save = async (): Promise<void> => {
     setSaving(true)
     try {
-      if (runtimeDirty) {
+      if (runtimeDirty || scheduleDirty) {
         await window.newbie.servers.update(server.id, {
-          name: name.trim() || server.name,
-          memoryMb
+          ...(runtimeDirty ? { name: name.trim() || server.name, memoryMb } : {}),
+          ...(scheduleDirty ? { restartSchedule: normalizeRestartSchedule(schedule) } : {})
         })
       }
       await window.newbie.servers.saveProperties(server.id, draft)
@@ -391,6 +567,11 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
   const set = (key: string, value: string): void => {
     setDraft((current) => ({ ...current, [key]: value }))
   }
+
+  const nextDisplay =
+    running && !scheduleDirty
+      ? server.restartSchedule?.nextRestartAt
+      : nextRestartAt(schedule)
 
   if (propertiesQuery.isLoading) {
     return <Skeleton className="h-96 w-full" />
@@ -452,6 +633,86 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
           Java {server.javaMajor} managed automatically · server folder {server.id} · {serverTypeLabel(server.type)}{' '}
           {server.versionId}
         </p>
+      </Card>
+      <Card className="p-4">
+        <div className="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h3 className="font-display text-[13px] font-semibold text-ink">Scheduled restarts</h3>
+            <p className="mt-0.5 text-[10px] leading-relaxed text-muted/70">
+              Restart automatically while the server is running. Newbie must stay open, and the server must be online
+              when the timer is due.
+            </p>
+          </div>
+          <Switch
+            checked={schedule.enabled}
+            onChange={(enabled) => setSchedule((current) => ({ ...current, enabled }))}
+            label="Automatic restarts"
+            hideLabel
+          />
+        </div>
+
+        {schedule.enabled && (
+          <div className="mt-4 space-y-3">
+            <Segmented
+              value={schedule.mode}
+              onChange={(mode) => setSchedule((current) => ({ ...current, mode }))}
+              size="sm"
+              options={[
+                { value: 'interval', label: 'Every few hours' },
+                { value: 'daily', label: 'Daily at' }
+              ]}
+            />
+            {schedule.mode === 'interval' ? (
+              <div>
+                <div className="text-[11.5px] font-medium text-ink">Interval</div>
+                <div className="mt-0.5 text-[10px] text-muted/75">
+                  The timer restarts when you start the server manually.
+                </div>
+                <div className="mt-1.5">
+                  <Select
+                    value={String(schedule.intervalMinutes)}
+                    onChange={(value) =>
+                      setSchedule((current) => ({
+                        ...current,
+                        intervalMinutes: Number(value)
+                      }))
+                    }
+                  >
+                    {[30, 60, 120, 240, 360, 720, 1440].map((minutes) => (
+                      <option key={minutes} value={minutes}>
+                        {restartIntervalLabel(minutes)}
+                      </option>
+                    ))}
+                  </Select>
+                </div>
+              </div>
+            ) : (
+              <div>
+                <div className="text-[11.5px] font-medium text-ink">Restart time</div>
+                <div className="mt-0.5 text-[10px] text-muted/75">Local time on this PC.</div>
+                <div className="mt-1.5">
+                  <Input
+                    type="time"
+                    value={schedule.time}
+                    onChange={(event) =>
+                      setSchedule((current) => ({ ...current, time: event.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+            )}
+            <div className="rounded-lg border border-line/45 bg-canvas/30 px-3 py-2 text-[10.5px] text-muted">
+              <span className="text-ink/80">Next restart:</span>{' '}
+              {formatRestartTime(nextDisplay)}
+              {!running && ' · starts counting when the server runs'}
+              {server.restartSchedule?.lastRestartAt && (
+                <span className="ml-2 text-muted/60">
+                  Last: {formatRestartTime(server.restartSchedule.lastRestartAt)}
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </Card>
       {running && (
         <div className="rounded-xl border border-gold/20 bg-gold/[0.035] p-3 text-[10.5px] leading-relaxed text-gold/85">

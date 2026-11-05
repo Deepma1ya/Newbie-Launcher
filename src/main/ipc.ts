@@ -19,6 +19,8 @@ import type {
   SearchQuery,
   ServerAddonType,
   ServerSearchQuery,
+  ServerResourcePackInput,
+  ServerResourcePackSearchQuery,
   SystemInfo,
   UpdateInstanceInput
 } from '@shared/types'
@@ -101,6 +103,16 @@ import {
   toggleServerAddon,
   updateAllServerAddons
 } from './services/serverAddons'
+import {
+  getServerResourcePack,
+  importServerResourcePack,
+  installServerResourcePack,
+  removeServerResourcePack,
+  saveServerResourcePack,
+  searchServerResourcePacks
+} from './services/serverResourcePack'
+import { resetServerRestartSchedule, stopServerScheduler } from './services/serverScheduler'
+import { getServerStats } from './services/serverStats'
 import {
   addBedrockExclusion,
   cancelBedrockDownload,
@@ -248,7 +260,17 @@ const createServerSchema = z.object({
 })
 const updateServerSchema = z.object({
   name: z.string().trim().min(1).max(60).optional(),
-  memoryMb: z.number().int().min(1024).max(65536).optional()
+  memoryMb: z.number().int().min(1024).max(65536).optional(),
+  restartSchedule: z
+    .object({
+      enabled: z.boolean(),
+      mode: z.enum(['interval', 'daily']),
+      intervalMinutes: z.number().int().min(15).max(10080),
+      time: z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/),
+      lastRestartAt: z.string().max(40).optional(),
+      nextRestartAt: z.string().max(40).optional()
+    })
+    .optional()
 })
 const serverSearchSchema = z.object({
   serverId: z.string().max(200),
@@ -262,6 +284,25 @@ const serverAddonRefSchema = z.object({
   projectId: z.string().max(200),
   versionId: z.string().max(200).optional(),
   type: serverAddonTypeSchema.optional()
+})
+const serverResourcePackSearchSchema = z.object({
+  serverId: z.string().max(200),
+  query: z.string().max(200),
+  sort: z.enum(['relevance', 'downloads', 'follows', 'newest', 'updated']).optional(),
+  offset: z.number().int().min(0).optional(),
+  limit: z.number().int().min(1).max(48).optional()
+})
+const serverResourcePackSchema = z.object({
+  url: z.string().min(1).max(2048),
+  sha1: z.string().max(40).optional(),
+  required: z.boolean().optional(),
+  prompt: z.string().max(256).optional(),
+  name: z.string().max(120).optional(),
+  filename: z.string().max(200).optional(),
+  size: z.number().int().min(0).max(512 * 1024 * 1024).optional(),
+  source: z.enum(['modrinth', 'file', 'url']).optional(),
+  projectId: z.string().max(200).optional(),
+  versionId: z.string().max(200).optional()
 })
 const serverPropertiesSchema = z.record(z.string().max(120), z.string().max(2000))
 
@@ -307,6 +348,7 @@ export function registerIpc(): void {
     pickFile(filters)
   )
   ipcMain.handle(IPC.appRelaunch, async () => {
+    stopServerScheduler()
     await stopAllServers()
     app.relaunch()
     app.exit(0)
@@ -382,6 +424,7 @@ export function registerIpc(): void {
     const server = await getServer(z.string().parse(id))
     if (!server) throw new Error('Server not found')
     await startServer(server)
+    await resetServerRestartSchedule(server.id)
   })
   ipcMain.handle(IPC.serversStop, async (_event, id: string) => {
     await stopServer(z.string().parse(id))
@@ -390,6 +433,7 @@ export function registerIpc(): void {
     const server = await getServer(z.string().parse(id))
     if (!server) throw new Error('Server not found')
     await restartServer(server)
+    await resetServerRestartSchedule(server.id)
   })
   ipcMain.handle(IPC.serversStatus, async (_event, id: string) => {
     const server = await getServer(z.string().parse(id))
@@ -400,6 +444,9 @@ export function registerIpc(): void {
     const servers = await listServers()
     return servers.map((server) => serverRuntimeStatus(server.id, server.port))
   })
+  ipcMain.handle(IPC.serversStats, async (_event, id: string) =>
+    getServerStats(z.string().parse(id))
+  )
   ipcMain.handle(IPC.serversLogs, async (_event, id: string) => serverLogs(z.string().parse(id)))
   ipcMain.handle(IPC.serversCommand, async (_event, id: string, command: string) => {
     sendServerCommand(z.string().parse(id), z.string().max(1000).parse(command))
@@ -467,6 +514,49 @@ export function registerIpc(): void {
       throw error
     }
   })
+  ipcMain.handle(IPC.serversResourcePack, async (_event, serverId: string) =>
+    getServerResourcePack(z.string().parse(serverId))
+  )
+  ipcMain.handle(IPC.serversResourcePackSearch, async (_event, query: unknown) =>
+    searchServerResourcePacks(
+      serverResourcePackSearchSchema.parse(query) as ServerResourcePackSearchQuery
+    )
+  )
+  ipcMain.handle(
+    IPC.serversResourcePackInstall,
+    async (_event, serverId: string, projectId: string, versionId?: string) => {
+      const id = z.string().parse(serverId)
+      const server = await getServer(id)
+      const handle = tasks.start('server-addon', 'Installing resource pack', server?.name)
+      try {
+        const state = await installServerResourcePack(
+          id,
+          z.string().max(200).parse(projectId),
+          versionId ? z.string().max(200).parse(versionId) : undefined
+        )
+        await handle.done('Resource pack installed')
+        return state
+      } catch (error) {
+        await handle.fail(error)
+        throw error
+      }
+    }
+  )
+  ipcMain.handle(IPC.serversResourcePackImport, async (_event, serverId: string, filePath: string) =>
+    importServerResourcePack(
+      z.string().parse(serverId),
+      pathSchema.parse(filePath)
+    )
+  )
+  ipcMain.handle(IPC.serversResourcePackSave, async (_event, serverId: string, input: unknown) =>
+    saveServerResourcePack(
+      z.string().parse(serverId),
+      serverResourcePackSchema.parse(input) as ServerResourcePackInput
+    )
+  )
+  ipcMain.handle(IPC.serversResourcePackRemove, async (_event, serverId: string, deleteFile: boolean) =>
+    removeServerResourcePack(z.string().parse(serverId), Boolean(deleteFile))
+  )
   ipcMain.handle(IPC.serversOpenFolder, async (_event, id: string, sub?: string) => {
     const serverId = z.string().parse(id)
     const target = safeJoin(paths.server(serverId), sub ? z.string().max(500).parse(sub) : '')

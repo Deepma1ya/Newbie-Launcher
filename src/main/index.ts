@@ -6,6 +6,7 @@ import { bindEventWindow } from './services/events'
 import { createMainWindow, getMainWindow, initTray, markQuitting, showWindow } from './window'
 import { initUpdater } from './services/updater'
 import { stopAllServers, runningServerIds } from './services/serverProcess'
+import { initServerScheduler, stopServerScheduler } from './services/serverScheduler'
 import { logger } from './util/log'
 
 const gotLock = app.requestSingleInstanceLock()
@@ -33,6 +34,7 @@ if (!gotLock) {
       bindEventWindow(window)
       initTray()
       initUpdater()
+      initServerScheduler()
       logger.info('app', `Newbie Launcher ${app.getVersion()} ready`)
     } catch (error) {
       logger.error('app', 'Fatal start-up error', error)
@@ -57,6 +59,7 @@ if (!gotLock) {
 
   app.on('before-quit', (event) => {
     markQuitting()
+    stopServerScheduler()
     if (shutdownComplete) return
     event.preventDefault()
     if (shuttingDown) return

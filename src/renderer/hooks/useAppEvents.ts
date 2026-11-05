@@ -57,6 +57,11 @@ export function useAppEvents(): void {
         case 'toast':
           toast(event.payload.kind, event.payload.title, event.payload.message)
           break
+        case 'server-schedule':
+          void queryClient.invalidateQueries({ queryKey: qk.server(event.payload.serverId) })
+          void queryClient.invalidateQueries({ queryKey: qk.servers })
+          void queryClient.invalidateQueries({ queryKey: qk.serverStatus(event.payload.serverId) })
+          break
         default:
           break
       }
