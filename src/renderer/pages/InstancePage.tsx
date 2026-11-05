@@ -537,8 +537,8 @@ function InstanceSettings({
   const activeAccount = accounts.find((entry) => entry.active) ?? accounts[0]
   const [name, setName] = useState(instance.name)
   const [memory, setMemory] = useState(instance.memoryMb)
-  const [width, setWidth] = useState(instance.width)
-  const [height, setHeight] = useState(instance.height)
+  const [width, setWidth] = useState(String(instance.width))
+  const [height, setHeight] = useState(String(instance.height))
   const [fullscreen, setFullscreen] = useState(instance.fullscreen)
   const [javaPath, setJavaPath] = useState(instance.javaPath ?? '')
   const [jvmArgs, setJvmArgs] = useState(instance.jvmArgs)
@@ -549,12 +549,17 @@ function InstanceSettings({
   const [copySettingsOpen, setCopySettingsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<PerformanceProfile>(settings?.performance.profile ?? 'balanced')
+  const widthValue = Number(width)
+  const heightValue = Number(height)
+  const widthValid = Number.isFinite(widthValue) && widthValue >= 320 && widthValue <= 7680
+  const heightValid = Number.isFinite(heightValue) && heightValue >= 240 && heightValue <= 4320
+  const resolutionValid = widthValid && heightValid
 
   useEffect(() => {
     setName(instance.name)
     setMemory(instance.memoryMb)
-    setWidth(instance.width)
-    setHeight(instance.height)
+    setWidth(String(instance.width))
+    setHeight(String(instance.height))
     setFullscreen(instance.fullscreen)
     setJavaPath(instance.javaPath ?? '')
     setJvmArgs(instance.jvmArgs)
@@ -562,10 +567,22 @@ function InstanceSettings({
   }, [instance])
 
   const save = async (): Promise<void> => {
+    if (!resolutionValid) {
+      setError('Choose a width from 320 to 7680 and a height from 240 to 4320.')
+      return
+    }
     setSaving(true)
     setError(null)
     try {
-      await window.newbie.instances.update(instance.id, { name, memoryMb: memory, width, height, fullscreen, javaPath: javaPath || null, jvmArgs })
+      await window.newbie.instances.update(instance.id, {
+        name,
+        memoryMb: memory,
+        width: Math.round(widthValue),
+        height: Math.round(heightValue),
+        fullscreen,
+        javaPath: javaPath || null,
+        jvmArgs
+      })
       await queryClient.invalidateQueries({ queryKey: qk.instance(instance.id) })
       await queryClient.invalidateQueries({ queryKey: qk.instances })
       onChanged()
@@ -671,11 +688,31 @@ function InstanceSettings({
             />
           </Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Width">
-              <Input type="number" min={320} max={7680} value={width} onChange={(event) => setWidth(Number(event.target.value))} />
+            <Field
+              label="Width"
+              hint="320–7680"
+              error={!widthValid ? 'Enter 320–7680' : undefined}
+            >
+              <Input
+                type="number"
+                min={320}
+                max={7680}
+                value={width}
+                onChange={(event) => setWidth(event.target.value)}
+              />
             </Field>
-            <Field label="Height">
-              <Input type="number" min={240} max={4320} value={height} onChange={(event) => setHeight(Number(event.target.value))} />
+            <Field
+              label="Height"
+              hint="240–4320"
+              error={!heightValid ? 'Enter 240–4320' : undefined}
+            >
+              <Input
+                type="number"
+                min={240}
+                max={4320}
+                value={height}
+                onChange={(event) => setHeight(event.target.value)}
+              />
             </Field>
           </div>
           <Switch checked={fullscreen} onChange={setFullscreen} label="Launch in fullscreen" />
@@ -722,7 +759,7 @@ function InstanceSettings({
             </div>
           )}
           <div className="flex justify-end">
-            <Button variant="primary" loading={saving} onClick={() => void save()}>
+            <Button variant="primary" loading={saving} disabled={!resolutionValid} onClick={() => void save()}>
               Save settings
             </Button>
           </div>
