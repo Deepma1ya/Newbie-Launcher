@@ -127,7 +127,9 @@ export function Switch({
   label,
   description,
   disabled,
-  hideLabel = false
+  hideLabel = false,
+  size = 'md',
+  className
 }: {
   checked: boolean
   onChange: (checked: boolean) => void
@@ -135,6 +137,8 @@ export function Switch({
   description?: string
   disabled?: boolean
   hideLabel?: boolean
+  size?: 'sm' | 'md'
+  className?: string
 }) {
   // Keep the visual state responsive while a settings IPC round-trip is in
   // flight, then re-sync when the persisted value arrives.
@@ -151,11 +155,21 @@ export function Switch({
     onChange(next)
   }
 
+  // The knob is centred inside the track, not inside the border box. For a
+  // 24px track and 16px knob that is 4px on every side; for the compact
+  // 20px track and 14px knob it is 3px. Horizontal travel is the remaining
+  // space, which keeps the on-state margin identical to the off-state margin.
+  const geometry =
+    size === 'sm'
+      ? { track: 'h-5 w-9', knob: 'left-[3px] top-[3px] h-3.5 w-3.5', on: 'translate-x-4' }
+      : { track: 'h-6 w-11', knob: 'left-1 top-1 h-4 w-4', on: 'translate-x-5' }
+
   return (
     <label
       className={cn(
-        'flex select-none items-start justify-between gap-5',
-        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+        hideLabel ? 'inline-flex items-center' : 'flex select-none items-start justify-between gap-5',
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer',
+        className
       )}
     >
       {!hideLabel && (
@@ -168,7 +182,13 @@ export function Switch({
           )}
         </span>
       )}
-      <span className="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center">
+      <span
+        className={cn(
+          'relative inline-flex shrink-0 items-center',
+          geometry.track,
+          !hideLabel && 'mt-0.5'
+        )}
+      >
         <input
           type="checkbox"
           role="switch"
@@ -191,8 +211,9 @@ export function Switch({
         <span
           aria-hidden="true"
           className={cn(
-            'absolute left-[3px] top-[3px] h-4 w-4 rounded-full shadow transition-transform duration-200',
-            optimistic ? 'translate-x-[20px] bg-[#08110A]' : 'translate-x-0 bg-muted'
+            'absolute rounded-full shadow transition-transform duration-200',
+            geometry.knob,
+            optimistic ? `${geometry.on} bg-[#08110A]` : 'translate-x-0 bg-muted'
           )}
         />
       </span>

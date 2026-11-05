@@ -4,7 +4,7 @@ import type { AddonRecord, Instance } from '@shared/types'
 import { toast, useUi } from '../store/ui'
 import { addonTypeLabel, cn, errorMessage, formatBytes, relativeTime } from '../lib/utils'
 import { ProjectIcon } from './ui/BlockIcon'
-import { Badge } from './ui/primitives'
+import { Badge, Switch } from './ui/primitives'
 
 export function AddonRow({
   record,
@@ -89,24 +89,14 @@ export function AddonRow({
             <ArrowsClockwise size={15} />
           </button>
         )}
-        <button
-          role="switch"
-          aria-checked={record.enabled}
-          aria-label={`${record.enabled ? 'Disable' : 'Enable'} ${record.name}`}
+        <Switch
+          size="sm"
+          hideLabel
+          checked={record.enabled}
           disabled={busy}
-          onClick={() => void toggle()}
-          className={cn(
-            'relative h-5 w-9 rounded-full border transition-colors',
-            record.enabled ? 'border-grass/35 bg-grass/75' : 'border-line bg-elevated'
-          )}
-        >
-          <span
-            className={cn(
-              'absolute top-1/2 h-3.5 w-3.5 -translate-y-1/2 rounded-full transition-transform',
-              record.enabled ? 'translate-x-[18px] bg-[#07140C]' : 'translate-x-[3px] bg-muted'
-            )}
-          />
-        </button>
+          onChange={() => void toggle()}
+          label={`Toggle ${record.name}`}
+        />
         <div className="relative">
           <button
             aria-label={`More options for ${record.name}`}
