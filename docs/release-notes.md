@@ -1,20 +1,13 @@
-# Newbie Launcher 0.1.31
+# Newbie Launcher 0.1.32
 
-A clearer Home dashboard.
+Bedrock exclusions now follow every installed version.
 
-## Active instance
+## Windows Security
 
-- Reorganized the active-instance card into a structured layout:
-  - **Active instance** header with Ready/Running state and loader, version and TL skin badges.
-  - Instance identity and **Play / Manage / Console** actions on one row.
-  - A dedicated 2×2 stat grid: add-ons + updates, loadouts, playtime and last played.
-- The card now uses the empty right side instead of leaving it as decoration.
-- Stats move below the identity on narrower windows so the card never becomes cramped.
+- After each Bedrock install, Newbie asks once whether to exclude the newly installed Minecraft package folder before you play.
+- The **Play** button checks that installed version's folder first and offers **Exclude and play** when it is not covered yet.
+- The setup card now reports the real exclusion state — all folders, some folders, or none — instead of trusting a one-time flag.
+- Windows requires administrator approval to read the exclusion list. When it is hidden, Newbie falls back to its last confirmed record and still re-checks every new install folder.
+- Exclusions stay opt-in: nothing changes without the in-app confirmation and Windows UAC prompt. Only Newbie's Bedrock download folder, Microsoft's official Minecraft data folders and the installed Microsoft package folder are excluded. Third-party files are never excluded.
 
-## Totals
-
-- Renamed the page-level cards to **All add-ons** and **All loadouts** to distinguish them from the active-instance stats.
-- **All add-ons** now shows the total number of updates available across every instance.
-- Refreshed the highlights list to show current features: Java servers, sharing, silent updates, Bedrock management, bulk cleanup and Java setup.
-
-Everything from 0.1.30 and earlier is included.
+Everything from 0.1.31 and earlier is included.
