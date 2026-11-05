@@ -48,9 +48,16 @@ jobs:
           }
           $lines | Out-File -Encoding ascii release/SHA256SUMS.txt
 
+      - name: Set release title
+        id: release_title
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          "name=Newbie Launcher $version" >> $env:GITHUB_OUTPUT
+
       - name: Publish GitHub release
         uses: softprops/action-gh-release@v2
         with:
+          name: ${{ steps.release_title.outputs.name }}
           body_path: docs/release-notes.md
           files: |
             release/*.exe
