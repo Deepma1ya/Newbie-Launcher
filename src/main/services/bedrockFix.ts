@@ -284,7 +284,7 @@ async function copyElevated(
 
   const script = `
 $ErrorActionPreference = 'Stop'
-$payload = Get-Content -LiteralPath '${escapePowerShell(payloadPath)}' -Raw | ConvertFrom-Json
+$payload = Get-Content -LiteralPath '${escapePowerShell(payloadPath)}' -Raw -Encoding UTF8 | ConvertFrom-Json
 $source = [string]$payload.source
 $dest = [string]$payload.dest
 $items = @($payload.files)
@@ -348,7 +348,7 @@ foreach ($rel in $items) {
       dest: targetRoot,
       files: files.map((file) => file.path.replace(/\//g, '\\'))
     })
-    await fs.writeFile(scriptPath, script, 'utf8')
+    await fs.writeFile(scriptPath, `\uFEFF${script}`, 'utf8')
     await fs.rm(resultPath, { force: true })
 
     const runner = `
