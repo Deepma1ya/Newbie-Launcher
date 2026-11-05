@@ -57,7 +57,8 @@ export const DEFAULT_SETTINGS: LauncherSettings = {
   },
   onboardingComplete: false,
   tlauncherSkins: true,
-  tlauncherCapePlugin: true
+  tlauncherCapePlugin: true,
+  bedrockFixDir: ''
 }
 
 const EMPTY_STATE: PersistedState = {

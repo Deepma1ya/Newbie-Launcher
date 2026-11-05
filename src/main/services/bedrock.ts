@@ -8,6 +8,7 @@ import type {
   BedrockChannel,
   BedrockExclusionResult,
   BedrockInstallation,
+  BedrockLaunchResult,
   BedrockProgress,
   BedrockSetup,
   BedrockState,
@@ -30,6 +31,7 @@ import {
 import { emit } from './events'
 import { fetchJson } from './http'
 import { paths, freeSpaceMb } from './paths'
+import { applyBedrockFix, getBedrockFixState } from './bedrockFix'
 import { preservePackageData, restorePreservedData } from './bedrockData'
 import { ensureDir, pathExists, readJson, sanitizeFilename, writeJsonAtomic } from '../util/fs'
 import { logger } from '../util/log'
@@ -405,11 +407,12 @@ export async function getBedrockState(forceRefresh = false): Promise<BedrockStat
     loadCatalog(forceRefresh),
     detectBedrockInstallations()
   ])
-  const setup = await getSetup(installations)
+  const [setup, fix] = await Promise.all([getSetup(installations), getBedrockFixState(installations)])
   return {
     setup,
     installations,
     versions: await enrichVersions(catalog.versions, installations),
+    fix,
     catalogUpdatedAt: catalog.fetchedAt,
     catalogError: catalog.error
   }
@@ -801,7 +804,7 @@ export async function installBedrockVersion(id: string, replaceInstalled = false
   }
 }
 
-export async function launchBedrock(channel: BedrockChannel): Promise<void> {
+export async function launchBedrock(channel: BedrockChannel): Promise<BedrockLaunchResult> {
   const installations = await detectBedrockInstallations()
   const target = installations.find((entry) => entry.channel === channel)
   if (!target) {
@@ -810,15 +813,44 @@ export async function launchBedrock(channel: BedrockChannel): Promise<void> {
   if (installations.some((entry) => entry.running)) {
     throw new Error('Minecraft is already running.')
   }
+
+  const fix = await applyBedrockFix(target)
+  if (fix.cancelled) {
+    throw new Error(
+      'The Windows administrator prompt was cancelled, so the Bedrock fix files were not copied. Minecraft was not started.'
+    )
+  }
+  if (fix.failures.length > 0) {
+    const first = fix.failures[0]!
+    const extra = fix.failures.length > 1 ? ` (+${fix.failures.length - 1} more)` : ''
+    throw new Error(
+      `Windows could not copy ${fix.failures.length} Bedrock fix file${
+        fix.failures.length === 1 ? '' : 's'
+      }: ${first.path}${extra}. ${first.error} Minecraft was not started.`
+    )
+  }
+
   const targetUri = `shell:appsFolder\\${target.familyName}!${target.appId}`
   const script = `Start-Process '${escapePowerShell(targetUri)}'`
   const result = await runPowerShell(script, 90_000)
   if (result.code !== 0) {
     throw new Error(`Windows could not start Minecraft. ${cleanPowerShellError(result)}`)
   }
-  logger.info('bedrock', `Launched ${target.packageFullName}`)
+  logger.info(
+    'bedrock',
+    `Launched ${target.packageFullName}${fix.copied > 0 ? ` after copying ${fix.copied} fix file(s)` : ''}`
+  )
   gameSessionStarted()
   monitorBedrockSession()
+  return {
+    fix: {
+      folder: fix.folder,
+      target: fix.target,
+      copied: fix.copied,
+      skipped: fix.skipped,
+      pending: fix.pending
+    }
+  }
 }
 
 async function bedrockClientRunning(): Promise<boolean> {

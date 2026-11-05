@@ -52,6 +52,8 @@ export interface LauncherSettings {
   onboardingComplete: boolean
   tlauncherSkins: boolean
   tlauncherCapePlugin: boolean
+  /** Optional folder whose files are copied into the Bedrock package before launch. */
+  bedrockFixDir: string
 }
 
 export interface AccountSummary {
@@ -556,10 +558,62 @@ export interface BedrockSetup {
   gameDataDirs: string[]
 }
 
+export interface BedrockFixFile {
+  /** Path inside the fix folder, using forward slashes. */
+  path: string
+  size: number
+  mtimeMs: number
+}
+
+export interface BedrockFixManifestEntry {
+  size: number
+  mtimeMs: number
+}
+
+export interface BedrockFixState {
+  /** Folder whose contents are copied into the Minecraft package before play. */
+  folder: string
+  exists: boolean
+  files: number
+  bytes: number
+  /** Files that will be copied the next time Minecraft starts. */
+  pending: number
+  lastSyncedAt?: string
+  lastSyncTarget?: string
+  error?: string
+}
+
+export interface BedrockFixFailure {
+  path: string
+  error: string
+}
+
+export interface BedrockFixResult {
+  folder: string
+  target: string
+  copied: number
+  skipped: number
+  pending: number
+  files: string[]
+  cancelled?: boolean
+  failures: BedrockFixFailure[]
+}
+
+export interface BedrockLaunchResult {
+  fix: {
+    folder: string
+    target: string
+    copied: number
+    skipped: number
+    pending: number
+  }
+}
+
 export interface BedrockState {
   setup: BedrockSetup
   installations: BedrockInstallation[]
   versions: BedrockVersion[]
+  fix: BedrockFixState
   catalogUpdatedAt?: string
   catalogError?: string
 }

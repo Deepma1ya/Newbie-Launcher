@@ -7,6 +7,7 @@ import type {
   BackupRecord,
   BedrockChannel,
   BedrockExclusionResult,
+  BedrockLaunchResult,
   BedrockServerBuild,
   BedrockState,
   BedrockWindowsAccount,
@@ -193,7 +194,9 @@ export const IPC = {
   bedrockAddExclusion: 'bedrock:add-exclusion',
   bedrockOpenSecurity: 'bedrock:open-security',
   bedrockWindowsAccount: 'bedrock:windows-account',
-  bedrockOpenXbox: 'bedrock:open-xbox'
+  bedrockOpenXbox: 'bedrock:open-xbox',
+  bedrockSetFixFolder: 'bedrock:set-fix-folder',
+  bedrockOpenFixFolder: 'bedrock:open-fix-folder'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
@@ -372,12 +375,14 @@ export interface NewbieApi {
     cancel(id: string): Promise<boolean>
     install(id: string, replaceInstalled?: boolean): Promise<BedrockState>
     uninstall(channel: BedrockChannel): Promise<BedrockState>
-    launch(channel: BedrockChannel): Promise<void>
+    launch(channel: BedrockChannel): Promise<BedrockLaunchResult>
     delete(id: string): Promise<void>
     openFolder(channel: BedrockChannel): Promise<void>
     addExclusion(): Promise<BedrockExclusionResult>
     openSecurity(): Promise<void>
     windowsAccount(): Promise<BedrockWindowsAccount>
     openXbox(): Promise<void>
+    setFixFolder(folder: string | null): Promise<void>
+    openFixFolder(): Promise<void>
   }
 }
