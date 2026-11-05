@@ -1,5 +1,6 @@
 import { app, BrowserWindow, dialog, shell, Tray, Menu, nativeImage } from 'electron'
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 import type { WindowState } from '@shared/types'
 import { emitWindowState } from './services/events'
 import { store } from './services/store'
@@ -8,6 +9,14 @@ import { logger } from './util/log'
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
+
+function appIconPath(): string {
+  if (app.isPackaged) {
+    const unpacked = path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'icon.png')
+    if (existsSync(unpacked)) return unpacked
+  }
+  return path.join(app.getAppPath(), 'resources', 'icon.png')
+}
 
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow
@@ -21,7 +30,7 @@ export function windowState(): WindowState {
 }
 
 export function createMainWindow(): BrowserWindow {
-  const icon = path.join(app.getAppPath(), 'resources', 'icon.png')
+  const icon = appIconPath()
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -118,9 +127,13 @@ export async function pickFile(filters?: { name: string; extensions: string[] }[
 
 export function initTray(): void {
   try {
-    const iconPath = path.join(app.getAppPath(), 'resources', 'icon.png')
+    const iconPath = appIconPath()
     const image = nativeImage.createFromPath(iconPath)
-    tray = new Tray(image.isEmpty() ? nativeImage.createEmpty() : image.resize({ width: 20, height: 20 }))
+    tray = new Tray(
+      image.isEmpty()
+        ? nativeImage.createEmpty()
+        : image.resize({ width: 32, height: 32, quality: 'best' })
+    )
     tray.setToolTip('Newbie Launcher')
     tray.setContextMenu(
       Menu.buildFromTemplate([

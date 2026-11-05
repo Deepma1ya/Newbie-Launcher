@@ -1,5 +1,9 @@
 # Newbie Launcher
 
+<p align="center">
+  <img src="build/icon.png" alt="Newbie Launcher icon" width="96" />
+</p>
+
 A calm, stable Minecraft **Java Edition** launcher for Windows — built around the things that actually break modded play: Java versions, loader installs, conflicting mods, pack drift, and losing a world.
 
 <p align="center">

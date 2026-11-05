@@ -12,6 +12,7 @@ import { APP_VERSION } from '@shared/constants'
 import { useAccounts } from '../hooks/queries'
 import { useUi } from '../store/ui'
 import { cn } from '../lib/utils'
+import appIcon from '../assets/app-icon.png'
 import { SkinFace } from './ui/BlockIcon'
 import { Tooltip } from './ui/primitives'
 
@@ -142,25 +143,17 @@ export function Sidebar() {
   )
 }
 
-export function LogoMark({ size = 36 }: { size?: number }) {
+export function LogoMark({ size = 36, className }: { size?: number; className?: string }) {
   return (
-    <svg
+    <img
+      src={appIcon}
       width={size}
       height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
+      alt=""
+      draggable={false}
       aria-hidden="true"
-      className="drop-shadow-[0_6px_14px_rgba(110,231,160,0.25)]"
-    >
-      <rect x="1" y="1" width="38" height="38" rx="11" fill="#101A12" stroke="#2C3A2E" />
-      <path d="M20 7L32 13.4V26.2L20 32.6L8 26.2V13.4L20 7Z" fill="#243B29" />
-      <path d="M20 7L32 13.4L20 19.8L8 13.4L20 7Z" fill="#6EE7A0" />
-      <path d="M8 13.4L20 19.8V32.6L8 26.2V13.4Z" fill="#3E8E5C" />
-      <path d="M32 13.4L20 19.8V32.6L32 26.2V13.4Z" fill="#2C6B43" />
-      <path d="M14 22.5L17 24L20 22.5" stroke="#A7F3D0" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="15.5" cy="17" r="1" fill="#07140C" />
-      <circle cx="24.5" cy="17" r="1" fill="#07140C" />
-    </svg>
+      className={cn('shrink-0 object-contain drop-shadow-[0_6px_14px_rgba(110,231,160,0.25)]', className)}
+      style={{ width: size, height: size }}
+    />
   )
 }

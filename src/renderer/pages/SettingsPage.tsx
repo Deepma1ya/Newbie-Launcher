@@ -23,6 +23,7 @@ import { toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
 import { PageHeader } from '../components/PageHeader'
 import { UpdatePanel } from '../components/UpdatePanel'
+import { LogoMark } from '../components/Sidebar'
 import { Badge, Card, Field, Input, Progress, Segmented, Select, Switch } from '../components/ui/primitives'
 import { Button } from '../components/ui/Button'
 
@@ -491,13 +492,16 @@ function AboutSection() {
     <>
       <Card className="p-5">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <h2 className="font-display text-[17px] font-semibold text-ink">Newbie Launcher</h2>
-            <p className="mt-1 text-[11.5px] text-muted">Version {APP_VERSION} · Java Edition · Windows x64</p>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Badge tone="green">MIT</Badge>
-              <Badge tone="neutral">Electron</Badge>
-              <Badge tone="neutral">Modrinth</Badge>
+          <div className="flex min-w-0 items-start gap-3.5">
+            <LogoMark size={44} />
+            <div>
+              <h2 className="font-display text-[17px] font-semibold text-ink">Newbie Launcher</h2>
+              <p className="mt-1 text-[11.5px] text-muted">Version {APP_VERSION} · Java Edition · Windows x64</p>
+              <div className="mt-3 flex flex-wrap gap-2">
+                <Badge tone="green">MIT</Badge>
+                <Badge tone="neutral">Electron</Badge>
+                <Badge tone="neutral">Modrinth</Badge>
+              </div>
             </div>
           </div>
           <div className="flex flex-wrap justify-end gap-2">

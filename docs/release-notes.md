@@ -1,14 +1,12 @@
-# Newbie Launcher 0.1.10
+# Newbie Launcher 0.1.11
 
-Toggle switch alignment.
+A new app icon.
 
-## Fixed
+## Changed
 
-- Rebuilt the shared switch geometry so the knob is vertically centred in the track.
-- Standard switches now use a 24px track, 16px knob and 4px on every side.
-- The compact Add-on row switch now uses the same component with a 20px track, 14px knob and 3px on every side.
-- The Add-on disable/enable switch no longer sits off-centre or travels past its correct end position.
-- Settings, onboarding, account, loadout, update and instance toggles all inherit the corrected geometry.
-- Label clicks, knob clicks and keyboard activation still work, and the focus ring is unchanged.
+- The new grass-block icon is used by the installer, executable, window, system tray, boot screen, sidebar and About page.
+- Added a multi-resolution Windows ICO (16 through 256 px) for crisp Start menu, taskbar and Explorer icons.
+- Added the icon to the README.
+- `npm run icon` now regenerates every icon asset from `build/new icon.png`.
 
-Everything from 0.1.9 (built-in update center) is included.
+Everything from 0.1.10 (toggle alignment) and 0.1.9 (built-in update center) is included.
