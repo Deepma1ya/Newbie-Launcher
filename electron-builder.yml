@@ -1,0 +1,45 @@
+appId: com.newbielauncher.app
+productName: Newbie Launcher
+copyright: Copyright © 2026 Deepma1ya
+directories:
+  buildResources: build
+  output: release
+files:
+  - out/**/*
+  - resources/**/*
+  - package.json
+asar: true
+asarUnpack:
+  - resources/**
+compression: maximum
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  icon: build/icon.png
+  artifactName: Newbie-Launcher-${version}-Setup.${ext}
+  fileAssociations:
+    - ext: mrpack
+      name: Modrinth Modpack
+      description: Modrinth modpack
+  requestedExecutionLevel: asInvoker
+nsis:
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: Newbie Launcher
+  uninstallDisplayName: Newbie Launcher
+  deleteAppDataOnUninstall: false
+  installerIcon: build/icon.ico
+  uninstallerIcon: build/icon.ico
+  installerHeaderIcon: build/icon.ico
+  runAfterFinish: true
+publish:
+  provider: github
+  owner: Deepma1ya
+  repo: Newbie-Launcher
+  releaseType: release

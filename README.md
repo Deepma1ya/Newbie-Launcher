@@ -1,0 +1,152 @@
+# Newbie Launcher
+
+A calm, stable Minecraft **Java Edition** launcher for Windows — built around the things that actually break modded play: Java versions, loader installs, conflicting mods, pack drift, and losing a world.
+
+<p align="center">
+  <img src="docs/images/home.png" alt="Newbie Launcher home screen" width="900" />
+</p>
+
+> Bedrock support is planned for a later release. This repository is the Java Edition launcher.
+
+## Download
+
+Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-Launcher/releases) page.
+
+- Windows 10/11, x64
+- Per-user install; the installer lets you choose the install folder
+- In-app auto-updates from GitHub releases
+
+## What it does
+
+| Area | What Newbie handles |
+| --- | --- |
+| **Game versions** | Every Mojang release, snapshot, beta and alpha, installed from official metadata and verified files |
+| **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
+| **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/17/21+ from Adoptium when a version needs it |
+| **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + skin sync, offline profiles, and generic authlib/Yggdrasil servers |
+| **Browse** | Modrinth and CurseForge. Required dependencies are resolved recursively; modpacks install as complete instances |
+| **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
+| **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
+| **Repair** | Duplicate mods, wrong-loader jars, incompatible mods, missing dependencies and missing files — one-click safe fixes with a backup first |
+| **Backups** | World ZIPs before launch, with retention and size limits |
+| **Performance** | Balanced/FPS/Quality profiles written to `options.txt`, plus the Windows high-performance GPU preference for Java |
+| **Comfort** | Custom install location, close-to-tray, live console, crash hints, auto-updater |
+
+<p align="center">
+  <img src="docs/images/browse.png" alt="Modrinth browsing" width="450" />
+  <img src="docs/images/mod-detail.png" alt="Mod detail and dependency-aware install" width="450" />
+</p>
+
+## Accounts, honestly
+
+- **Microsoft** — opens Microsoft's real sign-in page in an embedded window. The resulting Minecraft token is used for licensed servers. Tokens are encrypted with Windows DPAPI via Electron `safeStorage` and never reach the UI process.
+- **TLauncher** — stores your public TLauncher nickname and syncs your public skin/cape from `auth.tlauncher.org`. TLauncher does not issue Mojang/Microsoft game licences, so these profiles play in offline mode. In-game TLauncher skin rendering is on the roadmap; the launcher avatar sync is implemented.
+- **Offline** — a local username for single-player, LAN and offline-mode servers.
+- **Authlib** — third-party Yggdrasil servers (Ely.by, LittleSkin, private servers). The API root is resolved with the standard ALI header.
+
+Online-mode servers require Microsoft. This is a Minecraft platform rule, not a launcher restriction.
+
+## Loadouts
+
+A loadout is a saved set of add-ons. Switching loadouts moves the managed files into or out of the instance's `mods`, `resourcepacks` and `shaderpacks` folders.
+
+- **Full offline backup** keeps a copy of every file in `cache/addons`. Switching works without internet.
+- **Download on switch** stores metadata only. Cache entries used exclusively by download-mode loadouts are evicted; switching fetches them again.
+
+A repair backup is always created before destructive fixes.
+
+## Performance
+
+Newbie does not install GPU drivers. “Optimal GPU settings” means:
+
+1. Applying a conservative `options.txt` profile (render distance, FPS cap, VSync, graphics mode, particles, shadows).
+2. Registering the Java executable under Windows' `HKCU\Software\Microsoft\DirectX\UserGpuPreferences` with `GpuPreference=2` so hybrid laptops use the discrete GPU.
+3. Keeping a backup of the previous `options.txt`.
+
+The selected profile is shared by all instances and applied before launch when `Auto-apply` is enabled.
+
+## Install location
+
+`Settings → General → Change location` copies the launcher data (game files, libraries, assets, instances, runtimes, cache and backups) to an empty folder, updates all instance paths, and writes a new bootstrap config. The old copy is left in place so nothing is lost; you can delete it once the new location is verified. Minecraft cannot be running during the move.
+
+## Development
+
+```bash
+npm ci
+npm run dev          # Electron + Vite HMR
+npm test             # unit tests (Vitest)
+npm run typecheck
+npm run build
+npm run dist         # NSIS installer in release/
+```
+
+If your npm version blocks Electron's install script, run `node node_modules/electron/install.js` once.
+
+### Project layout
+
+```
+src/
+  main/              Electron main process
+    auth/            Microsoft, TLauncher, offline, authlib
+    services/        installs, launch, loaders, Java, Modrinth, CurseForge,
+                     add-ons, loadouts, repair, backups, updater, settings
+    util/            hashing, HTTP, archives, tokens
+  preload/           contextBridge API (no Node in the renderer)
+  renderer/          React 19 + Tailwind + Framer Motion UI
+  shared/            types, IPC contract, constants
+tests/               pure unit tests
+docs/                architecture notes and the TLauncher investigation
+```
+
+### Runtime data
+
+```
+<dataDir>/
+  versions/          Mojang version JSON + client jars
+  libraries/         shared Java libraries
+  assets/            content-addressed game assets
+  runtimes/java/     Adoptium JREs installed by Newbie
+  instances/<id>/    instance.json + minecraft/ (worlds, mods, configs, logs)
+  cache/addons/      offline loadout cache (SHA-1 addressed)
+  backups/worlds/    world ZIPs
+  backups/repairs/   pre-repair snapshots
+  logs/              launcher log
+```
+
+`dataDir` defaults to `%APPDATA%\NewbieLauncher`. Set `NEWBIE_DATA_DIR` to override it for portable/testing runs.
+
+## Stability notes
+
+- Downloads are streamed to a temp file, verified against SHA-1/SHA-256 where upstream provides one, then atomically renamed. Retries use backoff.
+- Version JSON is merged along `inheritsFrom`, with OS/library rules evaluated against the current machine.
+- Minecraft stdout is Log4j XML on modern versions; Newbie parses it back into readable console lines.
+- Temporary game process access tokens are redacted from log files.
+- Forge/NeoForge installer output is captured and surfaced if the installer fails.
+- World and repair backups use streaming ZIP and are pruned by age/size.
+
+## Security
+
+- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
+- Typed IPC with Zod validation in the main process
+- External links restricted to HTTPS; navigation blocked outside the app
+- Tokens encrypted at rest with DPAPI; CurseForge key stored separately
+- No arbitrary shell execution from the renderer
+
+## TLauncher investigation
+
+The TLauncher installer and its feature surface were inspected with REA for interoperability research. Findings, hashes and the mapping to Newbie's architecture are in [docs/tlauncher-analysis.md](docs/tlauncher-analysis.md). No TLauncher code or assets are included in this project.
+
+## Roadmap
+
+- Bedrock Edition support
+- In-game TLauncher skin provider (optional)
+- CurseForge modpack manifest polish
+- OptiFine one-click compatibility
+- Additional UI languages
+- Signed Windows binaries
+
+## Legal
+
+Newbie Launcher is an independent project, not affiliated with Mojang, Microsoft, TLauncher, Modrinth or CurseForge. “Minecraft” is a trademark of Mojang Synergies AB. Mods and packs remain the property of their authors and are downloaded from their official APIs.
+
+Licensed under the [MIT License](LICENSE).
