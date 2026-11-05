@@ -20,7 +20,7 @@ export function updaterState(): UpdateState {
 export function initUpdater(): void {
   if (initialised) return
   initialised = true
-  autoUpdater.autoDownload = false
+  autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.allowPrerelease = store.settings().allowPrerelease
   autoUpdater.logger = {
@@ -43,21 +43,36 @@ export function initUpdater(): void {
       message: `Downloading update… ${Math.round(progress.percent)}%`
     })
   )
-  autoUpdater.on('update-downloaded', (info) =>
+  autoUpdater.on('update-downloaded', (info) => {
     setState({ status: 'downloaded', version: info.version, message: 'Restart to install the update.' })
-  )
-  autoUpdater.on('error', (error) =>
+    emit({
+      type: 'toast',
+      payload: {
+        kind: 'success',
+        title: `Update ${info.version} ready`,
+        message: 'Restart Newbie Launcher to finish installing it.'
+      }
+    })
+  })
+  autoUpdater.on('error', (error) => {
+    logger.warn('updater', 'Update check/download failed', error)
     setState({ status: 'error', message: error instanceof Error ? error.message : String(error) })
-  )
+  })
 
   if (app.isPackaged && store.settings().autoCheckUpdates) {
-    setTimeout(() => void checkForUpdates().catch(() => undefined), 12_000)
+    const initial = setTimeout(() => void checkForUpdates().catch(() => undefined), 8_000)
+    initial.unref?.()
+    const repeat = setInterval(() => void checkForUpdates().catch(() => undefined), 30 * 60 * 1000)
+    repeat.unref?.()
   }
 }
 
 export async function checkForUpdates(): Promise<UpdateState> {
   if (!app.isPackaged) {
     setState({ status: 'none', message: 'Update checks are disabled in development builds.' })
+    return state
+  }
+  if (state.status === 'checking' || state.status === 'downloading' || state.status === 'downloaded') {
     return state
   }
   setState({ status: 'checking', message: 'Checking for updates…' })

@@ -15,7 +15,7 @@ import { installLoader, versionIdForLoader } from './loaders'
 import { getVersionJson } from './mojang'
 import { tasks } from './tasks'
 import { repairInstance } from './repair'
-import { launchInstance, runningStates, stopInstance } from './launch'
+import { isInstanceBusy, launchInstance, runningStates, stopInstance } from './launch'
 import { ensureDir, pathExists, removeDir, sanitizeFilename, slugify, uniqueId } from '../util/fs'
 import { logger } from '../util/log'
 
@@ -178,7 +178,7 @@ export async function changeInstanceVersion(
 ): Promise<Instance> {
   const instance = store.instance(id)
   if (!instance) throw new Error('Instance not found')
-  if (runningStates().some((state) => state.instanceId === id)) {
+  if (isInstanceBusy(id)) {
     throw new Error('Close Minecraft before changing its version')
   }
   const handle = tasks.start('install-version', `Updating ${instance.name}`, `${versionId} · ${loader}`, id)
@@ -214,7 +214,11 @@ export async function changeInstanceVersion(
 export async function removeInstance(id: string, deleteFiles: boolean): Promise<void> {
   const instance = store.instance(id)
   if (!instance) return
-  if (runningStates().some((state) => state.instanceId === id)) await stopInstance(id)
+  if (isInstanceBusy(id)) {
+    const running = runningStates().some((state) => state.instanceId === id)
+    if (!running) throw new Error('Wait for Minecraft to finish starting before deleting this instance')
+    await stopInstance(id)
+  }
   await store.removeInstance(id)
   if (deleteFiles) await removeDir(paths.instance(id))
   logger.info('instances', `Removed ${instance.name}${deleteFiles ? ' with files' : ''}`)

@@ -31,6 +31,11 @@ interface RunningProcess {
 }
 
 const running = new Map<string, RunningProcess>()
+const launching = new Set<string>()
+
+export function isInstanceBusy(instanceId: string): boolean {
+  return running.has(instanceId) || launching.has(instanceId)
+}
 
 export function runningStates(): LaunchState[] {
   return [...running.values()].map((entry) => ({
@@ -47,12 +52,18 @@ export function instanceLogs(instanceId: string): string[] {
 }
 
 export async function launchInstance(instanceId: string): Promise<void> {
-  if (running.has(instanceId)) throw new Error('This instance is already running')
+  if (isInstanceBusy(instanceId)) {
+    throw new Error('This instance is already running or starting')
+  }
   const instance = store.instance(instanceId)
   if (!instance) throw new Error('Instance not found')
   const account = store.activeAccount()
   if (!account) throw new Error('Add or select an account before launching Minecraft')
 
+  // Reserve the instance before the first await. This closes the race where
+  // two launch requests both passed the running check while files were still
+  // being verified or Java was being downloaded.
+  launching.add(instanceId)
   const task = tasks.start('install-version', `Preparing ${instance.name}`, `${instance.versionId} · ${instance.loader}`, instance.id)
   try {
     emit({ type: 'launch-state', payload: { instanceId, status: 'starting', startedAt: Date.now() } })
@@ -230,6 +241,8 @@ export async function launchInstance(instanceId: string): Promise<void> {
       }
     })
     throw error
+  } finally {
+    launching.delete(instanceId)
   }
 }
 

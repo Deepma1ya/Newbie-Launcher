@@ -21,7 +21,9 @@ export function PlayButton({
   className?: string
 }) {
   const [launching, setLaunching] = useState(false)
-  const running = useUi((state) => state.running.some((entry) => entry.instanceId === instance.id))
+  const launchState = useUi((state) => state.running.find((entry) => entry.instanceId === instance.id))
+  const running = launchState?.status === 'running'
+  const starting = launchState?.status === 'starting'
   const openModal = useUi((state) => state.openModal)
   const tasks = useTasks().data ?? []
   const liveTasks = useUi((state) => state.tasks)
@@ -54,7 +56,7 @@ export function PlayButton({
   }
 
   const progress = activeTask?.percent ?? 0
-  const busy = launching || Boolean(activeTask)
+  const busy = launching || starting || Boolean(activeTask)
 
   return (
     <div className={cn('relative', className, fullWidth && 'w-full')}>
@@ -67,7 +69,7 @@ export function PlayButton({
         onClick={() => void launch()}
         className={cn(running && 'shadow-none')}
       >
-        {running ? 'Stop' : busy ? (activeTask ? `${Math.round(progress)}%` : 'Starting') : 'Play'}
+        {running ? 'Stop' : busy ? (activeTask ? `${Math.round(progress)}%` : 'Starting…') : 'Play'}
       </Button>
       {activeTask && (
         <motion.span

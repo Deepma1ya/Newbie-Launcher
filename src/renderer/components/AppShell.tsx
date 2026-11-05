@@ -5,6 +5,7 @@ import { Background } from './Background'
 import { ConsoleDrawer } from './ConsoleDrawer'
 import { Toasts } from './Toasts'
 import { ConfirmDialog } from './ConfirmDialog'
+import { UpdateBanner } from './UpdateBanner'
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -15,7 +16,10 @@ export function AppShell({ children }: { children: ReactNode }) {
         <main className="relative min-w-0 flex-1">
           <Background />
           <div className="relative h-full overflow-y-auto">
-            <div className="mx-auto w-full max-w-[1180px] px-8 pb-28 pt-7">{children}</div>
+            <div className="mx-auto w-full max-w-[1180px] px-8 pb-28 pt-7">
+              <UpdateBanner />
+              {children}
+            </div>
           </div>
         </main>
       </div>

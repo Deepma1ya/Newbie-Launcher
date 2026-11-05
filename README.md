@@ -14,7 +14,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 
 - Windows 10/11, x64
 - Per-user install; the installer lets you choose the install folder
-- In-app auto-updates from GitHub releases
+- In-app auto-updates: checks at startup and every 30 minutes, downloads in the background, installs when you quit, and offers a restart banner when ready
 
 ## What it does
 
