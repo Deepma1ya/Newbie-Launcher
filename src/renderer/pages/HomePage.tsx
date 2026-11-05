@@ -17,7 +17,7 @@ import {
   TerminalWindow,
   Wrench
 } from '@phosphor-icons/react'
-import { GITHUB_URL } from '@shared/constants'
+import { APP_VERSION, GITHUB_URL } from '@shared/constants'
 import { useAccounts, useActiveInstance, useDiskUsage, useInstances, useSettings, useSystemInfo, useTasks } from '../hooks/queries'
 import { useUi } from '../store/ui'
 import { loaderLabel, formatPlaytime, relativeTime, formatBytes } from '../lib/utils'
@@ -218,7 +218,7 @@ export function HomePage() {
         <StatCard icon={<Cube size={16} />} label="Instances" value={String(instances.length)} detail={`${instances.filter((instance) => instance.loader !== 'vanilla').length} modded`} />
         <StatCard icon={<Package size={16} />} label="Add-ons" value={String(addonCount)} detail="tracked for updates" />
         <StatCard icon={<Stack size={16} />} label="Loadouts" value={String(loadoutCount)} detail="across your instances" />
-        <StatCard icon={<Sparkle size={16} />} label="Version" value={update.version ?? '0.1.0'} detail={update.status === 'available' ? 'Update available' : 'Newbie Launcher'} />
+        <StatCard icon={<Sparkle size={16} />} label="Version" value={update.version ?? APP_VERSION} detail={update.status === 'available' ? 'Update available' : 'Newbie Launcher'} />
       </div>
 
       {instances.length > 1 && (

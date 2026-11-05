@@ -17,7 +17,7 @@ import {
   WarningCircle
 } from '@phosphor-icons/react'
 import type { PerformanceProfile } from '@shared/types'
-import { GITHUB_URL } from '@shared/constants'
+import { APP_VERSION, GITHUB_URL } from '@shared/constants'
 import { useDiskUsage, useJavaRuntimes, useSettings, useSystemInfo, qk } from '../hooks/queries'
 import { useUi, toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
@@ -574,7 +574,7 @@ function AboutSection() {
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="font-display text-[17px] font-semibold text-ink">Newbie Launcher</h2>
-            <p className="mt-1 text-[11.5px] text-muted">Version 0.1.0 · Java Edition · Windows x64</p>
+            <p className="mt-1 text-[11.5px] text-muted">Version {APP_VERSION} · Java Edition · Windows x64</p>
             <div className="mt-3 flex flex-wrap gap-2">
               <Badge tone="green">MIT</Badge>
               <Badge tone="neutral">Electron</Badge>

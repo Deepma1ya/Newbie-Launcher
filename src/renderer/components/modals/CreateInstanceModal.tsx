@@ -159,9 +159,8 @@ export function CreateInstanceModal() {
               ))}
             </Select>
           </Field>
-          <div className="flex h-10 items-center gap-2 pb-0.5 text-[11.5px] text-muted">
-            <span>Releases only</span>
-            <Switch checked={releasesOnly} onChange={setReleasesOnly} label="Releases only" hideLabel />
+          <div className="flex h-10 items-center pb-0.5">
+            <Switch checked={releasesOnly} onChange={setReleasesOnly} label="Releases only" />
           </div>
         </div>
 

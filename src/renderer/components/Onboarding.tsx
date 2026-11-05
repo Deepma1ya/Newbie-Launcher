@@ -216,16 +216,16 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
                       )}
                     </div>
 
-                    <div className="flex items-center justify-between rounded-xl border border-line/50 bg-card/45 p-3.5">
-                      <div>
-                        <div className="text-[12px] font-semibold text-ink">Automatic Java downloads</div>
-                        <div className="mt-0.5 text-[10.5px] text-muted">Temurin JRE is downloaded when a version needs it.</div>
-                      </div>
+                    <div className="rounded-xl border border-line/50 bg-card/45 p-3.5">
                       <Switch
                         checked={settings.data.java.autoInstall}
-                        onChange={(checked) => void window.newbie.settings.update({ java: { autoInstall: checked } })}
+                        onChange={(checked) => {
+                          void window.newbie.settings
+                            .update({ java: { autoInstall: checked } })
+                            .then(() => queryClient.invalidateQueries({ queryKey: qk.settings }))
+                        }}
                         label="Automatic Java downloads"
-                        hideLabel
+                        description="Temurin JRE is downloaded when a version needs it."
                       />
                     </div>
                   </div>

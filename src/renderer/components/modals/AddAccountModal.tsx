@@ -12,7 +12,7 @@ import {
   WifiSlash,
   WindowsLogo
 } from '@phosphor-icons/react'
-import { useAccounts, qk } from '../../hooks/queries'
+import { useAccounts, useSettings, qk } from '../../hooks/queries'
 import { useUi, toast } from '../../store/ui'
 import { errorMessage } from '../../lib/utils'
 import { Modal } from '../ui/Modal'
@@ -29,6 +29,7 @@ export function AddAccountModal() {
   const auth = useUi((state) => state.auth)
   const setAuth = useUi((state) => state.setAuth)
   const accounts = useAccounts()
+  const settings = useSettings().data
   const queryClient = useQueryClient()
 
   const [username, setUsername] = useState('')
@@ -46,8 +47,10 @@ export function AddAccountModal() {
       setPassword('')
       setCopied(false)
       setAuth({ status: 'idle' })
+      return
     }
-  }, [open, setAuth])
+    setSkins(settings?.tlauncherSkins ?? true)
+  }, [open, setAuth, settings?.tlauncherSkins])
 
   const finish = async (accountId: string, label: string): Promise<void> => {
     await window.newbie.accounts.setActive(accountId)
@@ -269,7 +272,12 @@ export function AddAccountModal() {
           </Field>
           <Switch
             checked={skins}
-            onChange={setSkins}
+            onChange={(checked) => {
+              setSkins(checked)
+              void window.newbie.settings
+                .update({ tlauncherSkins: checked })
+                .then(() => queryClient.invalidateQueries({ queryKey: qk.settings }))
+            }}
             label="Sync TLauncher skin and cape"
             description="Fetches your public texture data and shows the skin next to your account."
           />

@@ -1,5 +1,8 @@
 import {
   forwardRef,
+  useEffect,
+  useId,
+  useState,
   type HTMLAttributes,
   type InputHTMLAttributes,
   type ReactNode,
@@ -133,35 +136,67 @@ export function Switch({
   disabled?: boolean
   hideLabel?: boolean
 }) {
+  // Keep the visual state responsive while a settings IPC round-trip is in
+  // flight, then re-sync when the persisted value arrives.
+  const [optimistic, setOptimistic] = useState(checked)
+  const descriptionId = useId()
+
+  useEffect(() => {
+    setOptimistic(checked)
+  }, [checked])
+
+  const toggle = (next: boolean): void => {
+    if (disabled) return
+    setOptimistic(next)
+    onChange(next)
+  }
+
   return (
-    <div className={cn('flex items-start justify-between gap-5', disabled && 'cursor-not-allowed opacity-50')}>
+    <label
+      className={cn(
+        'flex select-none items-start justify-between gap-5',
+        disabled ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+      )}
+    >
       {!hideLabel && (
         <span className="min-w-0">
           <span className="block text-[13.5px] font-medium text-ink">{label}</span>
-          {description && <span className="mt-0.5 block text-[12px] leading-relaxed text-muted">{description}</span>}
+          {description && (
+            <span id={descriptionId} className="mt-0.5 block text-[12px] leading-relaxed text-muted">
+              {description}
+            </span>
+          )}
         </span>
       )}
-      <button
-        type="button"
-        role="switch"
-        aria-checked={checked}
-        aria-label={label}
-        disabled={disabled}
-        onClick={() => onChange(!checked)}
-        className={cn(
-          'relative mt-0.5 h-6 w-11 shrink-0 rounded-full border transition-colors duration-200',
-          checked ? 'border-grass/40 bg-grass/80' : 'border-line bg-elevated'
-        )}
-      >
+      <span className="relative mt-0.5 inline-flex h-6 w-11 shrink-0 items-center">
+        <input
+          type="checkbox"
+          role="switch"
+          aria-label={label}
+          aria-checked={optimistic}
+          aria-describedby={description ? descriptionId : undefined}
+          checked={optimistic}
+          disabled={disabled}
+          onChange={(event) => toggle(event.target.checked)}
+          className="peer sr-only"
+        />
         <span
+          aria-hidden="true"
           className={cn(
-            'absolute top-1/2 h-4 w-4 -translate-y-1/2 rounded-full bg-[#08110A] shadow transition-transform duration-200',
-            checked ? 'translate-x-[22px]' : 'translate-x-[3px]',
-            !checked && 'bg-muted'
+            'absolute inset-0 rounded-full border transition-colors duration-200',
+            'peer-focus-visible:ring-2 peer-focus-visible:ring-grass/60 peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-canvas',
+            optimistic ? 'border-grass/40 bg-grass/80' : 'border-line bg-elevated'
           )}
         />
-      </button>
-    </div>
+        <span
+          aria-hidden="true"
+          className={cn(
+            'absolute left-[3px] top-[3px] h-4 w-4 rounded-full shadow transition-transform duration-200',
+            optimistic ? 'translate-x-[20px] bg-[#08110A]' : 'translate-x-0 bg-muted'
+          )}
+        />
+      </span>
+    </label>
   )
 }
 

@@ -15,7 +15,7 @@ interface TLauncherTextureResponse {
 export async function addTLauncherAccount(username: string): Promise<AccountSummary> {
   const name = validateUsername(username)
   const uuid = offlineUuid(name)
-  const textures = await fetchTLauncherTextures(name)
+  const textures = store.settings().tlauncherSkins ? await fetchTLauncherTextures(name) : {}
   const account: AuthAccount = {
     id: `tl_${uuid}`,
     type: 'tlauncher',
@@ -35,7 +35,9 @@ export async function addTLauncherAccount(username: string): Promise<AccountSumm
 export async function refreshTLauncherAccount(id: string): Promise<AccountSummary> {
   const account = store.account(id)
   if (!account || account.type !== 'tlauncher') throw new Error('TLauncher account not found')
-  const textures = await fetchTLauncherTextures(account.username)
+  const textures = store.settings().tlauncherSkins
+    ? await fetchTLauncherTextures(account.username)
+    : { skinUrl: undefined, capeUrl: undefined }
   const updated: AuthAccount = { ...account, skinUrl: textures.skinUrl, capeUrl: textures.capeUrl }
   return store.upsertAccount(updated)
 }
