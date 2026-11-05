@@ -1,3 +1,13 @@
+# Newbie Launcher 0.1.45
+
+Republished the Bedrock fix folder build with a fresh installer and checksums.
+
+## Re-release
+
+- No functional changes since 0.1.44. This build refreshes the installer, `latest.yml`, blockmap and SHA-256 checksums.
+- The Bedrock fix folder still applies automatically before every Play: Windows Security exclusion first, then changed files are copied into the installed Minecraft package, then the game starts.
+- The Bedrock page card shows the active folder, file count, pending files and last sync, and remembers a folder selected with **Choose folder**.
+
 # Newbie Launcher 0.1.44
 
 Bedrock fix files with non-ASCII names are copied reliably.
