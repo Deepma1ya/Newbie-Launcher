@@ -56,7 +56,8 @@ export const DEFAULT_SETTINGS: LauncherSettings = {
     maxSizeMb: 4096
   },
   onboardingComplete: false,
-  tlauncherSkins: true
+  tlauncherSkins: true,
+  tlauncherCapePlugin: true
 }
 
 const EMPTY_STATE: PersistedState = {
@@ -286,7 +287,8 @@ function normaliseInstance(instance: Instance): Instance {
         )
       : [],
     totalPlayTimeSec: instance.totalPlayTimeSec ?? 0,
-    repairFailures: instance.repairFailures ?? {}
+    repairFailures: instance.repairFailures ?? {},
+    tlauncherCape: instance.tlauncherCape ?? true
   }
 }
 

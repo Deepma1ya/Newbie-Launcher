@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { CaretDown, Cube, Package, WarningCircle } from '@phosphor-icons/react'
 import type { LoaderType } from '@shared/types'
+import { findTlsCapeArtifact } from '@shared/tlskincape'
 import { useLoaderVersions, useMinecraftVersions, useSystemInfo, useTasks, qk } from '../../hooks/queries'
 import { useUi, toast } from '../../store/ui'
 import { errorMessage, formatBytes } from '../../lib/utils'
@@ -153,7 +154,11 @@ export function CreateInstanceModal() {
           <Field label="Minecraft version" hint={`${versionOptions.length} available`}>
             <Select value={versionId} onChange={setVersionId} data-autofocus>
               {versionOptions.map((version) => (
-                <option key={version.id} value={version.id}>
+                <option
+                  key={version.id}
+                  value={version.id}
+                  data-tl={findTlsCapeArtifact(loader, version.id) ? 'yes' : 'no'}
+                >
                   {version.id} · {version.type === 'release' ? 'Release' : version.type === 'snapshot' ? 'Snapshot' : version.type.replace('old_', '')}
                 </option>
               ))}
@@ -173,6 +178,10 @@ export function CreateInstanceModal() {
               : loader === 'fabric' || loader === 'quilt'
                 ? 'Lightweight loader. Most Modrinth mods target Fabric.'
                 : 'Forge-based ecosystems. Installation runs the official loader installer.'}
+          </p>
+          <p className="mt-1 text-[10px] leading-relaxed text-muted/55">
+            TL skin marks versions with an official TLSkinCape build for the selected loader. Vanilla, Quilt and
+            NeoForge cannot load it.
           </p>
         </div>
 

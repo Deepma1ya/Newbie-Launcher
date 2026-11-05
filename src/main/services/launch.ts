@@ -18,6 +18,7 @@ import { prepareInstancePerformance } from './perf'
 import { maybeBackupWorlds } from './backups'
 import { ensureActiveLoadout } from './loadouts'
 import { applyOfflineSkin } from './skins'
+import { syncTlsCape } from './tlskincape'
 import { ensureDir, pathExists } from '../util/fs'
 import { logger } from '../util/log'
 import { extractZip } from '../util/zip'
@@ -147,6 +148,9 @@ export async function launchInstance(instanceId: string): Promise<void> {
     const session = await sessionForLaunch(account.id)
     await applyOfflineSkin(instance, session.account).catch((error) => {
       logger.warn('launch', 'Unable to apply the offline skin resource pack', error)
+    })
+    await syncTlsCape(instance, session.account).catch((error) => {
+      logger.warn('launch', 'Unable to prepare the TLSkinCape plugin', error)
     })
     const args = buildArguments({
       version,

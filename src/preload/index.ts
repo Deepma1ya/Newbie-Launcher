@@ -64,7 +64,8 @@ const api: NewbieApi = {
     openFolder: (id, sub) => ipcRenderer.invoke(IPC.instancesOpenFolder, id, sub),
     repair: (id, apply, allowDisable, reuseBackup) =>
       ipcRenderer.invoke(IPC.instancesRepair, id, apply, allowDisable, reuseBackup),
-    clearRepairFailures: (id) => ipcRenderer.invoke(IPC.instancesClearRepairFailures, id)
+    clearRepairFailures: (id) => ipcRenderer.invoke(IPC.instancesClearRepairFailures, id),
+    syncTlsCape: (id) => ipcRenderer.invoke(IPC.instancesSyncTlsCape, id)
   },
   addons: {
     search: (query) => ipcRenderer.invoke(IPC.addonsSearch, query),

@@ -29,6 +29,7 @@ import type {
   UpdateState,
   WindowState
 } from './types'
+import type { TlsCapeSyncResult } from './tlskincape'
 
 export const IPC = {
   appInfo: 'app:info',
@@ -77,6 +78,7 @@ export const IPC = {
   instancesOpenFolder: 'instances:open-folder',
   instancesRepair: 'instances:repair',
   instancesClearRepairFailures: 'instances:clear-repair-failures',
+  instancesSyncTlsCape: 'instances:sync-tls-cape',
 
   addonsSearch: 'addons:search',
   addonsProject: 'addons:project',
@@ -185,6 +187,7 @@ export interface NewbieApi {
     openFolder(id: string, sub?: string): Promise<void>
     repair(id: string, apply: boolean, allowDisable?: boolean, reuseBackup?: string): Promise<RepairReport>
     clearRepairFailures(id: string): Promise<void>
+    syncTlsCape(id: string): Promise<TlsCapeSyncResult>
   }
   addons: {
     search(query: SearchQuery): Promise<SearchPage>

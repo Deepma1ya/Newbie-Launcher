@@ -15,6 +15,7 @@ import { installLoader, versionIdForLoader } from './loaders'
 import { getVersionJson } from './mojang'
 import { tasks } from './tasks'
 import { repairInstance } from './repair'
+import { syncTlsCape } from './tlskincape'
 import { isInstanceBusy, launchInstance, runningStates, stopInstance } from './launch'
 import { ensureDir, pathExists, removeDir, sanitizeFilename, slugify, uniqueId } from '../util/fs'
 import { logger } from '../util/log'
@@ -70,7 +71,8 @@ export async function createInstance(input: CreateInstanceInput): Promise<Instan
     gameDir: paths.instanceGameDir(id),
     activeLoadoutId: loadout.id,
     loadouts: [loadout],
-    addons: []
+    addons: [],
+    tlauncherCape: true
   }
 
   await ensureDir(instance.gameDir)
@@ -153,6 +155,7 @@ export async function updateInstance(id: string, patch: UpdateInstanceInput): Pr
   if (patch.jvmArgs !== undefined) instance.jvmArgs = patch.jvmArgs.trim()
   if (patch.iconUrl !== undefined) instance.iconUrl = patch.iconUrl
   if (patch.color !== undefined) instance.color = patch.color
+  if (patch.tlauncherCape !== undefined) instance.tlauncherCape = Boolean(patch.tlauncherCape)
   await store.updateInstance(id, (current) => Object.assign(current, instance))
 
   const versionChanged = Boolean(patch.versionId && patch.versionId !== instance.versionId)
@@ -166,6 +169,12 @@ export async function updateInstance(id: string, patch: UpdateInstanceInput): Pr
       patch.loader ?? instance.loader,
       patch.loaderVersion ?? instance.loaderVersion
     )
+    const updated = store.instance(id)
+    if (updated) {
+      await syncTlsCape(updated, store.activeAccount()).catch((error) => {
+        logger.warn('tlskincape', 'Could not update TLSkinCape after changing the version', error)
+      })
+    }
   }
   return store.instance(id)!
 }

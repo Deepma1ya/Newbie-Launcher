@@ -23,6 +23,7 @@ import { useUi } from '../store/ui'
 import { loaderLabel, formatPlaytime, relativeTime, formatBytes } from '../lib/utils'
 import { PageHeader, SectionTitle } from '../components/PageHeader'
 import { InstanceCard } from '../components/InstanceCard'
+import { TlsCapeBadge } from '../components/TlsCapeBadge'
 import { PlayButton } from '../components/PlayButton'
 import { BlockIcon, SkinFace } from '../components/ui/BlockIcon'
 import { Badge, Card, Progress, Skeleton } from '../components/ui/primitives'
@@ -93,6 +94,7 @@ export function HomePage() {
                   </Badge>
                   <Badge tone="neutral">{loaderLabel(active.loader)}</Badge>
                   <Badge tone="neutral">{active.versionId}</Badge>
+                  <TlsCapeBadge loader={active.loader} versionId={active.versionId} />
                 </div>
                 <div className="mt-6 flex items-center gap-4">
                   <BlockIcon name={active.name} color={active.color} iconUrl={active.iconUrl} size={66} />

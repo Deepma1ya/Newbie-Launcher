@@ -2,13 +2,13 @@ import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
 import { CheckCircle, Image, Leaf, Plus, ShieldCheck, Trash, UploadSimple, UserCircle, WifiSlash, WindowsLogo } from '@phosphor-icons/react'
 import type { AccountSummary } from '@shared/types'
-import { useAccounts, qk } from '../hooks/queries'
+import { useAccounts, useSettings, qk } from '../hooks/queries'
 import { toast, useUi } from '../store/ui'
 import { errorMessage } from '../lib/utils'
 import { PageHeader } from '../components/PageHeader'
 import { AccountCard } from '../components/AccountCard'
 import { SkinFace } from '../components/ui/BlockIcon'
-import { Card, EmptyState } from '../components/ui/primitives'
+import { Card, EmptyState, Switch } from '../components/ui/primitives'
 import { Button } from '../components/ui/Button'
 
 export function AccountsPage() {
@@ -52,7 +52,10 @@ export function AccountsPage() {
               </Button>
             }
           />
-          <AccountTypePanel onAdd={openAdd} />
+          <div className="space-y-4">
+            <TLauncherCapeCard />
+            <AccountTypePanel onAdd={openAdd} />
+          </div>
         </div>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
@@ -85,10 +88,59 @@ export function AccountsPage() {
             </Card>
           </div>
 
-          <AccountTypePanel onAdd={openAdd} />
+          <div className="space-y-4">
+            <TLauncherCapeCard />
+            <AccountTypePanel onAdd={openAdd} />
+          </div>
         </div>
       )}
     </div>
+  )
+}
+
+function TLauncherCapeCard() {
+  const settings = useSettings().data
+  const queryClient = useQueryClient()
+  if (!settings) return null
+
+  const save = async (checked: boolean): Promise<void> => {
+    try {
+      await window.newbie.settings.update({ tlauncherCapePlugin: checked })
+      await queryClient.invalidateQueries({ queryKey: qk.settings })
+      toast(
+        'success',
+        checked ? 'TLSkinCape enabled' : 'TLSkinCape disabled',
+        checked
+          ? 'Supported Fabric and Forge instances will receive the plugin before launch.'
+          : 'Newbie-owned TLSkinCape files are removed from instances on their next launch.'
+      )
+    } catch (error) {
+      toast('error', 'Could not save that setting', errorMessage(error))
+    }
+  }
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-center gap-2 text-[12px] font-medium text-ink">
+        <Leaf size={16} className="text-grass" weight="fill" /> TL skin &amp; cape plugin
+      </div>
+      <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
+        TLauncher adds its TLSkinCape mod when a supported version launches. Newbie can place the same official plugin
+        before launch, but only for TLauncher accounts and supported Fabric or Forge builds.
+      </p>
+      <div className="mt-3">
+        <Switch
+          checked={settings.tlauncherCapePlugin}
+          onChange={(checked) => void save(checked)}
+          label="Place TLSkinCape on supported instances"
+          description="The plugin is downloaded from TLauncher's repository and verified before it is placed in mods."
+        />
+      </div>
+      <p className="mt-3 text-[10px] leading-relaxed text-muted/65">
+        Version support is shown on every instance and in the version picker. TLSkinCape is GPL-3.0-only and is not
+        bundled with Newbie.
+      </p>
+    </Card>
   )
 }
 

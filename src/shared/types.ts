@@ -50,6 +50,7 @@ export interface LauncherSettings {
   backups: BackupSettings
   onboardingComplete: boolean
   tlauncherSkins: boolean
+  tlauncherCapePlugin: boolean
 }
 
 export interface AccountSummary {
@@ -149,6 +150,10 @@ export interface Instance {
   modpackVersionId?: string
   /** Fingerprints of automatic repairs that failed, so Repair does not retry them in a loop. */
   repairFailures?: Record<string, RepairFailure>
+  /** Place TLauncher's TLSkinCape mod in mods/ before launch. Defaults to true. */
+  tlauncherCape?: boolean
+  /** Managed TLSkinCape file relative to the game directory, when Newbie placed it. */
+  tlsCapeFile?: string
 }
 
 export interface CreateInstanceInput {
@@ -178,6 +183,7 @@ export interface UpdateInstanceInput {
   jvmArgs?: string
   iconUrl?: string
   color?: string
+  tlauncherCape?: boolean
 }
 
 export interface MinecraftVersionSummary {

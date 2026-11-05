@@ -66,6 +66,7 @@ import { createBackupNow, listBackups } from './services/backups'
 import { tasks } from './services/tasks'
 import { checkForUpdates, installUpdate, updaterState } from './services/updater'
 import { clearRepairFailures } from './services/repair'
+import { syncTlsCape } from './services/tlskincape'
 import {
   addBedrockExclusion,
   cancelBedrockDownload,
@@ -109,6 +110,7 @@ const settingsPatchSchema = z
     downloadConcurrency: z.number().optional(),
     onboardingComplete: z.boolean().optional(),
     tlauncherSkins: z.boolean().optional(),
+    tlauncherCapePlugin: z.boolean().optional(),
     java: z
       .object({
         autoInstall: z.boolean().optional(),
@@ -166,7 +168,8 @@ const updateInstanceSchema = z.object({
   javaPath: z.string().nullable().optional(),
   jvmArgs: z.string().max(8000).optional(),
   iconUrl: z.string().max(2048).optional(),
-  color: z.string().max(32).optional()
+  color: z.string().max(32).optional(),
+  tlauncherCape: z.boolean().optional()
 })
 
 const searchSchema = z.object({
@@ -358,6 +361,11 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.instancesClearRepairFailures, async (_event, id: string) => {
     await clearRepairFailures(z.string().parse(id))
+  })
+  ipcMain.handle(IPC.instancesSyncTlsCape, async (_event, id: string) => {
+    const instance = store.instance(z.string().parse(id))
+    if (!instance) throw new Error('Instance not found')
+    return syncTlsCape(instance, store.activeAccount())
   })
 
   ipcMain.handle(IPC.addonsSearch, async (_event, raw: unknown) => {

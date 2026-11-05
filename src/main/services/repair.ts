@@ -149,6 +149,9 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
   const managedFilenames = new Set(
     instance.addons.filter((record) => record.type === 'mod').map((record) => record.filename.toLowerCase())
   )
+  if (instance.tlsCapeFile) {
+    managedFilenames.add(path.basename(instance.tlsCapeFile).toLowerCase())
+  }
 
   for (const mod of corruptActive) {
     plannedDisabled.add(mod.relative)

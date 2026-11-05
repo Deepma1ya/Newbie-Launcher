@@ -151,6 +151,28 @@ export function SettingsPage() {
                   </Button>
                 </div>
               </Card>
+
+              <Card className="space-y-4 p-5">
+                <div>
+                  <h2 className="font-display text-[15px] font-semibold text-ink">TLauncher skins</h2>
+                  <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
+                    Applies when a TLauncher account is selected. Version support for the plugin is shown on each
+                    instance and in the version picker.
+                  </p>
+                </div>
+                <Switch
+                  checked={settings.tlauncherSkins}
+                  onChange={(checked) => void save({ tlauncherSkins: checked })}
+                  label="Sync TLauncher skin and cape"
+                  description="Fetch the public TLauncher skin and cape when adding or refreshing an account."
+                />
+                <Switch
+                  checked={settings.tlauncherCapePlugin}
+                  onChange={(checked) => void save({ tlauncherCapePlugin: checked })}
+                  label="Place TLSkinCape in supported instances"
+                  description="Download TLauncher's official TLSkinCape mod and add it to Fabric or Forge instances that support it."
+                />
+              </Card>
             </>
           )}
 

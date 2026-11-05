@@ -106,6 +106,7 @@ interface SelectOption {
   value: string
   label: string
   disabled: boolean
+  tl?: 'yes' | 'no'
 }
 
 type SelectProps = Omit<
@@ -128,15 +129,36 @@ function readSelectOptions(children: ReactNode): SelectOption[] {
   const options: SelectOption[] = []
   Children.forEach(children, (child) => {
     if (!isValidElement(child) || child.type !== 'option') return
-    const props = child.props as { value?: string | number; disabled?: boolean; children?: ReactNode }
+    const props = child.props as {
+      value?: string | number
+      disabled?: boolean
+      children?: ReactNode
+      'data-tl'?: string
+    }
     const label = optionText(props.children).trim()
+    const tl = props['data-tl'] === 'yes' || props['data-tl'] === 'no' ? props['data-tl'] : undefined
     options.push({
       value: String(props.value ?? label),
       label: label || String(props.value ?? ''),
-      disabled: Boolean(props.disabled)
+      disabled: Boolean(props.disabled),
+      tl
     })
   })
   return options
+}
+
+function TlsBadge({ tone }: { tone: 'yes' | 'no' }) {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        'shrink-0 rounded px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.07em]',
+        tone === 'yes' ? 'bg-grass/10 text-grass' : 'bg-white/[0.045] text-muted/55'
+      )}
+    >
+      {tone === 'yes' ? 'TL skin' : 'No TL'}
+    </span>
+  )
 }
 
 export function Select({ className, children, value, onChange, disabled, ...props }: SelectProps) {
@@ -295,8 +317,11 @@ export function Select({ className, children, value, onChange, disabled, ...prop
           disabled && 'cursor-not-allowed opacity-50'
         )}
       >
-        <span className={cn('truncate', !selectedOption && 'text-muted/70')}>
-          {selectedOption?.label ?? value ?? 'Select…'}
+        <span className="flex min-w-0 items-center gap-2">
+          {selectedOption?.tl && <TlsBadge tone={selectedOption.tl} />}
+          <span className={cn('truncate', !selectedOption && 'text-muted/70')}>
+            {selectedOption?.label ?? value ?? 'Select…'}
+          </span>
         </span>
         <CaretDown
           size={14}
@@ -350,7 +375,10 @@ export function Select({ className, children, value, onChange, disabled, ...prop
                       option.disabled && 'cursor-not-allowed opacity-40'
                     )}
                   >
-                    <span className="truncate">{option.label}</span>
+                    <span className="flex min-w-0 items-center gap-2">
+                      {option.tl && <TlsBadge tone={option.tl} />}
+                      <span className="truncate">{option.label}</span>
+                    </span>
                     {isSelected && <Check size={13} weight="bold" className="shrink-0 text-grass" />}
                   </button>
                 )

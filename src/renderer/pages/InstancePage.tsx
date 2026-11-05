@@ -20,7 +20,9 @@ import {
   Wrench
 } from '@phosphor-icons/react'
 import type { Instance, LoaderType, PerformanceProfile } from '@shared/types'
+import { findTlsCapeArtifact } from '@shared/tlskincape'
 import {
+  useAccounts,
   useBackups,
   useDiskUsage,
   useInstance,
@@ -39,6 +41,7 @@ import { PageHeader } from '../components/PageHeader'
 import { PlayButton } from '../components/PlayButton'
 import { AddonRow } from '../components/AddonRow'
 import { LoadoutCard } from '../components/LoadoutCard'
+import { TlsCapeBadge } from '../components/TlsCapeBadge'
 import { BlockIcon } from '../components/ui/BlockIcon'
 import { Badge, Card, EmptyState, Field, Input, Progress, Segmented, Select, Skeleton, Switch } from '../components/ui/primitives'
 import { Button, IconButton } from '../components/ui/Button'
@@ -174,6 +177,7 @@ export function InstancePage() {
             <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[11px] text-muted">
               <Badge tone="neutral">{loaderLabel(instance.loader)}</Badge>
               <Badge tone="neutral">{instance.versionId}</Badge>
+              <TlsCapeBadge loader={instance.loader} versionId={instance.versionId} />
               <span>{instance.addons.length} add-ons</span>
               <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
               <span>{disk ? formatBytes(disk.mb * 1024 * 1024) : '—'}</span>
@@ -476,6 +480,8 @@ function InstanceSettings({
   const java = useJavaRuntimes().data ?? []
   const system = useSystemInfo().data
   const settings = useSettings().data
+  const accounts = useAccounts().data ?? []
+  const activeAccount = accounts.find((entry) => entry.active) ?? accounts[0]
   const [name, setName] = useState(instance.name)
   const [memory, setMemory] = useState(instance.memoryMb)
   const [width, setWidth] = useState(instance.width)
@@ -484,6 +490,8 @@ function InstanceSettings({
   const [javaPath, setJavaPath] = useState(instance.javaPath ?? '')
   const [jvmArgs, setJvmArgs] = useState(instance.jvmArgs)
   const [saving, setSaving] = useState(false)
+  const [capeBusy, setCapeBusy] = useState(false)
+  const [capeEnabled, setCapeEnabled] = useState(instance.tlauncherCape !== false)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<PerformanceProfile>(settings?.performance.profile ?? 'balanced')
 
@@ -495,6 +503,7 @@ function InstanceSettings({
     setFullscreen(instance.fullscreen)
     setJavaPath(instance.javaPath ?? '')
     setJvmArgs(instance.jvmArgs)
+    setCapeEnabled(instance.tlauncherCape !== false)
   }, [instance])
 
   const save = async (): Promise<void> => {
@@ -522,7 +531,48 @@ function InstanceSettings({
     }
   }
 
+  const toggleCape = async (enabled: boolean): Promise<void> => {
+    setCapeEnabled(enabled)
+    setCapeBusy(true)
+    setError(null)
+    try {
+      await window.newbie.instances.update(instance.id, { tlauncherCape: enabled })
+      await queryClient.invalidateQueries({ queryKey: qk.instance(instance.id) })
+      await queryClient.invalidateQueries({ queryKey: qk.instances })
+      onChanged()
+      const result = await window.newbie.instances.syncTlsCape(instance.id)
+      if (!enabled) {
+        toast('success', 'TLSkinCape removed', 'Newbie-owned TLSkinCape files were removed from this instance.')
+      } else if (result.active) {
+        toast(
+          'success',
+          'TLSkinCape ready',
+          result.reason === 'existing'
+            ? 'Using the TLSkinCape file already in the mods folder.'
+            : `${result.fileName ?? 'TLSkinCape'} will load with this instance.`
+        )
+      } else if (result.reason === 'account') {
+        toast('info', 'TLSkinCape preference saved', 'It will be added when you launch with a TLauncher account.')
+      } else if (result.reason === 'unsupported') {
+        toast('info', 'TLSkinCape not available', 'No TLSkinCape build exists for this loader and version.')
+      } else {
+        toast('info', 'TLSkinCape is off globally', 'Turn it on in Accounts to use the plugin.')
+      }
+    } catch (cause) {
+      setCapeEnabled(instance.tlauncherCape !== false)
+      setError(errorMessage(cause))
+    } finally {
+      setCapeBusy(false)
+    }
+  }
+
   const total = system?.totalMemMb ?? 16384
+  const capeSupported = Boolean(findTlsCapeArtifact(instance.loader, instance.versionId))
+  const capeGlobal = settings?.tlauncherCapePlugin !== false
+  const capeAccountNote =
+    activeAccount?.type === 'tlauncher'
+      ? 'Added to mods/ before launch and removed when you turn this off.'
+      : 'Takes effect when a TLauncher account is active.'
 
   return (
     <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
@@ -585,6 +635,7 @@ function InstanceSettings({
           <div className="mt-3 flex items-center gap-2">
             <Badge tone="green">{instance.versionId}</Badge>
             <Badge tone="neutral">{loaderLabel(instance.loader)}</Badge>
+            <TlsCapeBadge loader={instance.loader} versionId={instance.versionId} />
           </div>
           <p className="mt-2 text-[11px] leading-relaxed text-muted">
             Changing the version reinstalls the loader and moves add-ons to compatible builds automatically. Incompatible
@@ -593,6 +644,45 @@ function InstanceSettings({
           <Button variant="secondary" size="sm" className="mt-3" onClick={onChangeVersion} icon={<ArrowsClockwise size={14} />}>
             Change version
           </Button>
+        </Card>
+
+        <Card className="p-5">
+          <div className="flex items-start justify-between gap-2">
+            <div>
+              <h2 className="font-display text-[15px] font-semibold text-ink">TLauncher skin &amp; cape</h2>
+              <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+                Places TLauncher&apos;s official TLSkinCape mod in this instance.
+              </p>
+            </div>
+            <TlsCapeBadge
+              loader={instance.loader}
+              versionId={instance.versionId}
+            />
+          </div>
+          <div className="mt-3">
+            <Switch
+              checked={capeEnabled && capeGlobal && capeSupported}
+              onChange={(checked) => void toggleCape(checked)}
+              disabled={!capeSupported || !capeGlobal || capeBusy}
+              label="Place TLSkinCape before launch"
+              description={
+                !capeSupported
+                  ? 'No TLSkinCape build exists for this loader and version.'
+                  : !capeGlobal
+                    ? 'Turn on TLSkinCape in Accounts first.'
+                    : capeAccountNote
+              }
+            />
+          </div>
+          {instance.tlsCapeFile && (
+            <div className="mt-3 truncate rounded-lg border border-line/45 bg-canvas/35 px-2.5 py-1.5 font-mono text-[9.5px] text-muted/70">
+              {instance.tlsCapeFile}
+            </div>
+          )}
+          <p className="mt-3 text-[10px] leading-relaxed text-muted/65">
+            Downloaded from TLauncher&apos;s repository and checked against its published SHA-1. TLSkinCape is
+            GPL-3.0-only and is not bundled with Newbie. Fabric and Forge builds only.
+          </p>
         </Card>
 
         <Card className="p-5">
@@ -724,7 +814,13 @@ function ChangeVersionModal({
         <Field label="Minecraft version">
           <Select value={versionId} onChange={setVersionId}>
             {options.map((version) => (
-              <option key={version.id} value={version.id}>{version.id}</option>
+              <option
+                key={version.id}
+                value={version.id}
+                data-tl={findTlsCapeArtifact(loader, version.id) ? 'yes' : 'no'}
+              >
+                {version.id}
+              </option>
             ))}
           </Select>
         </Field>
@@ -743,6 +839,10 @@ function ChangeVersionModal({
               { value: 'neoforge', label: 'NeoForge' }
             ]}
           />
+          <p className="mt-1.5 text-[10px] leading-relaxed text-muted/55">
+            TL skin marks versions with an official TLSkinCape build for this loader. Vanilla, Quilt and NeoForge
+            cannot load it.
+          </p>
         </div>
         {loader !== 'vanilla' && (
           <Field label={`${loader} build`}>

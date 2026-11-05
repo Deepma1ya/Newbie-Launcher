@@ -32,11 +32,11 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Bedrock** | Minecraft for Windows versions: download official signed GDK packages, install through Windows/Gaming Services, launch the installed package, and switch versions without touching Java |
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/17/21+ from Adoptium when a version needs it |
-| **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + skin sync, offline profiles, and generic authlib/Yggdrasil servers |
+| **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, and generic authlib/Yggdrasil servers |
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
 | **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
-| **Repair** | Duplicate mods, wrong-loader jars, incompatible mods, missing dependencies and missing files — idempotent fixes with a backup first. Failed automatic fixes pause instead of looping |
+| **Repair** | Installs missing dependencies and re-enables disabled providers first. Duplicate, wrong-loader or incompatible mods are only disabled after a confirmation popup, with a backup |
 | **Launcher updates** | Built-in updater over free GitHub Releases: background download, live progress and speed, release notes, restart-and-install, stable or beta channel |
 | **Backups** | World ZIPs before launch, with retention and size limits |
 | **Performance** | Balanced/FPS/Quality profiles written to `options.txt`, plus the Windows high-performance GPU preference for Java |

@@ -15,6 +15,7 @@ import { toast, useUi } from '../store/ui'
 import { qk } from '../hooks/queries'
 import { loaderLabel, relativeTime, formatPlaytime } from '../lib/utils'
 import { BlockIcon } from './ui/BlockIcon'
+import { TlsCapeBadge } from './TlsCapeBadge'
 import { Badge } from './ui/primitives'
 import { PlayButton } from './PlayButton'
 import { cn } from '../lib/utils'
@@ -98,7 +99,13 @@ export function InstanceCard({ instance, compact = false }: { instance: Instance
 
       <div className="flex items-start justify-between gap-3 px-4 pb-3.5 pt-3">
         <div className="min-w-0 flex-1">
-          <h3 className="truncate font-display text-[14.5px] font-semibold text-ink">{instance.name}</h3>
+          <div className="flex min-w-0 items-center gap-2">
+            <TlsCapeBadge
+              loader={instance.loader}
+              versionId={instance.versionId}
+            />
+            <h3 className="min-w-0 truncate font-display text-[14.5px] font-semibold text-ink">{instance.name}</h3>
+          </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[11px] text-muted">
             <span>{instance.addons.length} add-ons</span>
             <span className="h-0.5 w-0.5 rounded-full bg-muted/60" />
