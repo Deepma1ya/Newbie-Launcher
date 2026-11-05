@@ -214,6 +214,11 @@ export function RepairModal() {
           </div>
         </div>
 
+        <div className="flex items-start gap-2 rounded-xl border border-grass/15 bg-grass/[0.025] px-3 py-2 text-[10.5px] leading-relaxed text-grass/85">
+          <ShieldCheck size={13} className="mt-0.5 shrink-0" />
+          Fabric API, Sodium, config libraries and other essential mods are protected from conflict disables.
+        </div>
+
         {scanning && (
           <div className="space-y-2">
             <Skeleton className="h-16 w-full" />

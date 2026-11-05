@@ -523,4 +523,71 @@ describe('repair application', () => {
     expect(report.backupPath).not.toBe(path.join(root, 'evil.zip'))
     expect(zipPaths).toHaveBeenCalledTimes(1)
   })
+
+  it('disables the ordinary mod instead of Fabric API in a conflict', async () => {
+    writeFabricJar('fabric-api.jar', { id: 'fabric-api' })
+    writeFabricJar('conflicting.jar', { id: 'conflicting', breaks: { 'fabric-api': '*' } })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const scan = await repairInstance('inst_test', false)
+    expect(scan.pendingDisables).toBe(1)
+    expect(scan.issues[0]?.files).toEqual(['mods/conflicting.jar'])
+
+    const safe = await repairInstance('inst_test', true, false)
+    expect(safe.pendingDisables).toBe(1)
+    expect(await exists(path.join(modsDir, 'fabric-api.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'conflicting.jar'))).toBe(true)
+
+    const final = await repairInstance('inst_test', true, true)
+    expect(final.fixed).toBe(1)
+    expect(await exists(path.join(modsDir, 'fabric-api.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'conflicting.jar.disabled'))).toBe(true)
+  })
+
+  it('keeps both mods when two protected essentials conflict', async () => {
+    writeFabricJar('fabric-api.jar', { id: 'fabric-api' })
+    writeFabricJar('sodium.jar', { id: 'sodium', breaks: { 'fabric-api': '*' } })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const scan = await repairInstance('inst_test', false)
+    expect(scan.pendingDisables).toBe(0)
+    expect(scan.issues).toHaveLength(1)
+    expect(scan.issues[0]?.autoFixable).toBe(false)
+    expect(scan.issues[0]?.detail).toContain('Newbie will not disable either')
+
+    const applied = await repairInstance('inst_test', true, true)
+    expect(applied.fixed).toBe(0)
+    expect(await exists(path.join(modsDir, 'fabric-api.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'sodium.jar'))).toBe(true)
+  })
+
+  it('protects a library required by another active mod during a conflict', async () => {
+    writeFabricJar('corelib.jar', { id: 'corelib' })
+    writeFabricJar('needs-core.jar', { id: 'needscore', depends: { corelib: '*' } })
+    writeFabricJar('breaker.jar', { id: 'breaker', breaks: { corelib: '*' } })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const final = await repairInstance('inst_test', true, true)
+    expect(final.fixed).toBe(1)
+    expect(await exists(path.join(modsDir, 'corelib.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'needs-core.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'breaker.jar.disabled'))).toBe(true)
+  })
+
+  it('never disables an essential mod when its dependency cannot be installed', async () => {
+    writeFabricJar('sodium.jar', { id: 'sodium', depends: { missinglib: '*' } })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const report = await repairInstance('inst_test', true, false)
+    expect(report.failed).toBe(1)
+    expect(report.pendingDisables).toBe(0)
+    expect(report.issues[0]?.autoFixable).toBe(false)
+    expect(report.issues[0]?.detail).toContain('left enabled')
+    expect(await exists(path.join(modsDir, 'sodium.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'sodium.jar.disabled'))).toBe(false)
+  })
 })

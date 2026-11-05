@@ -1,24 +1,20 @@
-# Newbie Launcher 0.1.19
+# Newbie Launcher 0.1.20
 
-Datapacks, installed as smoothly as mods.
+Essential mods stay protected during repair.
 
-## Datapacks
+## Repair
 
-- Added a **Datapacks** tab to Browse with Modrinth search, version filters and dependency-aware installs.
-- Datapacks work on vanilla instances too — no mod loader required.
-- The project details window now has an **Install to** selector:
-  - choose any world in the instance and the pack is copied into `saves/<world>/datapacks`;
-  - choose **Instance datapacks folder** to keep a staging copy in the instance.
-- If the instance has worlds, the most recently used one is selected by default.
-- Required datapack dependencies are installed into the same world.
-- The Library and Instance add-ons views now have **Datapacks** filters.
-- Datapack rows show which world they belong to, and updates keep writing to that same world.
-- **Scan local** now finds datapacks in the instance folder and inside every world's `datapacks` folder.
-- Removing or disabling a datapack uses its real world-specific path, so other worlds are not touched.
+- Repair no longer chooses essential mods as the mod to disable when resolving a conflict.
+- Protected out of the box: Fabric API, Fabric Language Kotlin, Quilt API/QSL, Sodium, Embeddium, Rubidium, Iris, Oculus, Indium, Lithium, FerriteCore, Krypton, ModernFix, ImmediatelyFast, EntityCulling, C2ME, Noisium, ThreadTweak, BadOptimizations, MemoryLeakFix, Debugify, Cloth Config, Architectury, Forge Config API Port, YACL and Mod Menu.
+- If another mod conflicts with a protected mod, the other mod is offered for disabling instead.
+- If two protected mods conflict, Newbie disables neither and reports a manual conflict.
+- A mod required by another active mod is also protected from conflict disables, even if it is not in the curated list.
+- Missing-dependency fallbacks never disable essential or required mods. They are left enabled and the problem is reported for manual review.
 
 ## Notes
 
-- Datapacks are world data. Minecraft loads them when the world loads; use `/reload` or reopen the world after installing.
-- Datapacks are Java Edition only. Bedrock behaviour packs are not part of this feature.
+- Protection applies to conflict resolution and dependency fallbacks.
+- Unreadable, wrong-loader or duplicate copies can still be disabled after confirmation because they cannot stay active as-is. Duplicate cleanup always keeps one working copy.
+- The Repair window now states that essential mods are protected.
 
-Everything from 0.1.18 (TLSkinCape) and earlier is included.
+Everything from 0.1.19 (datapacks), 0.1.18 (TLSkinCape) and earlier is included.

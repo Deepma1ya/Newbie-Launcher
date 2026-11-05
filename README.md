@@ -37,7 +37,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Datapacks** | Modrinth datapacks installed directly into a chosen world's `datapacks` folder, or kept in an instance staging folder. Required dependencies and updates follow the same target. |
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
 | **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
-| **Repair** | Installs missing dependencies and re-enables disabled providers first. Duplicate, wrong-loader or incompatible mods are only disabled after a confirmation popup, with a backup |
+| **Repair** | Installs missing dependencies and re-enables disabled providers first. Essential mods such as Fabric API and Sodium are protected from conflict disables. Other duplicate, wrong-loader or incompatible mods are only disabled after a confirmation popup, with a backup |
 | **Launcher updates** | Built-in updater over free GitHub Releases: background download, live progress and speed, release notes, restart-and-install, stable or beta channel |
 | **Backups** | World ZIPs before launch, with retention and size limits |
 | **Performance** | Balanced/FPS/Quality profiles written to `options.txt`, plus the Windows high-performance GPU preference for Java |

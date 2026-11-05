@@ -23,6 +23,74 @@ interface ScannedMod {
   corrupt: boolean
 }
 
+/**
+ * Mods that must stay enabled whenever possible. This is intentionally a
+ * curated list of loader APIs, config libraries and core performance mods.
+ * Repair will never choose one of these as the mod to disable in a conflict.
+ */
+const ESSENTIAL_MOD_IDS = new Set([
+  'fabric-api',
+  'fabric-language-kotlin',
+  'quilted-fabric-api',
+  'quilted_fabric_api',
+  'qsl',
+  'sodium',
+  'embeddium',
+  'rubidium',
+  'iris',
+  'oculus',
+  'indium',
+  'lithium',
+  'ferritecore',
+  'krypton',
+  'modernfix',
+  'immediatelyfast',
+  'entityculling',
+  'c2me',
+  'noisium',
+  'threadtweak',
+  'badoptimizations',
+  'memoryleakfix',
+  'debugify',
+  'cloth-config',
+  'architectury',
+  'forgeconfigapiport',
+  'forge-config-api-port',
+  'yacl',
+  'yet_another_config_lib_v3',
+  'modmenu'
+])
+
+const ESSENTIAL_ID_PREFIXES = ['fabric-api-']
+
+function modIds(mod: ScannedMod): string[] {
+  return [mod.meta.modId, ...mod.meta.provided].map((id) => id.toLowerCase())
+}
+
+function isEssentialMod(mod: ScannedMod): boolean {
+  return modIds(mod).some(
+    (id) => ESSENTIAL_MOD_IDS.has(id) || ESSENTIAL_ID_PREFIXES.some((prefix) => id.startsWith(prefix))
+  )
+}
+
+/**
+ * A mod is protected when it is essential or when another active mod requires
+ * it. Protected mods are kept out of conflict-disable choices; if both sides
+ * are protected, Repair reports a manual conflict instead.
+ */
+function isProtectedMod(mod: ScannedMod, activeMods: ScannedMod[]): boolean {
+  if (isEssentialMod(mod)) return true
+  const ids = modIds(mod)
+  return activeMods.some(
+    (other) =>
+      other.relative !== mod.relative &&
+      other.meta.dependencies.some((dependency) => {
+        if (!dependency.required || dependency.incompatible) return false
+        return ids.includes(dependency.id.toLowerCase())
+      })
+  )
+}
+
 type RepairAction =
   | { type: 'disable'; relative: string; recordId?: string }
   | { type: 'enable'; recordId: string }
@@ -251,21 +319,50 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
 
       const modBreaksOther = declaresIncompatibility(mod, other)
       const otherBreaksMod = declaresIncompatibility(other, mod)
-      const loser =
-        modBreaksOther && !otherBreaksMod
-          ? other
-          : otherBreaksMod && !modBreaksOther
-            ? mod
-            : lowerPriority(mod, other, managedFilenames)
+      const protectedPool = active.filter((candidate) => !plannedDisabled.has(candidate.relative))
+      const modProtected = isProtectedMod(mod, protectedPool)
+      const otherProtected = isProtectedMod(other, protectedPool)
+
+      if (modProtected && otherProtected) {
+        push(
+          {
+            kind: 'incompatible',
+            severity: 'warning',
+            title: `${mod.meta.name} conflicts with ${other.meta.name}`,
+            detail:
+              'The two mods declare an incompatibility, but both are essential or required by another active mod. Newbie will not disable either of them automatically. Resolve this manually by removing one of the conflicting mods.',
+            files: [mod.relative, other.relative],
+            autoFixable: false
+          },
+          []
+        )
+        continue
+      }
+
+      const loser = modProtected
+        ? other
+        : otherProtected
+          ? mod
+          : modBreaksOther && !otherBreaksMod
+            ? other
+            : otherBreaksMod && !modBreaksOther
+              ? mod
+              : lowerPriority(mod, other, managedFilenames)
       if (plannedDisabled.has(loser.relative)) continue
       plannedDisabled.add(loser.relative)
+      const protectedNote =
+        modProtected || otherProtected
+          ? `${modProtected ? mod.meta.name : other.meta.name} is essential or required by another active mod, so it is kept enabled. `
+          : ''
       push(
         {
           kind: 'incompatible',
           severity: 'error',
           title: `${mod.meta.name} conflicts with ${other.meta.name}`,
-          detail: `The two mods declare an incompatibility. ${
-            modBreaksOther && otherBreaksMod ? 'This is mutual; Newbie keeps the higher-priority mod. ' : ''
+          detail: `${protectedNote}The two mods declare an incompatibility. ${
+            modBreaksOther && otherBreaksMod && !modProtected && !otherProtected
+              ? 'This is mutual; Newbie keeps the higher-priority mod. '
+              : ''
           }Disabling ${loser.meta.name}.`,
           files: [loser.relative],
           autoFixable: true,
@@ -323,6 +420,11 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
   }
 
   for (const [id, entry] of missing) {
+    const protectedDependents = entry.dependents.filter((mod) => isProtectedMod(mod, remainingActive))
+    const fallbackDependents = entry.dependents.filter((mod) => !protectedDependents.includes(mod))
+    const protectionNote = protectedDependents.length
+      ? ` ${dependentNames(protectedDependents)} ${protectedDependents.length === 1 ? 'is' : 'are'} essential or required by another active mod, so ${protectedDependents.length === 1 ? 'it is' : 'they are'} left enabled.`
+      : ''
     push(
       {
         kind: 'missing-dependency',
@@ -330,13 +432,15 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
         title: `Missing dependency: ${id}`,
         detail: `Required by ${dependentNames(entry.dependents)}${
           entry.ranges.size ? ` (${[...entry.ranges].join(', ')})` : ''
-        }. Newbie can try to install it from Modrinth.`,
-        files: entry.dependents.map((mod) => mod.relative),
+        }. Newbie can try to install it from Modrinth.${protectionNote}`,
+        files: (fallbackDependents.length > 0 ? fallbackDependents : entry.dependents).map(
+          (mod) => mod.relative
+        ),
         autoFixable: true,
         fixLabel: 'Install missing dependency'
       },
       [{ type: 'install-dependency', dependencyId: id }],
-      entry.dependents.map((mod) => ({
+      fallbackDependents.map((mod) => ({
         type: 'disable' as const,
         relative: mod.relative,
         recordId: recordIdForRelative(instance, mod.relative)
@@ -817,9 +921,9 @@ function markPendingFallbacks(plan: RepairPlan, fingerprints: Set<string>): void
     issue.fixLabel = 'Disable dependent mods'
     if (dependencyId) {
       issue.title = `Dependency ${dependencyId} could not be installed`
-      issue.detail = `Newbie could not download ${dependencyId} from Modrinth. Disabling the mods that require it is the last resort.`
+      issue.detail = `${issue.detail} Newbie could not download ${dependencyId} from Modrinth. Disabling the unprotected mods that require it is the last resort.`
     } else {
-      issue.detail = `${issue.detail} Newbie could not install the dependency automatically, so the mods that require it can be disabled instead.`
+      issue.detail = `${issue.detail} Newbie could not install the dependency automatically, so the unprotected mods that require it can be disabled instead.`
     }
   }
 }
