@@ -17,7 +17,7 @@ export async function pathExists(target: string): Promise<boolean> {
 export async function readJson<T>(file: string, fallback: T): Promise<T> {
   try {
     const raw = await fs.readFile(file, 'utf8')
-    return JSON.parse(raw) as T
+    return JSON.parse(raw.replace(/^\uFEFF/, '')) as T
   } catch {
     return fallback
   }

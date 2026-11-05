@@ -1,6 +1,6 @@
 export const APP_NAME = 'Newbie Launcher'
 export const APP_ID = 'com.newbielauncher.app'
-export const APP_VERSION = '0.1.14'
+export const APP_VERSION = '0.1.15'
 export const GITHUB_OWNER = 'Deepma1ya'
 export const GITHUB_REPO = 'Newbie-Launcher'
 export const GITHUB_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
@@ -15,6 +15,21 @@ export const QUILT_META = 'https://meta.quiltmc.org/v3'
 export const FORGE_PROMOTIONS = 'https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json'
 export const NEOFORGE_MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml'
 export const ADOPTIUM_API = 'https://api.adoptium.net/v3'
+
+/**
+ * Public, MIT-licensed GdkLinks catalog used by the Bedrock Launcher project.
+ * It lists exact Xbox Live CDN resources for full Minecraft for Windows GDK
+ * builds. The GitHub raw copy is primary; the Bedrock Launcher mirror is the
+ * fallback.
+ */
+export const BEDROCK_LINKS_URLS = [
+  'https://raw.githubusercontent.com/MinecraftBedrockArchiver/GdkLinks/master/urls.json',
+  'https://www.raythnetwork.co.uk/gdk.urls.min.json'
+]
+export const BEDROCK_STORE_URL = 'ms-windows-store://pdp/?productid=9NBLGGH2JHXJ'
+export const BEDROCK_STORE_WEB_URL = 'https://www.xbox.com/games/store/minecraft-for-windows/9NBLGGH2JHXJ'
+export const GAMING_SERVICES_STORE_URL = 'ms-windows-store://pdp/?productid=9MWPM2CQNLHN'
+export const GAMING_SERVICES_STORE_WEB_URL = 'https://apps.microsoft.com/detail/9mwpm2cqnlhn'
 
 /** Microsoft's public Minecraft launcher client id. No client secret is used. */
 export const MICROSOFT_CLIENT_ID = '00000000402b5328'

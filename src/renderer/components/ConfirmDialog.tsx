@@ -23,6 +23,15 @@ export function ConfirmDialog() {
     }
   }
 
+  const cancel = (): void => {
+    if (!request) return
+    try {
+      request.onCancel?.()
+    } finally {
+      close()
+    }
+  }
+
   return (
     <Modal
       open={Boolean(request)}
@@ -33,8 +42,8 @@ export function ConfirmDialog() {
       zIndex={140}
       footer={
         <>
-          <Button variant="ghost" onClick={close} disabled={loading}>
-            Cancel
+          <Button variant="ghost" onClick={cancel} disabled={loading}>
+            {request?.cancelLabel ?? 'Cancel'}
           </Button>
           <Button variant={request?.danger ? 'danger' : 'primary'} loading={loading} onClick={() => void confirm()}>
             {request?.confirmLabel ?? 'Confirm'}
@@ -43,7 +52,8 @@ export function ConfirmDialog() {
       }
     >
       <p className="text-[13px] leading-relaxed text-muted">
-        This action is applied immediately. You can reinstall or restore from a backup afterwards.
+        {request?.body ??
+          'This action is applied immediately. You can reinstall or restore from a backup afterwards.'}
       </p>
     </Modal>
   )

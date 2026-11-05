@@ -4,13 +4,13 @@
   <img src="build/icon.png" alt="Newbie Launcher icon" width="96" />
 </p>
 
-A calm, stable Minecraft **Java Edition** launcher for Windows — built around the things that actually break modded play: Java versions, loader installs, conflicting mods, pack drift, and losing a world.
+A calm, stable Minecraft **Java Edition** and **Bedrock (Minecraft for Windows)** launcher — built around the things that actually break modded play: Java versions, loader installs, conflicting mods, pack drift, and losing a world.
 
 <p align="center">
   <img src="docs/images/home.png" alt="Newbie Launcher home screen" width="900" />
 </p>
 
-> Bedrock support is planned for a later release. This repository is the Java Edition launcher.
+> Java and Bedrock are kept separate. Java supports mods, loadouts and Modrinth; Bedrock is the official Minecraft for Windows package and is not moddable.
 
 ## Download
 
@@ -29,6 +29,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | Area | What Newbie handles |
 | --- | --- |
 | **Game versions** | Every Mojang release, snapshot, beta and alpha, installed from official metadata and verified files |
+| **Bedrock** | Minecraft for Windows versions: download official signed GDK packages, install through Windows/Gaming Services, launch the installed package, and switch versions without touching Java |
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/17/21+ from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + skin sync, offline profiles, and generic authlib/Yggdrasil servers |
@@ -55,6 +56,33 @@ Newbie updates itself through the public GitHub Releases feed. There is no updat
 - Downloads happen in the background from GitHub. The installer is verifiable against the SHA-512 in `latest.yml`.
 - Choose **Restart and install** when ready, or let the update install when you close the launcher. Worlds, instances, accounts and settings are untouched.
 - The sidebar version chip and the in-app banner show when an update is available or ready to install.
+
+## Bedrock
+
+The **Bedrock** page downloads and launches Minecraft for Windows separately from Java instances.
+
+- Lists release and preview builds from the public MIT-licensed [GdkLinks](https://github.com/MinecraftBedrockArchiver/GdkLinks) catalog.
+- Downloads the full Microsoft-signed GDK package with progress, resume and cancel.
+- Installs through Windows/Gaming Services with `Add-AppxPackage`. A different version replaces the installed package; Windows preserves worlds and settings.
+- Launches the installed package through its real Windows app identity.
+- Requires a Microsoft account with **Minecraft for Windows** or **Game Pass**. The full package is listed; the in-game 90-minute trial still applies if the account does not own the game. Newbie does not bypass licensing.
+- Bedrock is not moddable. Modrinth, loadouts, shaders and repair are Java-only.
+
+<p align="center">
+  <img src="docs/images/bedrock.png" alt="Bedrock version manager with installed version and download list" width="900" />
+</p>
+
+### Windows Security exclusion
+
+Defender can slow down or block a 1–2 GB package. Before the first Bedrock download, Newbie asks for consent in the app, then opens a Windows UAC prompt.
+
+Only these are excluded:
+
+- Newbie's own Bedrock download folder
+- The official `Microsoft.MinecraftUWP` / `Microsoft.MinecraftWindowsBeta` data folders
+- The installed Microsoft package folders
+
+Third-party DLLs, online fixes or cracks are never excluded. Newbie does not support them.
 
 ## Accounts, honestly
 

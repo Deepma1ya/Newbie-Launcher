@@ -19,7 +19,7 @@ export function TitleBar() {
       <div className="flex items-center gap-2.5">
         <span className="h-1.5 w-1.5 rounded-full bg-grass/80 shadow-[0_0_10px_rgba(110,231,160,0.7)]" />
         <span className="font-display text-[11px] font-semibold tracking-[0.14em] text-muted">NEWBIE LAUNCHER</span>
-        <span className="rounded border border-line/60 px-1.5 py-0.5 font-mono text-[9px] text-muted/70">JAVA</span>
+        <span className="rounded border border-line/60 px-1.5 py-0.5 font-mono text-[9px] text-muted/70">JAVA + BEDROCK</span>
       </div>
       <div className="no-drag flex h-full items-center">
         <button
