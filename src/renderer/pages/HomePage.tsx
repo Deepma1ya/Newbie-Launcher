@@ -4,7 +4,9 @@ import {
   ArrowRight,
   ArrowsClockwise,
   Books,
+  CalendarBlank,
   CheckCircle,
+  Clock,
   Cube,
   Cpu,
   HardDrives,
@@ -20,7 +22,7 @@ import {
 import { APP_VERSION, GITHUB_URL } from '@shared/constants'
 import { useAccounts, useActiveInstance, useDiskUsage, useInstances, useSettings, useSystemInfo, useTasks } from '../hooks/queries'
 import { useUi } from '../store/ui'
-import { loaderLabel, formatPlaytime, relativeTime, formatBytes } from '../lib/utils'
+import { loaderLabel, formatPlaytime, relativeTime, formatBytes, cn } from '../lib/utils'
 import { PageHeader, SectionTitle } from '../components/PageHeader'
 import { InstanceCard } from '../components/InstanceCard'
 import { TlsCapeBadge } from '../components/TlsCapeBadge'
@@ -41,10 +43,24 @@ export function HomePage() {
   const update = useUi((state) => state.update)
   const openModal = useUi((state) => state.openModal)
   const tasks = useUi((state) => state.tasks)
+  const running = useUi((state) => state.running)
   const instances = instancesQuery.data ?? []
   const addonCount = instances.reduce((total, instance) => total + instance.addons.length, 0)
   const loadoutCount = instances.reduce((total, instance) => total + instance.loadouts.length, 0)
   const pendingUpdates = active?.addons.filter((addon) => addon.latestVersionId && addon.latestVersionId !== addon.versionId).length ?? 0
+  const totalPendingUpdates = instances.reduce(
+    (total, instance) =>
+      total +
+      instance.addons.filter(
+        (addon) => addon.latestVersionId && addon.latestVersionId !== addon.versionId
+      ).length,
+    0
+  )
+  const activeLoadout = active?.loadouts.find((loadout) => loadout.id === active.activeLoadoutId) ?? active?.loadouts[0]
+  const activeRunning = Boolean(active && running.some((entry) => entry.instanceId === active.id))
+  const playtime = active && active.totalPlayTimeSec >= 60
+    ? formatPlaytime(active.totalPlayTimeSec).replace(/ played$/, '')
+    : '0m'
   const greeting = greetingForNow()
 
   return (
@@ -84,46 +100,118 @@ export function HomePage() {
                 background: `radial-gradient(120% 130% at 82% 10%, ${active.color}33 0%, transparent 55%), linear-gradient(135deg, #131D15 0%, #0B100C 65%)`
               }}
             >
-              <div className="block-art absolute inset-0 opacity-20" />
-              <div className="absolute -right-10 -top-16 h-64 w-64 rotate-12 rounded-3xl opacity-[0.13]" style={{ backgroundColor: active.color }} />
-              <div className="relative flex h-full flex-col">
-                <div className="flex items-center gap-2">
-                  <Badge tone="green">
-                    <span className="h-1.5 w-1.5 rounded-full bg-grass" />
-                    Ready
-                  </Badge>
-                  <Badge tone="neutral">{loaderLabel(active.loader)}</Badge>
-                  <Badge tone="neutral">{active.versionId}</Badge>
-                  <TlsCapeBadge loader={active.loader} versionId={active.versionId} />
-                </div>
-                <div className="mt-6 flex items-center gap-4">
-                  <BlockIcon name={active.name} color={active.color} iconUrl={active.iconUrl} size={66} />
-                  <div className="min-w-0">
-                    <h2 className="truncate font-display text-[27px] font-semibold tracking-[-0.02em] text-ink">{active.name}</h2>
-                    <p className="mt-1 text-[11.5px] text-muted">
-                      {active.addons.length} add-ons · {active.loadouts.length} loadout{active.loadouts.length === 1 ? '' : 's'} ·{' '}
-                      {active.lastPlayedAt ? `played ${relativeTime(active.lastPlayedAt)}` : 'freshly installed'}
-                    </p>
+              <div className="block-art absolute inset-0 opacity-[0.14]" />
+              <div
+                className="absolute -right-12 -top-20 h-56 w-56 rotate-12 rounded-3xl opacity-[0.07]"
+                style={{ backgroundColor: active.color }}
+              />
+              <div className="relative">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-grass/70">
+                    <span
+                      className={cn(
+                        'h-1.5 w-1.5 rounded-full bg-grass',
+                        activeRunning && 'animate-pulse'
+                      )}
+                    />
+                    Active instance
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <Badge tone="green">
+                      <span
+                        className={cn(
+                          'h-1.5 w-1.5 rounded-full bg-grass',
+                          activeRunning && 'animate-pulse'
+                        )}
+                      />
+                      {activeRunning ? 'Running' : 'Ready'}
+                    </Badge>
+                    <Badge tone="neutral">{loaderLabel(active.loader)}</Badge>
+                    <Badge tone="neutral">{active.versionId}</Badge>
+                    <TlsCapeBadge loader={active.loader} versionId={active.versionId} />
                   </div>
                 </div>
 
-                <div className="mt-auto flex flex-wrap items-center gap-2 pt-7">
-                  <PlayButton instance={active} size="lg" className="min-w-[150px]" />
-                  <Button variant="secondary" onClick={() => navigate(`/instances/${active.id}`)} icon={<Stack size={15} />}>
-                    Manage
-                  </Button>
-                  <Button variant="ghost" onClick={() => openModal('console', { instanceId: active.id })} icon={<TerminalWindow size={15} />}>
-                    Console
-                  </Button>
-                  {pendingUpdates > 0 && (
-                    <Button
-                      variant="subtle"
-                      onClick={() => void window.newbie.addons.updateAll(active.id)}
-                      icon={<ArrowsClockwise size={15} />}
-                    >
-                      {pendingUpdates} updates
-                    </Button>
-                  )}
+                <div className="mt-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
+                  <div className="min-w-0">
+                    <div className="flex items-start gap-4">
+                      <BlockIcon
+                        name={active.name}
+                        color={active.color}
+                        iconUrl={active.iconUrl}
+                        size={64}
+                      />
+                      <div className="min-w-0">
+                        <h2 className="truncate font-display text-[27px] font-semibold tracking-[-0.02em] text-ink">
+                          {active.name}
+                        </h2>
+                        <p className="mt-1 text-[11px] text-muted">
+                          {activeRunning ? 'Running now' : 'Ready to play'}
+                          <span className="mx-1.5 text-muted/40">·</span>
+                          {activeLoadout ? `Loadout: ${activeLoadout.name}` : 'No active loadout'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="mt-5 flex flex-wrap items-center gap-2">
+                      <PlayButton instance={active} size="lg" className="min-w-[128px]" />
+                      <Button
+                        variant="secondary"
+                        onClick={() => navigate(`/instances/${active.id}`)}
+                        icon={<Stack size={15} />}
+                      >
+                        Manage
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        onClick={() => openModal('console', { instanceId: active.id })}
+                        icon={<TerminalWindow size={15} />}
+                      >
+                        Console
+                      </Button>
+                      {pendingUpdates > 0 && (
+                        <Button
+                          variant="subtle"
+                          onClick={() => void window.newbie.addons.updateAll(active.id)}
+                          icon={<ArrowsClockwise size={15} />}
+                        >
+                          {pendingUpdates} update{pendingUpdates === 1 ? '' : 's'}
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2 self-center">
+                    <MiniStat
+                      icon={<Package size={12} />}
+                      label="Add-ons"
+                      value={String(active.addons.length)}
+                      detail={
+                        pendingUpdates > 0
+                          ? `${pendingUpdates} update${pendingUpdates === 1 ? '' : 's'}`
+                          : 'Up to date'
+                      }
+                      highlight={pendingUpdates > 0}
+                    />
+                    <MiniStat
+                      icon={<Stack size={12} />}
+                      label="Loadouts"
+                      value={String(active.loadouts.length)}
+                      detail={activeLoadout?.name ?? 'None'}
+                    />
+                    <MiniStat
+                      icon={<Clock size={12} />}
+                      label="Playtime"
+                      value={playtime}
+                      detail="Total"
+                    />
+                    <MiniStat
+                      icon={<CalendarBlank size={12} />}
+                      label="Last played"
+                      value={active.lastPlayedAt ? relativeTime(active.lastPlayedAt) : 'Never'}
+                      detail={active.lastPlayedAt ? 'Last session' : 'Not played yet'}
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -218,8 +306,8 @@ export function HomePage() {
 
       <div className="mt-5 grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard icon={<Cube size={16} />} label="Instances" value={String(instances.length)} detail={`${instances.filter((instance) => instance.loader !== 'vanilla').length} modded`} />
-        <StatCard icon={<Package size={16} />} label="Add-ons" value={String(addonCount)} detail="tracked for updates" />
-        <StatCard icon={<Stack size={16} />} label="Loadouts" value={String(loadoutCount)} detail="across your instances" />
+        <StatCard icon={<Package size={16} />} label="All add-ons" value={String(addonCount)} detail={totalPendingUpdates > 0 ? `${totalPendingUpdates} updates available` : 'All up to date'} />
+        <StatCard icon={<Stack size={16} />} label="All loadouts" value={String(loadoutCount)} detail="across your instances" />
         <StatCard
           icon={<Sparkle size={16} />}
           label="Version"
@@ -268,15 +356,15 @@ export function HomePage() {
 
       <div className="mt-7 grid gap-4 lg:grid-cols-[1.3fr_0.7fr]">
         <Card className="p-5">
-          <SectionTitle title="What's new in Newbie" description="Java Edition · 0.1 release" />
+          <SectionTitle title="What's new in Newbie" description="Recent launcher features" />
           <div className="grid gap-2 sm:grid-cols-2">
             {[
-              'Loadouts with full offline cache',
-              'Modrinth dependency resolution',
-              'One-click mod conflict repair',
-              'TLauncher skin account support',
-              'Automatic Java 8–25 setup',
-              'World backups before every launch'
+              'One-click Java servers with GUI settings',
+              'Play with friends sharing tools',
+              'Silent, automatic launcher updates',
+              'Bedrock install and uninstall manager',
+              'Bulk add-on cleanup by section',
+              'Automatic Java 8–25 setup'
             ].map((item) => (
               <div key={item} className="flex items-center gap-2 rounded-lg border border-line/40 bg-canvas/25 px-2.5 py-2 text-[11px] text-muted">
                 <CheckCircle size={13} className="shrink-0 text-grass/80" weight="fill" />
@@ -333,6 +421,33 @@ function SystemRow({ icon, label, value, ok }: { icon: React.ReactNode; label: s
       <span className={ok ? 'text-grass/75' : 'text-danger/75'}>{icon}</span>
       <span className="text-muted">{label}</span>
       <span className="ml-auto text-right font-medium text-ink/85">{value}</span>
+    </div>
+  )
+}
+
+function MiniStat({
+  icon,
+  label,
+  value,
+  detail,
+  highlight = false
+}: {
+  icon: React.ReactNode
+  label: string
+  value: string
+  detail: string
+  highlight?: boolean
+}) {
+  return (
+    <div className="rounded-xl border border-white/[0.055] bg-black/15 px-3 py-2.5">
+      <div className="flex items-center gap-1.5 text-[8.5px] font-semibold uppercase tracking-[0.1em] text-muted/60">
+        <span className={highlight ? 'text-gold/80' : 'text-grass/65'}>{icon}</span>
+        {label}
+      </div>
+      <div className="mt-1 truncate font-display text-[14px] font-semibold text-ink">{value}</div>
+      <div className={cn('mt-0.5 truncate text-[9px]', highlight ? 'text-gold/75' : 'text-muted/55')}>
+        {detail}
+      </div>
     </div>
   )
 }

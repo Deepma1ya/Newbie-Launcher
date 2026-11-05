@@ -1,23 +1,20 @@
-# Newbie Launcher 0.1.30
+# Newbie Launcher 0.1.31
 
-Play with friends — with the right address and clear difficulty levels.
+A clearer Home dashboard.
 
-## Server → Share
+## Active instance
 
-- New **Share** tab on every local server.
-- Detects your **LAN**, **Radmin VPN** and **public** addresses plus the router gateway.
-- The address field remembers what you paste and gives you **Copy** and **Test** buttons.
-- Tests use a local TCP connection for LAN/Radmin and a public Minecraft status lookup for tunnels and port-forwarded addresses.
-- Newcomer-friendly method cards with **Easy / Medium / Hard / Advanced** badges and a **Friends need** label.
+- Reorganized the active-instance card into a structured layout:
+  - **Active instance** header with Ready/Running state and loader, version and TL skin badges.
+  - Instance identity and **Play / Manage / Console** actions on one row.
+  - A dedicated 2×2 stat grid: add-ons + updates, loadouts, playtime and last played.
+- The card now uses the empty right side instead of leaving it as decoration.
+- Stats move below the identity on narrower windows so the card never becomes cramped.
 
-## Methods
+## Totals
 
-- **playit.gg — Easy (recommended).** Exact local target (`127.0.0.1:port`), download and tunnel-setup links. Friends only need the playit address and vanilla Minecraft.
-- **Port forwarding — Hard.** Shows the LAN target, public address, router gateway link, CGNAT warning and step-by-step router/firewall instructions.
-- **Radmin VPN — Medium.** Detects the Radmin IP when the adapter is active and gives friends the exact `RadminIP:port`.
-- **ngrok — Medium.** Shows the exact `ngrok tcp <port>` command, download/token links and the free-plan card-verification caveat.
-- **Cloudflare Tunnel — Advanced.** Explains the real limitation: Minecraft Java is raw TCP, so friends need cloudflared/WARP (or a client mod) and authentication.
-- **Same Wi-Fi / LAN — Easy.** Copy the local network address for players on the same network.
-- Added a security warning to enable online mode and the whitelist before sharing a public address.
+- Renamed the page-level cards to **All add-ons** and **All loadouts** to distinguish them from the active-instance stats.
+- **All add-ons** now shows the total number of updates available across every instance.
+- Refreshed the highlights list to show current features: Java servers, sharing, silent updates, Bedrock management, bulk cleanup and Java setup.
 
-Everything from 0.1.29 and earlier is included.
+Everything from 0.1.30 and earlier is included.
