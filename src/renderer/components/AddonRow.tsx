@@ -122,7 +122,7 @@ export function AddonRow({
                 aria-label="Close menu"
                 onClick={() => setMenuOpen(false)}
               />
-              <div className="absolute right-0 top-9 z-40 w-40 overflow-hidden rounded-xl border border-line bg-elevated p-1 shadow-lift">
+              <div className="absolute right-0 top-9 z-50 w-40 overflow-hidden rounded-xl border border-line bg-elevated p-1 shadow-lift">
                 {record.sourceUrl && (
                   <button
                     className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[12px] text-muted hover:bg-white/[0.05] hover:text-ink"

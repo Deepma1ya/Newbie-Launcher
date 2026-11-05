@@ -69,12 +69,12 @@ export function AccountCard({
   return (
     <div
       className={cn(
-        'relative overflow-hidden rounded-2xl border bg-card/65',
+        'relative rounded-2xl border bg-card/65',
         account.active ? 'border-grass/35' : 'border-line/55',
         large ? 'p-5' : 'p-4'
       )}
     >
-      {account.active && <div className="absolute inset-x-0 top-0 h-[2px] bg-gradient-to-r from-transparent via-grass/80 to-transparent" />}
+      {account.active && <div className="absolute inset-x-0 top-0 h-[2px] rounded-t-2xl bg-gradient-to-r from-transparent via-grass/80 to-transparent" />}
       <div className="flex items-start justify-between gap-3">
         <div className="flex min-w-0 items-center gap-3.5">
           <SkinFace skinUrl={account.skinUrl} name={account.username} size={large ? 56 : 42} />
@@ -119,8 +119,8 @@ export function AccountCard({
             </button>
             {menuOpen && (
               <>
-                <button className="fixed inset-0 z-30 cursor-default" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
-                <div className="absolute right-0 top-9 z-40 w-44 rounded-xl border border-line bg-elevated p-1 shadow-lift">
+                <button className="fixed inset-0 z-40 cursor-default" aria-label="Close menu" onClick={() => setMenuOpen(false)} />
+                <div className="absolute right-0 top-9 z-50 w-44 rounded-xl border border-line bg-elevated p-1 shadow-lift">
                   {account.type !== 'offline' && (
                     <button
                       className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-[12px] text-muted hover:bg-white/[0.05] hover:text-ink"

@@ -51,7 +51,7 @@ export function InstanceCard({ instance, compact = false }: { instance: Instance
   return (
     <article
       className={cn(
-        'card-hover group relative cursor-pointer overflow-hidden rounded-2xl border border-line/60 bg-card/70',
+        'card-hover group relative cursor-pointer rounded-2xl border border-line/60 bg-card/70',
         compact ? 'min-h-[148px]' : 'min-h-[178px]'
       )}
       onClick={() => {
@@ -113,7 +113,7 @@ export function InstanceCard({ instance, compact = false }: { instance: Instance
             <DotsThree size={18} weight="bold" />
           </button>
           {menuOpen && (
-            <div className="absolute right-0 top-9 z-40 w-44 overflow-hidden rounded-xl border border-line bg-elevated p-1 shadow-lift">
+            <div className="absolute right-0 top-9 z-50 w-44 overflow-hidden rounded-xl border border-line bg-elevated p-1 shadow-lift">
               <MenuItem
                 icon={<TerminalWindow size={15} />}
                 label="Open console"
