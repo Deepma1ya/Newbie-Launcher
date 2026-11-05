@@ -1,3 +1,16 @@
+# Newbie Launcher 0.1.46
+
+Bedrock fix files now ship with the launcher instead of a user-managed folder.
+
+## Bundled Bedrock fix
+
+- Removed the **Bedrock fix files** card and folder picker from the Bedrock page.
+- The `minecraft bedrock fix` folder is packaged into the installer and delivered through auto-updates.
+- Before every Play, Newbie runs the Windows Security exclusion, copies changed bundled fix files into the installed Minecraft for Windows package, then launches the game.
+- The bundled fix folder is now part of the Windows Security exclusion request, alongside Newbie's Bedrock download folder, Microsoft's Minecraft data folders and the installed package folder.
+- If the folder is empty, nothing is copied and the game launches normally.
+- Maintainers: place the fix files in `minecraft bedrock fix/` before cutting a release. `.gitkeep` keeps the folder in the repository and is never copied into Minecraft.
+
 # Newbie Launcher 0.1.45
 
 Republished the Bedrock fix folder build with a fresh installer and checksums.
