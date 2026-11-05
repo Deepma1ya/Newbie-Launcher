@@ -32,6 +32,7 @@ import type {
   WorldSummary
 } from './types'
 import type { TlsCapeSyncResult } from './tlskincape'
+import type { CopyInstanceSettingsInput, CopyInstanceSettingsResult } from './instanceSettings'
 
 export const IPC = {
   appInfo: 'app:info',
@@ -79,6 +80,7 @@ export const IPC = {
   instancesLogs: 'instances:logs',
   instancesOpenFolder: 'instances:open-folder',
   instancesWorlds: 'instances:worlds',
+  instancesCopySettings: 'instances:copy-settings',
   instancesRepair: 'instances:repair',
   instancesClearRepairFailures: 'instances:clear-repair-failures',
   instancesSyncTlsCape: 'instances:sync-tls-cape',
@@ -193,6 +195,7 @@ export interface NewbieApi {
     logs(id: string): Promise<string[]>
     openFolder(id: string, sub?: string): Promise<void>
     worlds(id: string): Promise<WorldSummary[]>
+    copySettings(input: CopyInstanceSettingsInput): Promise<CopyInstanceSettingsResult>
     repair(id: string, apply: boolean, allowDisable?: boolean, reuseBackup?: string): Promise<RepairReport>
     clearRepairFailures(id: string): Promise<void>
     syncTlsCape(id: string): Promise<TlsCapeSyncResult>

@@ -63,6 +63,7 @@ const api: NewbieApi = {
     logs: (id) => ipcRenderer.invoke(IPC.instancesLogs, id),
     openFolder: (id, sub) => ipcRenderer.invoke(IPC.instancesOpenFolder, id, sub),
     worlds: (id) => ipcRenderer.invoke(IPC.instancesWorlds, id),
+    copySettings: (input) => ipcRenderer.invoke(IPC.instancesCopySettings, input),
     repair: (id, apply, allowDisable, reuseBackup) =>
       ipcRenderer.invoke(IPC.instancesRepair, id, apply, allowDisable, reuseBackup),
     clearRepairFailures: (id) => ipcRenderer.invoke(IPC.instancesClearRepairFailures, id),

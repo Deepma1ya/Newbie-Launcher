@@ -5,6 +5,7 @@ import {
   ArrowLeft,
   ArrowSquareOut,
   ArrowsClockwise,
+  Copy,
   Cpu,
   Cube,
   FolderOpen,
@@ -42,6 +43,7 @@ import { PageHeader } from '../components/PageHeader'
 import { PlayButton } from '../components/PlayButton'
 import { AddonRow } from '../components/AddonRow'
 import { LoadoutCard } from '../components/LoadoutCard'
+import { CopySettingsModal } from '../components/modals/CopySettingsModal'
 import { TlsCapeBadge } from '../components/TlsCapeBadge'
 import { BlockIcon } from '../components/ui/BlockIcon'
 import { Badge, Card, EmptyState, Field, Input, Progress, Segmented, Select, Skeleton, Switch } from '../components/ui/primitives'
@@ -496,6 +498,7 @@ function InstanceSettings({
   const [installingJava, setInstallingJava] = useState<number | null>(null)
   const [capeBusy, setCapeBusy] = useState(false)
   const [capeEnabled, setCapeEnabled] = useState(instance.tlauncherCape !== false)
+  const [copySettingsOpen, setCopySettingsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [profile, setProfile] = useState<PerformanceProfile>(settings?.performance.profile ?? 'balanced')
 
@@ -694,6 +697,28 @@ function InstanceSettings({
             Change version
           </Button>
         </Card>
+
+        <Card className="p-5">
+          <h2 className="font-display text-[15px] font-semibold text-ink">Minecraft settings</h2>
+          <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
+            Copy keybinds, video and audio options, resource pack order and shader selection to another instance.
+          </p>
+          <Button
+            variant="secondary"
+            size="sm"
+            className="mt-3"
+            onClick={() => setCopySettingsOpen(true)}
+            icon={<Copy size={14} />}
+          >
+            Copy settings
+          </Button>
+        </Card>
+
+        <CopySettingsModal
+          open={copySettingsOpen}
+          onClose={() => setCopySettingsOpen(false)}
+          source={instance}
+        />
 
         <Card className="p-5">
           <div className="flex items-start justify-between gap-2">

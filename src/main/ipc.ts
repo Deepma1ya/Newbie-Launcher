@@ -69,6 +69,7 @@ import { tasks } from './services/tasks'
 import { checkForUpdates, installUpdate, updaterState } from './services/updater'
 import { clearRepairFailures } from './services/repair'
 import { syncTlsCape } from './services/tlskincape'
+import { copyInstanceSettings } from './services/instanceSettings'
 import {
   addBedrockExclusion,
   cancelBedrockDownload,
@@ -172,6 +173,28 @@ const updateInstanceSchema = z.object({
   iconUrl: z.string().max(2048).optional(),
   color: z.string().max(32).optional(),
   tlauncherCape: z.boolean().optional()
+})
+
+const copySettingsSchema = z.object({
+  sourceId: z.string().max(200),
+  targetIds: z.array(z.string().max(200)).min(1).max(200),
+  categories: z
+    .array(
+      z.enum([
+        'keybinds',
+        'video',
+        'audio',
+        'controls',
+        'chat',
+        'accessibility',
+        'language',
+        'resourcePacks',
+        'shaders',
+        'other'
+      ])
+    )
+    .min(1)
+    .max(20)
 })
 
 const searchSchema = z.object({
@@ -301,6 +324,9 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.instancesList, () => listInstances())
   ipcMain.handle(IPC.instancesGet, (_event, id: string) => getInstance(z.string().parse(id)))
   ipcMain.handle(IPC.instancesWorlds, async (_event, id: string) => listWorlds(z.string().parse(id)))
+  ipcMain.handle(IPC.instancesCopySettings, async (_event, raw: unknown) =>
+    copyInstanceSettings(copySettingsSchema.parse(raw))
+  )
   ipcMain.handle(IPC.instancesCreate, async (_event, input: unknown) =>
     createInstance(createInstanceSchema.parse(input) as CreateInstanceInput)
   )

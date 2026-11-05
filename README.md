@@ -35,6 +35,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, and generic authlib/Yggdrasil servers |
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
 | **Datapacks** | Modrinth datapacks installed directly into a chosen world's `datapacks` folder, or kept in an instance staging folder. Required dependencies and updates follow the same target. |
+| **Settings transfer** | Copy keybinds, video/audio options, resource pack order and Iris shader setup between instances, or make the selected settings the default for every other instance. |
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
 | **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
 | **Repair** | Installs missing dependencies and re-enables disabled providers first. Essential mods such as Fabric API and Sodium are protected from conflict disables. Other duplicate, wrong-loader or incompatible mods are only disabled after a confirmation popup, with a backup |

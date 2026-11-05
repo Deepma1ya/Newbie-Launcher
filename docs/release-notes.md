@@ -1,20 +1,26 @@
-# Newbie Launcher 0.1.21
+# Newbie Launcher 0.1.22
 
-Java 25 and more Java choices.
+Copy Minecraft settings between instances.
 
-## Java
+## Copy settings
 
-- Added Java 25 to the Java settings page, alongside Java 21, 17, 11 and 8.
-- Install buttons now show when a major is already installed; only missing versions are offered for download.
-- The per-instance **Java runtime** picker now includes direct install options for missing majors:
-  - choose **Java 25 · install Temurin** and Newbie downloads it, then selects it for that instance;
-  - the same works for Java 21, 17, 11 and 8;
-  - detected runtimes from any vendor remain selectable.
-- Automatic Java now prefers the exact major a Minecraft version needs. A newer installed runtime no longer silently replaces it — for example, Java 25 will not be used for a Java 21 instance unless you select it explicitly.
-- Java 25 is optional and intended for newer versions or mods that explicitly support it. The instance picker warns about this.
+- Added **Instance → Settings → Minecraft settings → Copy settings**.
+- Choose exactly what to copy:
+  - **Keybinds**
+  - **Video & graphics** — render distance, FPS, graphics mode, clouds, particles and brightness
+  - **Audio** — master, music and per-category volumes
+  - **Controls** — sensitivity, sprint/crouch toggles and auto-jump
+  - **Chat & social** — visibility, opacity, links and secure-chat options
+  - **Accessibility** — narrator, subtitles, contrast and skin parts
+  - **Language**
+  - **Resource pack order** — enabled packs and their order
+  - **Shaders** — Iris selection/configuration and the selected shader pack
+  - **Other options** — any remaining `options.txt` keys
+- Copy to **one instance** or **all other instances** in one operation. The all-instances mode makes the selected settings the default for every other instance.
+- Target `options.txt` files are backed up as `options.txt.newbie-copy.bak` before anything changes.
+- Resource pack entries for packs missing in the target are skipped instead of leaving broken pack order entries.
+- The selected shader pack is copied into the target when it is not already installed.
+- `lastServer` and `version` are never copied.
+- Copying is blocked while the source or any target instance is running.
 
-## Notes
-
-- Adoptium JRE downloads are still verified against their SHA-256 checksum.
-- Java 8, 11, 17, 21 and 25 are all available from the same installer.
-- Everything from 0.1.20 (essential mod protection), 0.1.19 (datapacks) and earlier is included.
+Everything from 0.1.21 (Java 25), 0.1.20 (essential mod protection) and earlier is included.
