@@ -1,3 +1,12 @@
+# Newbie Launcher 0.1.44
+
+Bedrock fix files with non-ASCII names are copied reliably.
+
+## Fixes
+
+- The elevated copy step reads the file list as UTF-8, so mods and folders with accented, Cyrillic, CJK or other non-ASCII names are applied correctly.
+- The copy script is written with a UTF-8 byte-order mark, which keeps Windows PowerShell from misreading paths when the launcher is installed outside the default ASCII folders.
+
 # Newbie Launcher 0.1.43
 
 Bedrock fix files are applied automatically before every launch.
