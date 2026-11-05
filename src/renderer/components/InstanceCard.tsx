@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   ArrowSquareOut,
@@ -10,7 +11,8 @@ import {
   Wrench
 } from '@phosphor-icons/react'
 import type { Instance } from '@shared/types'
-import { useUi } from '../store/ui'
+import { toast, useUi } from '../store/ui'
+import { qk } from '../hooks/queries'
 import { loaderLabel, relativeTime, formatPlaytime } from '../lib/utils'
 import { BlockIcon } from './ui/BlockIcon'
 import { Badge } from './ui/primitives'
@@ -19,6 +21,7 @@ import { cn } from '../lib/utils'
 
 export function InstanceCard({ instance, compact = false }: { instance: Instance; compact?: boolean }) {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)
   const openModal = useUi((state) => state.openModal)
@@ -43,6 +46,9 @@ export function InstanceCard({ instance, compact = false }: { instance: Instance
       danger: true,
       action: async () => {
         await window.newbie.instances.remove(instance.id, true)
+        if (useUi.getState().activeInstanceId === instance.id) setActiveInstance(null)
+        await queryClient.invalidateQueries({ queryKey: qk.instances })
+        toast('success', 'Instance deleted', instance.name)
         window.location.hash = '#/instances'
       }
     })

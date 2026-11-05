@@ -26,6 +26,7 @@ export async function initPaths(): Promise<string> {
   }
   logger.setDataDir(currentDataDir)
   logger.info('paths', `Data directory: ${currentDataDir}`)
+  void cleanupTrash()
   return currentDataDir
 }
 
@@ -36,6 +37,7 @@ export async function setDataDir(dir: string): Promise<string> {
   await writeJsonAtomic(bootstrapPath, { dataDir: currentDataDir } satisfies BootstrapConfig)
   logger.setDataDir(currentDataDir)
   logger.info('paths', `Data directory changed to: ${currentDataDir}`)
+  void cleanupTrash()
   return currentDataDir
 }
 
@@ -99,6 +101,12 @@ export const paths = {
   get logs() {
     return path.join(dataDir(), 'logs')
   },
+  get trash() {
+    return path.join(dataDir(), 'trash')
+  },
+  get instanceTrash() {
+    return path.join(dataDir(), 'trash', 'instances')
+  },
   get natives() {
     return path.join(dataDir(), 'natives')
   },
@@ -143,8 +151,18 @@ export async function ensureLayout(dir: string): Promise<void> {
     ensureDir(path.join(dir, 'backups', 'worlds')),
     ensureDir(path.join(dir, 'backups', 'repairs')),
     ensureDir(path.join(dir, 'backups', 'modpacks')),
-    ensureDir(path.join(dir, 'logs'))
+    ensureDir(path.join(dir, 'logs')),
+    ensureDir(path.join(dir, 'trash', 'instances'))
   ])
+}
+
+export async function cleanupTrash(): Promise<void> {
+  const target = path.join(currentDataDir, 'trash', 'instances')
+  try {
+    await fs.rm(target, { recursive: true, force: true, maxRetries: 2, retryDelay: 200 })
+  } catch (error) {
+    logger.warn('paths', 'Could not clear the deleted-instance trash folder', error)
+  }
 }
 
 export async function freeSpaceMb(target: string): Promise<number> {

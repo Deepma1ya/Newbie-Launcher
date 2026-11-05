@@ -219,9 +219,50 @@ export async function removeInstance(id: string, deleteFiles: boolean): Promise<
     if (!running) throw new Error('Wait for Minecraft to finish starting before deleting this instance')
     await stopInstance(id)
   }
+
+  let trashPath: string | null = null
+  if (deleteFiles) trashPath = await moveInstanceToTrash(id)
+
+  // Remove the instance from the launcher immediately. The renamed folder is
+  // cleaned in the background, so a large world or modpack cannot freeze the UI.
   await store.removeInstance(id)
-  if (deleteFiles) await removeDir(paths.instance(id))
+  await store.flush()
+
+  if (deleteFiles) {
+    if (trashPath) {
+      void removeDir(trashPath).catch((error) =>
+        logger.warn('instances', `Could not finish deleting ${trashPath}`, error)
+      )
+    } else {
+      void removeDir(paths.instance(id)).catch((error) =>
+        logger.warn('instances', `Could not finish deleting ${id}`, error)
+      )
+    }
+  }
   logger.info('instances', `Removed ${instance.name}${deleteFiles ? ' with files' : ''}`)
+}
+
+async function moveInstanceToTrash(id: string): Promise<string | null> {
+  const source = paths.instance(id)
+  if (!(await pathExists(source))) return null
+  await ensureDir(paths.instanceTrash)
+  const target = path.join(
+    paths.instanceTrash,
+    `${sanitizeFilename(id)}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  )
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    try {
+      await fs.rename(source, target)
+      return target
+    } catch (error) {
+      if (attempt === 7) {
+        logger.warn('instances', `Could not move ${source} to trash; deleting in place`, error)
+        return null
+      }
+      await new Promise((resolve) => setTimeout(resolve, 150))
+    }
+  }
+  return null
 }
 
 export async function openInstanceFolder(id: string, sub?: string): Promise<string> {

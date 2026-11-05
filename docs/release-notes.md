@@ -1,13 +1,14 @@
-# Newbie Launcher 0.1.13
+# Newbie Launcher 0.1.14
 
-Console opens only after a crash.
+Faster instance deletion.
 
 ## Changed
 
-- Clicking **Play** no longer opens the console drawer.
-- The console opens automatically only when Minecraft exits unexpectedly.
-- Pressing **Stop** is not treated as a crash, so it does not open the console.
-- A clean exit keeps the console closed. Use the **Console** button to inspect history whenever you want.
-- Added a regression test for crash classification.
+- Deleting an instance now removes it from the launcher immediately.
+- The instance folder is moved into a trash folder in one fast rename, then deleted in the background.
+- Large worlds and modpacks no longer block the window while they are deleted.
+- The instances list and active-instance selection update right away.
+- A running game is still stopped before deletion.
+- The trash folder is cleared on startup, so an interrupted delete does not leave stale data.
 
-Everything from 0.1.12 (repair reliability) and 0.1.11 (new icon) is included.
+Everything from 0.1.13 (console only on crashes) and 0.1.12 (repair reliability) is included.

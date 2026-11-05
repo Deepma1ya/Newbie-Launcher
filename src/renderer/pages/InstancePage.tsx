@@ -139,6 +139,9 @@ export function InstancePage() {
       danger: true,
       action: async () => {
         await window.newbie.instances.remove(instance.id, true)
+        if (useUi.getState().activeInstanceId === instance.id) setActiveInstance(null)
+        await queryClient.invalidateQueries({ queryKey: qk.instances })
+        toast('success', 'Instance deleted', instance.name)
         navigate('/instances')
       }
     })

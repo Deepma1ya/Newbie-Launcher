@@ -1,6 +1,6 @@
 export const APP_NAME = 'Newbie Launcher'
 export const APP_ID = 'com.newbielauncher.app'
-export const APP_VERSION = '0.1.13'
+export const APP_VERSION = '0.1.14'
 export const GITHUB_OWNER = 'Deepma1ya'
 export const GITHUB_REPO = 'Newbie-Launcher'
 export const GITHUB_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
