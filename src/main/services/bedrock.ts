@@ -225,6 +225,8 @@ interface SetupBase {
   gamingServices: boolean
   windowsBuild: string
   defenderAvailable: boolean
+  defenderTamperProtected: boolean
+  defenderTamperExclusions: boolean
   exclusionPaths: string[]
 }
 
@@ -237,6 +239,8 @@ try {
 $gaming = [bool](Get-AppxPackage -Name Microsoft.GamingServices -ErrorAction SilentlyContinue)
 $build = [System.Environment]::OSVersion.Version.ToString()
 $defenderAvailable = $false
+$tamperProtected = $false
+$tamperExclusions = $false
 $exclusionPaths = @()
 try {
   $null = Get-Command Get-MpPreference -ErrorAction Stop
@@ -244,7 +248,9 @@ try {
   $defenderAvailable = $true
   $exclusionPaths = @($preference.ExclusionPath | Where-Object { $_ })
 } catch {}
-[pscustomobject]@{ developerMode = $dev; gamingServices = $gaming; windowsBuild = $build; defenderAvailable = $defenderAvailable; exclusionPaths = $exclusionPaths } | ConvertTo-Json -Compress -Depth 4
+try { $tamperProtected = [bool](Get-MpComputerStatus).IsTamperProtected } catch {}
+try { $tamperExclusions = ((Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows Defender\\Features' -Name TPExclusions -ErrorAction Stop) -eq 1) } catch {}
+[pscustomobject]@{ developerMode = $dev; gamingServices = $gaming; windowsBuild = $build; defenderAvailable = $defenderAvailable; defenderTamperProtected = $tamperProtected; defenderTamperExclusions = $tamperExclusions; exclusionPaths = $exclusionPaths } | ConvertTo-Json -Compress -Depth 4
 `
   const result = await runPowerShell(script, 60_000)
   if (result.code !== 0) {
@@ -253,6 +259,8 @@ try {
       gamingServices: false,
       windowsBuild: '',
       defenderAvailable: false,
+      defenderTamperProtected: false,
+      defenderTamperExclusions: false,
       exclusionPaths: []
     }
   }
@@ -267,6 +275,8 @@ try {
       gamingServices: Boolean(parsed.gamingServices),
       windowsBuild: String(parsed.windowsBuild ?? ''),
       defenderAvailable: Boolean(parsed.defenderAvailable) && !unreadable,
+      defenderTamperProtected: Boolean(parsed.defenderTamperProtected),
+      defenderTamperExclusions: Boolean(parsed.defenderTamperExclusions),
       exclusionPaths: unreadable ? [] : detected
     }
   } catch {
@@ -275,6 +285,8 @@ try {
       gamingServices: false,
       windowsBuild: '',
       defenderAvailable: false,
+      defenderTamperProtected: false,
+      defenderTamperExclusions: false,
       exclusionPaths: []
     }
   }
@@ -297,6 +309,8 @@ async function getSetup(installations: BedrockInstallation[]): Promise<BedrockSe
     defenderCheckedAt: base.defenderAvailable ? new Date().toISOString() : marker?.addedAt,
     defenderExcludedPaths: summary.excluded,
     defenderMissingPaths: summary.missing,
+    defenderTamperProtected: base.defenderTamperProtected,
+    defenderTamperExclusions: base.defenderTamperExclusions,
     dataDir: bedrockRoot(),
     gameDataDirs: gameDataDirs()
   }
@@ -757,19 +771,38 @@ export async function addBedrockExclusion(): Promise<BedrockExclusionResult> {
   const installations = await detectBedrockInstallations().catch(() => [])
   const dataDirs = gameDataDirs()
   await Promise.all(dataDirs.map((entry) => ensureDir(entry).catch(() => undefined)))
-  const candidates = requiredExclusionPaths(installations)
-  const existing = candidates.length > 0 ? candidates : [root]
+  const required = requiredExclusionPaths(installations)
+  const candidates = required.length > 0 ? required : [root]
 
-  const scriptPath = path.join(root, 'defender-exclusion.ps1')
-  const resultPath = path.join(root, 'defender-exclusion-result.json')
-  const pathList = existing.map((entry) => `'${escapePowerShell(entry)}'`).join(', ')
+  let workDir = exclusionWorkDir()
+  try {
+    await ensureDir(workDir)
+  } catch {
+    workDir = root
+  }
+  const nonce = `${process.pid}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
+  const scriptPath = path.join(workDir, `defender-exclusion-${nonce}.ps1`)
+  const resultPath = path.join(workDir, `defender-exclusion-result-${nonce}.json`)
+  const pathList = candidates.map((entry) => `'${escapePowerShell(entry)}'`).join(', ')
   const script = `
 $ErrorActionPreference = 'Stop'
 $paths = @(${pathList})
 $kept = @()
 $failed = @()
 $current = @()
-try { $current = @((Get-MpPreference).ExclusionPath | Where-Object { $_ }) } catch {}
+$readable = $false
+$admin = $false
+$tamperProtected = $false
+$tamperExclusions = $false
+try {
+  $admin = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+} catch {}
+try { $tamperProtected = [bool](Get-MpComputerStatus).IsTamperProtected } catch {}
+try { $tamperExclusions = ((Get-ItemPropertyValue -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows Defender\\Features' -Name TPExclusions -ErrorAction Stop) -eq 1) } catch {}
+try {
+  $current = @((Get-MpPreference).ExclusionPath | Where-Object { $_ -and $_ -notlike 'N/A:*' })
+  $readable = $true
+} catch {}
 foreach ($item in $paths) {
   $covered = $false
   $itemNorm = $item.TrimEnd([char]92)
@@ -786,79 +819,140 @@ foreach ($item in $paths) {
     continue
   }
   try {
+    New-Item -ItemType Directory -Force -Path $item -ErrorAction SilentlyContinue | Out-Null
     Add-MpPreference -ExclusionPath $item -ErrorAction Stop
-    $current += $item
-    $kept += $item
+    $readBack = @()
+    try { $readBack = @((Get-MpPreference).ExclusionPath | Where-Object { $_ -and $_ -notlike 'N/A:*' }) } catch {}
+    $verified = $false
+    if ($readBack.Count -eq 0) {
+      if ($tamperExclusions) {
+        $failed += [pscustomobject]@{ path = $item; error = 'Windows Tamper Protection protects the exclusion list and did not confirm the change.' }
+        continue
+      }
+      $verified = $true
+    } else {
+      foreach ($entry in $readBack) {
+        if ([string]::IsNullOrWhiteSpace($entry)) { continue }
+        $entryNorm = $entry.TrimEnd([char]92)
+        if ($itemNorm -eq $entryNorm -or $item.StartsWith($entryNorm + [char]92, [System.StringComparison]::OrdinalIgnoreCase)) {
+          $verified = $true
+          break
+        }
+      }
+    }
+    if ($verified) {
+      $current += $item
+      $kept += $item
+    } else {
+      $failed += [pscustomobject]@{ path = $item; error = 'Windows did not apply the exclusion (policy or Tamper Protection).' }
+    }
   } catch {
     $failed += [pscustomobject]@{ path = $item; error = $_.Exception.Message }
   }
 }
-[pscustomobject]@{ ok = ($failed.Count -eq 0 -and $kept.Count -gt 0); paths = $kept; failed = $failed } | ConvertTo-Json -Compress -Depth 4 |
+[pscustomobject]@{ ok = ($kept.Count -gt 0); admin = $admin; tamperProtected = $tamperProtected; tamperExclusions = $tamperExclusions; readable = $readable; paths = $kept; failed = $failed } | ConvertTo-Json -Compress -Depth 4 |
   ForEach-Object { [System.IO.File]::WriteAllText('${escapePowerShell(resultPath)}', $_, (New-Object System.Text.UTF8Encoding($false))) }
 `
-  await fs.writeFile(scriptPath, script, 'utf8')
-  await fs.rm(resultPath, { force: true })
+  try {
+    await fs.writeFile(scriptPath, script, 'utf8')
+    await fs.rm(resultPath, { force: true })
 
-  const runner = `
+    const runner = `
 $ErrorActionPreference = 'Stop'
 $process = Start-Process -FilePath '${escapePowerShell(POWERSHELL)}' -ArgumentList @('-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-File', '${escapePowerShell(scriptPath)}') -Verb RunAs -WindowStyle Hidden -PassThru -Wait
 exit $process.ExitCode
 `
-  const run = await runPowerShell(runner, 5 * 60 * 1000)
-  const result = await readJson<{
-    ok?: boolean
-    paths?: string[]
-    failed?: { path?: string; error?: string }[]
-    error?: string
-  } | null>(resultPath, null)
-  if (!result) {
-    const output = `${run.stdout}\n${run.stderr}`
-    const cancelled = run.code !== 0 && /cancel|1223/i.test(output)
-    logger.warn('bedrock', 'Windows Security exclusion was not added', output)
-    return {
-      ok: false,
-      cancelled,
-      paths: existing,
-      error: cancelled ? undefined : cleanPowerShellError(run)
+    const run = await runPowerShell(runner, 5 * 60 * 1000)
+    const result = await readJson<{
+      ok?: boolean
+      admin?: boolean
+      tamperProtected?: boolean
+      tamperExclusions?: boolean
+      readable?: boolean
+      paths?: string[]
+      failed?: { path?: string; error?: string }[]
+      error?: string
+    } | null>(resultPath, null)
+    if (!result) {
+      const output = `${run.stdout}\n${run.stderr}`.trim()
+      const cancelled = run.code !== 0 && /cancel|1223/i.test(output)
+      logger.warn('bedrock', 'Windows Security exclusion was not added', output || 'No result file')
+      return {
+        ok: false,
+        cancelled,
+        paths: candidates,
+        allPaths: candidates,
+        error: cancelled
+          ? undefined
+          : output
+            ? cleanPowerShellError({ stdout: '', stderr: output })
+            : 'Windows did not return an exclusion result. Run Newbie as administrator or add the folders manually in Windows Security.'
+      }
     }
-  }
 
-  const addedPaths =
-    Array.isArray(result.paths) && result.paths.length > 0
-      ? result.paths.filter((entry): entry is string => typeof entry === 'string')
-      : []
-  if (addedPaths.length > 0) {
-    await writeJsonAtomic(exclusionMarkerFile(), {
-      addedAt: new Date().toISOString(),
-      paths: addedPaths
-    } satisfies ExclusionMarker)
-    logger.info('bedrock', `Windows Security exclusions added: ${addedPaths.join(', ')}`)
-  }
-
-  const failed = Array.isArray(result.failed)
-    ? result.failed.filter((entry) => entry && entry.path)
-    : []
-  if (failed.length > 0) {
-    const detail = failed
-      .map((entry) => `${entry.path ?? 'unknown'}: ${entry.error ?? 'unknown error'}`)
-      .join('; ')
-    logger.warn('bedrock', `Some Windows Security exclusions were skipped: ${detail}`)
-    return {
-      ok: false,
-      paths: addedPaths.length > 0 ? addedPaths : existing,
-      error: `Windows Security rejected ${failed.length} Bedrock folder${
-        failed.length === 1 ? '' : 's'
-      }. ${failed[0]?.error ?? 'Enable Developer Mode or Windows Security access and try again.'}`
+    const addedPaths =
+      Array.isArray(result.paths) && result.paths.length > 0
+        ? result.paths.filter((entry): entry is string => typeof entry === 'string')
+        : []
+    const failed = (Array.isArray(result.failed) ? result.failed : []).filter(
+      (entry): entry is { path: string; error?: string } => Boolean(entry?.path)
+    )
+    if (addedPaths.length > 0) {
+      await writeJsonAtomic(exclusionMarkerFile(), {
+        addedAt: new Date().toISOString(),
+        paths: addedPaths
+      } satisfies ExclusionMarker)
+      logger.info('bedrock', `Windows Security exclusions added: ${addedPaths.join(', ')}`)
     }
-  }
 
-  if (!result.ok || addedPaths.length === 0) {
-    return {
-      ok: false,
-      paths: existing,
-      error: result.error ?? 'Windows Security did not confirm the exclusion. Try again as administrator.'
+    if (failed.length > 0) {
+      const detail = failed
+        .map((entry) => `${entry.path ?? 'unknown'}: ${entry.error ?? 'unknown error'}`)
+        .join('; ')
+      logger.warn('bedrock', `Some Windows Security exclusions were skipped: ${detail}`)
+      const tamper = Boolean(result.tamperExclusions || result.tamperProtected)
+      const error = tamper
+        ? 'Windows Tamper Protection is protecting the Defender exclusion list. Add the folders manually in Windows Security.'
+        : `Windows rejected ${failed.length} Bedrock folder${
+            failed.length === 1 ? '' : 's'
+          }. ${failed[0]?.error ?? 'Add the folders manually in Windows Security.'}`
+      return {
+        ok: addedPaths.length > 0,
+        partial: addedPaths.length > 0,
+        manual: true,
+        paths: addedPaths.length > 0 ? addedPaths : candidates,
+        allPaths: candidates,
+        failed,
+        error
+      }
     }
-  }
 
-  return { ok: true, paths: addedPaths }
+    if (!result.ok || addedPaths.length === 0) {
+      return {
+        ok: false,
+        paths: candidates,
+        allPaths: candidates,
+        manual: Boolean(result.tamperExclusions || result.tamperProtected),
+        error: result.error ?? 'Windows Security did not confirm the exclusion. Try again as administrator or add the folders manually.'
+      }
+    }
+
+    return { ok: true, paths: addedPaths, allPaths: candidates }
+  } finally {
+    await fs.rm(scriptPath, { force: true }).catch(() => undefined)
+    await fs.rm(resultPath, { force: true }).catch(() => undefined)
+  }
+}
+
+export async function openWindowsSecurity(): Promise<void> {
+  try {
+    await shell.openExternal('windowsdefender://threatsettings')
+  } catch {
+    await shell.openExternal('ms-settings:windowsdefender')
+  }
+}
+
+function exclusionWorkDir(): string {
+  const publicDir = process.env.PUBLIC || path.join(os.homedir(), 'Public')
+  return path.join(publicDir, 'NewbieLauncher', 'defender-exclusion')
 }

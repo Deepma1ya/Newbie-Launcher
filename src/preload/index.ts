@@ -166,7 +166,8 @@ const api: NewbieApi = {
     launch: (channel) => ipcRenderer.invoke(IPC.bedrockLaunch, channel),
     delete: (id) => ipcRenderer.invoke(IPC.bedrockDelete, id),
     openFolder: (channel) => ipcRenderer.invoke(IPC.bedrockOpenFolder, channel),
-    addExclusion: () => ipcRenderer.invoke(IPC.bedrockAddExclusion)
+    addExclusion: () => ipcRenderer.invoke(IPC.bedrockAddExclusion),
+    openSecurity: () => ipcRenderer.invoke(IPC.bedrockOpenSecurity)
   }
 }
 

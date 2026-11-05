@@ -132,6 +132,7 @@ import {
   installBedrockVersion,
   launchBedrock,
   openBedrockInstallFolder,
+  openWindowsSecurity,
   uninstallBedrockVersion
 } from './services/bedrock'
 import { addOfflineAccount } from './auth/offline'
@@ -993,6 +994,7 @@ export function registerIpc(): void {
     openBedrockInstallFolder(bedrockChannelSchema.parse(channel))
   )
   ipcMain.handle(IPC.bedrockAddExclusion, () => addBedrockExclusion())
+  ipcMain.handle(IPC.bedrockOpenSecurity, () => openWindowsSecurity())
 
   nativeTheme.themeSource = 'dark'
   logger.info('ipc', 'IPC handlers registered')

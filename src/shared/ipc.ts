@@ -183,7 +183,8 @@ export const IPC = {
   bedrockLaunch: 'bedrock:launch',
   bedrockDelete: 'bedrock:delete',
   bedrockOpenFolder: 'bedrock:open-folder',
-  bedrockAddExclusion: 'bedrock:add-exclusion'
+  bedrockAddExclusion: 'bedrock:add-exclusion',
+  bedrockOpenSecurity: 'bedrock:open-security'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
@@ -362,5 +363,6 @@ export interface NewbieApi {
     delete(id: string): Promise<void>
     openFolder(channel: BedrockChannel): Promise<void>
     addExclusion(): Promise<BedrockExclusionResult>
+    openSecurity(): Promise<void>
   }
 }

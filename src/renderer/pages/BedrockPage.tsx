@@ -3,6 +3,7 @@ import {
   ArrowClockwise,
   ArrowSquareOut,
   CheckCircle,
+  Copy,
   Cube,
   DownloadSimple,
   GearSix,
@@ -17,7 +18,14 @@ import {
   WindowsLogo,
   X
 } from '@phosphor-icons/react'
-import type { BedrockChannel, BedrockProgress, BedrockSetup, BedrockState, BedrockVersion } from '@shared/types'
+import type {
+  BedrockChannel,
+  BedrockExclusionResult,
+  BedrockProgress,
+  BedrockSetup,
+  BedrockState,
+  BedrockVersion
+} from '@shared/types'
 import { normalizeExclusionPath } from '@shared/bedrock'
 import { BEDROCK_STORE_WEB_URL, GAMING_SERVICES_STORE_WEB_URL } from '@shared/constants'
 import { PageHeader } from '../components/PageHeader'
@@ -82,6 +90,23 @@ export function BedrockPage() {
     }
   }, [refresh])
 
+  const showExclusionHelp = (result: BedrockExclusionResult): void => {
+    const paths = result.allPaths?.length ? result.allPaths : result.paths
+    askConfirm({
+      title: 'Windows blocked the exclusion',
+      description:
+        result.error ?? 'Windows did not apply the Windows Security exclusion for the Bedrock folders.',
+      body: `Add these folders manually in Windows Security → Virus & threat protection → Exclusions:\n\n${paths.join(
+        '\n'
+      )}\n\nThe button opens Windows Security. You can also copy the folder list from the setup card.`,
+      confirmLabel: 'Open Windows Security',
+      cancelLabel: 'Close',
+      action: async () => {
+        await window.newbie.bedrock.openSecurity()
+      }
+    })
+  }
+
   const addExclusion = useCallback(async (): Promise<boolean> => {
     setExcluding(true)
     try {
@@ -90,25 +115,30 @@ export function BedrockPage() {
         toast('info', 'Exclusion skipped', 'You can add it any time from the Bedrock page.')
         return false
       }
-      const next = await refresh(false)
-      if (result.ok && next?.setup.defenderExclusion === 'added') {
-        declinedExclusionFor.current = null
-        toast(
-          'success',
-          'Windows Security exclusion added',
-          `${result.paths.length} Bedrock folder${result.paths.length === 1 ? '' : 's'} excluded.`
-        )
-        return true
+      if (result.ok && !result.partial) {
+        const next = await refresh(false)
+        if (next?.setup.defenderExclusion === 'added') {
+          declinedExclusionFor.current = null
+          toast(
+            'success',
+            'Windows Security exclusion added',
+            `${result.paths.length} Bedrock folder${result.paths.length === 1 ? '' : 's'} excluded.`
+          )
+          return true
+        }
       }
+      await refresh(false)
       if (result.ok) {
         toast(
           'info',
           'Exclusion partly added',
-          'Some Bedrock folders still need approval. Use Add on the setup card to finish.'
+          `${result.paths.length} folder${
+            result.paths.length === 1 ? '' : 's'
+          } added. Some folders still need manual approval.`
         )
         return false
       }
-      toast('error', 'Could not add the exclusion', result.error)
+      showExclusionHelp(result)
       return false
     } catch (failure) {
       toast('error', 'Could not add the exclusion', errorMessage(failure))
@@ -116,7 +146,7 @@ export function BedrockPage() {
     } finally {
       setExcluding(false)
     }
-  }, [refresh])
+  }, [refresh, askConfirm])
 
   const requestExclusion = (
     run: () => Promise<void>,
@@ -156,6 +186,22 @@ export function BedrockPage() {
         await addExclusion()
       }
     })
+  }
+
+  const copyExclusionPaths = async (): Promise<void> => {
+    const paths =
+      state?.setup.defenderMissingPaths.length
+        ? state.setup.defenderMissingPaths
+        : state?.setup.dataDir
+          ? [state.setup.dataDir]
+          : []
+    if (paths.length === 0) return
+    try {
+      await navigator.clipboard.writeText(paths.join('\n'))
+      toast('success', 'Folder paths copied', `${paths.length} path${paths.length === 1 ? '' : 's'}`)
+    } catch (failure) {
+      toast('error', 'Could not copy the paths', errorMessage(failure))
+    }
   }
 
   const runDownload = async (version: BedrockVersion): Promise<void> => {
@@ -563,6 +609,8 @@ export function BedrockPage() {
               setup={state!.setup}
               excluding={excluding}
               onAddExclusion={requestManualExclusion}
+              onOpenSecurity={() => void window.newbie.bedrock.openSecurity()}
+              onCopyPaths={() => void copyExclusionPaths()}
               onOpenGamingServices={() => void window.newbie.app.openExternal(GAMING_SERVICES_STORE_WEB_URL)}
             />
             <Card className="p-5">
@@ -810,11 +858,15 @@ function SetupCard({
   setup,
   excluding,
   onAddExclusion,
+  onOpenSecurity,
+  onCopyPaths,
   onOpenGamingServices
 }: {
   setup: BedrockSetup
   excluding: boolean
   onAddExclusion: () => void
+  onOpenSecurity: () => void
+  onCopyPaths: () => void
   onOpenGamingServices: () => void
 }) {
   return (
@@ -832,13 +884,15 @@ function SetupCard({
           detail={
             setup.defenderExclusion === 'added'
               ? 'Minecraft, download and data folders are excluded.'
-              : setup.defenderExclusion === 'partial'
-                ? `${setup.defenderMissingPaths.length} Bedrock folder${
-                    setup.defenderMissingPaths.length === 1 ? '' : 's'
-                  } still need approval, including the installed version.`
-                : setup.defenderExclusion === 'missing'
-                  ? 'Defender can slow down or block 1–2 GB downloads and the installed package. Requires your approval.'
-                  : 'Windows needs approval to read the exclusion list. Add it once to cover Bedrock.'
+              : setup.defenderTamperExclusions
+                ? 'Windows Tamper Protection protects the exclusion list. Add these folders manually.'
+                : setup.defenderExclusion === 'partial'
+                  ? `${setup.defenderMissingPaths.length} Bedrock folder${
+                      setup.defenderMissingPaths.length === 1 ? '' : 's'
+                    } still need approval, including the installed version.`
+                  : setup.defenderExclusion === 'missing'
+                    ? 'Defender can slow down or block 1–2 GB downloads and the installed package. Requires your approval.'
+                    : 'Windows needs approval to read the exclusion list. Add it once to cover Bedrock.'
           }
           action={
             <Button
@@ -852,6 +906,39 @@ function SetupCard({
             </Button>
           }
         />
+        {setup.defenderExclusion !== 'added' && (
+          <details className="rounded-lg border border-line/40 bg-canvas/20 px-2.5 py-2 text-[10px] text-muted">
+            <summary className="cursor-pointer select-none text-[10px] font-medium text-muted/80">
+              Manual fallback
+            </summary>
+            <p className="mt-1.5 leading-relaxed text-muted/65">
+              Open Windows Security → Virus &amp; threat protection → Exclusions, then add these folders:
+            </p>
+            <div className="mt-1.5 max-h-24 space-y-0.5 overflow-y-auto">
+              {(setup.defenderMissingPaths.length
+                ? setup.defenderMissingPaths
+                : [setup.dataDir]
+              ).map((entry) => (
+                <div key={entry} className="break-all font-mono text-[9px] leading-relaxed text-muted/60">
+                  {entry}
+                </div>
+              ))}
+            </div>
+            <div className="mt-2 flex flex-wrap gap-1.5">
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={onOpenSecurity}
+                icon={<ShieldCheck size={13} />}
+              >
+                Open Windows Security
+              </Button>
+              <Button size="sm" variant="ghost" onClick={onCopyPaths} icon={<Copy size={13} />}>
+                Copy paths
+              </Button>
+            </div>
+          </details>
+        )}
 
         <Requirement
           icon={setup.gamingServices ? <CheckCircle size={16} weight="fill" /> : <WarningCircle size={16} />}

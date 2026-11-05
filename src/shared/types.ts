@@ -546,6 +546,10 @@ export interface BedrockSetup {
   defenderExcludedPaths: string[]
   /** Bedrock paths that still need an exclusion, including the current install location. */
   defenderMissingPaths: string[]
+  /** Windows Tamper Protection is enabled. */
+  defenderTamperProtected?: boolean
+  /** Windows protects the Defender exclusion list itself (TPExclusions = 1). */
+  defenderTamperExclusions?: boolean
   dataDir: string
   gameDataDirs: string[]
 }
@@ -572,7 +576,13 @@ export interface BedrockProgress {
 export interface BedrockExclusionResult {
   ok: boolean
   cancelled?: boolean
+  partial?: boolean
+  /** Windows protected the exclusion list; paths must be added manually. */
+  manual?: boolean
   paths: string[]
+  /** All paths Newbie tried to exclude, including failed ones. */
+  allPaths?: string[]
+  failed?: { path: string; error?: string }[]
   error?: string
 }
 

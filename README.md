@@ -93,6 +93,8 @@ Only these are excluded:
 
 Nothing is excluded without consent. Third-party DLLs, online fixes or cracks are never excluded. Newbie does not support them.
 
+If Windows Tamper Protection or a managed security policy blocks the exclusion, Newbie reports which folders were accepted and shows the exact paths with an **Open Windows Security** button and a **Copy paths** action so they can be added manually. A partial exclusion is never reported as a hard failure.
+
 ## Local servers
 
 The **Servers** page creates and runs Minecraft servers on this PC. It is a launcher-managed alternative to downloading a server jar and editing text files by hand.
