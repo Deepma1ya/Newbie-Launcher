@@ -35,38 +35,6 @@ export function modrinthProjectType(type: AddonType): string {
   return type
 }
 
-export function curseForgeClassId(type: AddonType): number {
-  switch (type) {
-    case 'mod':
-      return 6
-    case 'modpack':
-      return 4471
-    case 'resourcepack':
-      return 12
-    case 'world':
-      return 4546
-    case 'shader':
-      return 6552
-    default:
-      return 6
-  }
-}
-
-export function curseForgeModLoaderType(loader: LoaderType): number | undefined {
-  switch (loader) {
-    case 'forge':
-      return 1
-    case 'fabric':
-      return 4
-    case 'quilt':
-      return 5
-    case 'neoforge':
-      return 6
-    default:
-      return undefined
-  }
-}
-
 export function addonFolder(type: AddonType): string {
   switch (type) {
     case 'resourcepack':

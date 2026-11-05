@@ -78,7 +78,6 @@ export function AddonRow({
             onClick={() => {
               void window.newbie.addons
                 .install(instance.id, {
-                  provider: record.provider as 'modrinth' | 'curseforge',
                   projectId: record.projectId,
                   versionId: record.latestVersionId ?? ''
                 })

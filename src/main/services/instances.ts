@@ -124,7 +124,7 @@ export async function createInstance(input: CreateInstanceInput): Promise<Instan
         instanceId: id
       })
       const { installModpackIntoInstance } = await import('./modpacks')
-      await installModpackIntoInstance(instance.id, input.modpack.provider, input.modpack.projectId, input.modpack.versionId)
+      await installModpackIntoInstance(instance.id, input.modpack.projectId, input.modpack.versionId)
     }
 
     await handle.done('Ready to play')

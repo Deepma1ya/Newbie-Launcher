@@ -11,12 +11,6 @@ import {
   pickPrimaryFile,
   projectTypeToAddonType
 } from './modrinth'
-import {
-  curseForgeDownloadUrl,
-  curseForgeSha1,
-  getCurseForgeFile,
-  getCurseForgeMod
-} from './curseforge'
 import { addonCacheEntry } from './installer'
 import { downloadFile } from './http'
 import { paths } from './paths'
@@ -44,22 +38,7 @@ interface MrpackIndex {
   dependencies: Record<string, string>
 }
 
-interface CurseForgeManifest {
-  minecraft: {
-    version: string
-    modLoaders: { id: string; primary: boolean }[]
-  }
-  manifestType: string
-  manifestVersion: number
-  name: string
-  version: string
-  author: string
-  files: { projectID: number; fileID: number; required: boolean }[]
-  overrides: string
-}
-
 interface PreparedModpack {
-  provider: 'modrinth' | 'curseforge'
   projectId: string
   versionId: string
   name: string
@@ -70,7 +49,6 @@ interface PreparedModpack {
   iconUrl?: string
   archive: string
   mrpack?: MrpackIndex
-  curseManifest?: CurseForgeManifest
 }
 
 export async function installModpack(projectId: string, versionId: string): Promise<Instance> {
@@ -82,7 +60,6 @@ export async function installModpack(projectId: string, versionId: string): Prom
     loaderVersion: meta.loaderVersion,
     iconUrl: meta.iconUrl,
     modpack: {
-      provider: meta.provider,
       projectId,
       versionId
     }
@@ -91,12 +68,11 @@ export async function installModpack(projectId: string, versionId: string): Prom
 
 export async function installModpackIntoInstance(
   instanceId: string,
-  provider: 'modrinth' | 'curseforge',
   projectId: string,
   versionId: string,
   onProgress?: (message: string, percent?: number) => void
 ): Promise<void> {
-  const meta = await prepareModpack(projectId, versionId, provider)
+  const meta = await prepareModpack(projectId, versionId)
   await installPreparedModpack(instanceId, meta, onProgress)
 }
 
@@ -143,10 +119,8 @@ async function installPreparedModpack(
     loadout.updatedAt = new Date().toISOString()
   }
 
-  if (meta.provider === 'modrinth' && meta.mrpack) {
+  if (meta.mrpack) {
     await installMrpackFiles(instance, meta, onProgress)
-  } else if (meta.provider === 'curseforge' && meta.curseManifest) {
-    await installCurseForgeFiles(instance, meta, onProgress)
   }
 
   const active = instance.loadouts.find((candidate) => candidate.id === instance.activeLoadoutId)
@@ -193,14 +167,7 @@ function loaderLabel(loader: Instance['loader']): string {
   return loader === 'vanilla' ? 'Vanilla' : loader.charAt(0).toUpperCase() + loader.slice(1)
 }
 
-async function prepareModpack(
-  projectId: string,
-  requestedVersionId: string,
-  hintedProvider?: 'modrinth' | 'curseforge'
-): Promise<PreparedModpack> {
-  if (hintedProvider === 'curseforge' || /^\d+$/.test(projectId)) {
-    return prepareCurseForge(projectId, requestedVersionId)
-  }
+async function prepareModpack(projectId: string, requestedVersionId: string): Promise<PreparedModpack> {
   const project = await getModrinthProject(projectId)
   const versions = await getModrinthVersions(projectId)
   const version = versions.find((candidate) => candidate.id === requestedVersionId) ?? versions[0]
@@ -221,7 +188,6 @@ async function prepareModpack(
   const index = JSON.parse(entry.getData().toString('utf8')) as MrpackIndex
   const loader = detectLoader(index.dependencies)
   return {
-    provider: 'modrinth',
     projectId,
     versionId: version.id,
     name: project.title || index.name,
@@ -232,39 +198,6 @@ async function prepareModpack(
     iconUrl: project.icon_url ?? undefined,
     archive,
     mrpack: index
-  }
-}
-
-async function prepareCurseForge(projectId: string, requestedVersionId: string): Promise<PreparedModpack> {
-  const project = await getCurseForgeMod(projectId)
-  const file = requestedVersionId
-    ? await getCurseForgeFile(projectId, requestedVersionId).catch(() => null)
-    : project.latestFiles?.[0] ?? null
-  if (!file) throw new Error('This CurseForge modpack has no downloadable file')
-  const archive = path.join(paths.downloadsCache, file.fileName)
-  await downloadFile(curseForgeDownloadUrl(file), archive, {
-    sha1: curseForgeSha1(file),
-    size: file.fileLength,
-    retries: 4
-  })
-  const zip = new AdmZip(archive)
-  const entry = zip.getEntry('manifest.json')
-  if (!entry) throw new Error('This CurseForge modpack is missing manifest.json')
-  const manifest = JSON.parse(entry.getData().toString('utf8')) as CurseForgeManifest
-  const loaderEntry = manifest.minecraft.modLoaders.find((item) => item.primary) ?? manifest.minecraft.modLoaders[0]
-  const loader = detectCurseForgeLoader(loaderEntry?.id ?? 'forge')
-  return {
-    provider: 'curseforge',
-    projectId,
-    versionId: String(file.id),
-    name: project.name || manifest.name,
-    summary: project.summary,
-    gameVersion: manifest.minecraft.version,
-    loader: loader.type,
-    loaderVersion: loader.version,
-    iconUrl: project.logo?.thumbnailUrl ?? project.logo?.url,
-    archive,
-    curseManifest: manifest
   }
 }
 
@@ -400,57 +333,6 @@ async function enrichMrpackRecords(records: AddonRecord[]): Promise<AddonRecord[
   })
 }
 
-async function installCurseForgeFiles(
-  instance: Instance,
-  meta: PreparedModpack,
-  onProgress?: (message: string, percent?: number) => void
-): Promise<void> {
-  const manifest = meta.curseManifest!
-  const required = manifest.files.filter((file) => file.required)
-  let completed = 0
-  const added = await mapLimit(required, 4, async (entry): Promise<AddonRecord | null> => {
-    try {
-      const file = await getCurseForgeFile(entry.projectID, entry.fileID)
-      const mod = await getCurseForgeMod(entry.projectID)
-      const sha1 = curseForgeSha1(file)
-      const filename = path.basename(file.fileName)
-      const target = path.join(instance.gameDir, 'mods', filename)
-      const cache = sha1 ? addonCacheEntry(sha1, filename) : path.join(paths.downloadsCache, filename)
-      await downloadFile(curseForgeDownloadUrl(file), cache, { sha1, size: file.fileLength, retries: 4 })
-      await ensureDir(path.dirname(target))
-      await fs.copyFile(cache, target)
-      completed += 1
-      onProgress?.(`Installing CurseForge files (${completed}/${required.length})`, 40 + Math.round((completed / Math.max(1, required.length)) * 45))
-      return {
-        id: `addon_curseforge_${mod.id}`,
-        provider: 'curseforge',
-        projectId: String(mod.id),
-        versionId: String(file.id),
-        name: mod.name,
-        slug: mod.slug,
-        type: 'mod',
-        filename,
-        versionNumber: file.displayName,
-        sha1,
-        size: file.fileLength,
-        iconUrl: mod.logo?.thumbnailUrl,
-        description: mod.summary,
-        sourceUrl: mod.links?.websiteUrl,
-        dependencies: [],
-        enabled: true,
-        installedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      }
-    } catch (error) {
-      logger.warn('modpacks', `Could not install CurseForge file ${entry.fileID}`, error)
-      return null
-    }
-  })
-  await mergePackRecords(instance, added.filter((record): record is AddonRecord => Boolean(record)))
-  onProgress?.('Extracting overrides', 88)
-  await extractOverrides(meta.archive, instance.gameDir, [manifest.overrides || 'overrides'])
-}
-
 async function extractOverrides(archive: string, gameDir: string, prefixes: string[]): Promise<void> {
   const zip = new AdmZip(archive)
   for (const entry of zip.getEntries()) {
@@ -471,14 +353,6 @@ function detectLoader(dependencies: Record<string, string>): { type: Instance['l
   if (dependencies['quilt-loader']) return { type: 'quilt', version: dependencies['quilt-loader'] }
   if (dependencies.forge) return { type: 'forge', version: dependencies.forge }
   if (dependencies.neoforge) return { type: 'neoforge', version: dependencies.neoforge }
-  return { type: 'vanilla', version: '' }
-}
-
-function detectCurseForgeLoader(id: string): { type: Instance['loader']; version: string } {
-  if (id.startsWith('forge-')) return { type: 'forge', version: id.slice(6) }
-  if (id.startsWith('fabric-')) return { type: 'fabric', version: id.slice(7) }
-  if (id.startsWith('quilt-')) return { type: 'quilt', version: id.slice(6) }
-  if (id.startsWith('neoforge-')) return { type: 'neoforge', version: id.slice(9) }
   return { type: 'vanilla', version: '' }
 }
 

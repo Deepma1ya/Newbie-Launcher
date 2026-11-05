@@ -5,8 +5,6 @@ import type {
   AppInfo,
   BackupRecord,
   CreateInstanceInput,
-  CurseForgeFile,
-  CurseForgeMod,
   GpuApplyResult,
   Instance,
   JavaRuntime,
@@ -46,8 +44,6 @@ export const IPC = {
   settingsPickDataDir: 'settings:pick-data-dir',
   settingsChangeDataDir: 'settings:change-data-dir',
   settingsRevealDataDir: 'settings:reveal-data-dir',
-  settingsSetCurseforgeKey: 'settings:set-curseforge-key',
-  settingsTestCurseforgeKey: 'settings:test-curseforge-key',
 
   accountsList: 'accounts:list',
   accountsAddOffline: 'accounts:add-offline',
@@ -114,7 +110,6 @@ export const IPC = {
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
 
 export interface AddonVersionRef {
-  provider: 'modrinth' | 'curseforge'
   projectId: string
   versionId: string
 }
@@ -143,8 +138,6 @@ export interface NewbieApi {
     pickDataDir(): Promise<string | null>
     changeDataDir(dir: string): Promise<LauncherSettings>
     revealDataDir(): Promise<void>
-    setCurseforgeKey(key: string | null): Promise<LauncherSettings>
-    testCurseforgeKey(key: string): Promise<boolean>
   }
   accounts: {
     list(): Promise<AccountSummary[]>
@@ -178,13 +171,8 @@ export interface NewbieApi {
   }
   addons: {
     search(query: SearchQuery): Promise<SearchPage>
-    project(provider: 'modrinth' | 'curseforge', id: string): Promise<ModrinthProject | CurseForgeMod>
-    versions(
-      provider: 'modrinth' | 'curseforge',
-      projectId: string,
-      gameVersion?: string,
-      loader?: LoaderType
-    ): Promise<(ModrinthVersion | CurseForgeFile)[]>
+    project(id: string): Promise<ModrinthProject>
+    versions(projectId: string, gameVersion?: string, loader?: LoaderType): Promise<ModrinthVersion[]>
     install(instanceId: string, ref: AddonVersionRef): Promise<AddonRecord[]>
     remove(instanceId: string, addonId: string, deleteFile: boolean): Promise<void>
     toggle(instanceId: string, addonId: string, enabled: boolean): Promise<AddonRecord>

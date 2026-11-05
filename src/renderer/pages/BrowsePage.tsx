@@ -12,7 +12,7 @@ import {
   Sparkle,
   SquaresFour
 } from '@phosphor-icons/react'
-import type { AddonType, CurseForgeMod, LoaderType, ModrinthHit, SearchPage, SearchQuery } from '@shared/types'
+import type { AddonType, LoaderType, ModrinthHit, SearchPage, SearchQuery } from '@shared/types'
 import { useActiveInstance, useInstances, useMinecraftVersions, useSearch, qk } from '../hooks/queries'
 import { useUi } from '../store/ui'
 import { addonTypeLabel, formatNumber, loaderLabel } from '../lib/utils'
@@ -40,7 +40,6 @@ export function BrowsePage() {
 
   const initialType = (params.get('type') as AddonType | null) ?? 'mod'
   const [type, setType] = useState<AddonType>(types.some((entry) => entry.value === initialType) ? initialType : 'mod')
-  const [provider, setProvider] = useState<'modrinth' | 'curseforge'>('modrinth')
   const [query, setQuery] = useState('')
   const [debounced, setDebounced] = useState('')
   const [gameVersion, setGameVersion] = useState(params.get('version') ?? active?.versionId ?? '')
@@ -70,7 +69,7 @@ export function BrowsePage() {
   useEffect(() => {
     setOffset(0)
     setAccumulated([])
-  }, [type, provider, debounced, gameVersion, loader, sort])
+  }, [type, debounced, gameVersion, loader, sort])
 
   const searchQuery: SearchQuery = useMemo(
     () => ({
@@ -79,11 +78,10 @@ export function BrowsePage() {
       gameVersion: gameVersion || undefined,
       loader: type === 'mod' || type === 'modpack' ? (loader === 'vanilla' ? undefined : loader) : undefined,
       sort,
-      provider,
       offset,
       limit: 24
     }),
-    [debounced, type, gameVersion, loader, sort, provider, offset]
+    [debounced, type, gameVersion, loader, sort, offset]
   )
 
   const search = useSearch(searchQuery)
@@ -106,14 +104,13 @@ export function BrowsePage() {
 
   const results = accumulated
   const canLoadMore = (search.data?.offset ?? 0) + (search.data?.limit ?? 0) < (search.data?.total ?? 0)
-  const requiresKey = provider === 'curseforge' && search.isError
 
   return (
     <div>
       <PageHeader
         eyebrow="Discover"
         title="Browse"
-        description="Mods, modpacks, resource packs and shaders from Modrinth and CurseForge — installed with dependencies handled."
+        description="Mods, modpacks, resource packs and shaders from Modrinth — installed with dependencies handled."
         actions={
           targetInstance ? (
             <button
@@ -144,14 +141,6 @@ export function BrowsePage() {
               aria-label="Search projects"
             />
           </div>
-          <Segmented
-            value={provider}
-            onChange={setProvider}
-            options={[
-              { value: 'modrinth', label: 'Modrinth' },
-              { value: 'curseforge', label: 'CurseForge' }
-            ]}
-          />
           <Segmented value={type} onChange={changeType} options={types} />
         </div>
 
@@ -185,12 +174,12 @@ export function BrowsePage() {
         </div>
       </div>
 
-      {requiresKey ? (
+      {search.isError ? (
         <EmptyState
           icon={<Compass size={22} />}
-          title="CurseForge needs an API key"
-          description="CurseForge requires a personal API key for third-party apps. Add one in Settings → Downloads, or keep browsing Modrinth without a key."
-          action={<Button variant="primary" onClick={() => navigate('/settings?section=downloads')}>Add API key</Button>}
+          title="Search is unavailable"
+          description="Modrinth could not be reached. Check your connection and try again."
+          action={<Button variant="secondary" onClick={() => void search.refetch()} icon={<ArrowClockwise size={14} />}>Retry</Button>}
         />
       ) : search.isLoading && results.length === 0 ? (
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
@@ -209,11 +198,11 @@ export function BrowsePage() {
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {results.map((hit) => {
-              const data = normalizeHit(hit, provider)
+              const data = normalizeHit(hit)
               return (
                 <button
-                  key={`${provider}-${data.id}`}
-                  onClick={() => openModal('modDetail', { provider, id: data.id })}
+                  key={data.id}
+                  onClick={() => openModal('modDetail', { id: data.id })}
                   className="card-hover flex min-h-[148px] flex-col rounded-2xl border border-line/55 bg-card/65 p-4 text-left"
                 >
                   <div className="flex items-start gap-3">
@@ -251,37 +240,21 @@ export function BrowsePage() {
       )}
 
       <div className="mt-6 rounded-xl border border-line/40 bg-card/30 p-3 text-[10.5px] leading-relaxed text-muted/70">
-        {provider === 'modrinth'
-          ? 'Modrinth is free and open. Newbie resolves required dependencies and picks the newest compatible release for your selected loader and game version.'
-          : 'CurseForge results use your personal API key. Some authors disable third-party downloads; those files can only be installed manually.'}
+        Modrinth is free and open. Newbie resolves required dependencies and picks the newest compatible release for your selected loader and game version.
       </div>
     </div>
   )
 }
 
-function normalizeHit(hit: ModrinthHit | CurseForgeMod, provider: 'modrinth' | 'curseforge') {
-  if (provider === 'modrinth' || 'project_id' in hit) {
-    const modrinth = hit as ModrinthHit
-    return {
-      id: modrinth.project_id,
-      title: modrinth.title,
-      description: modrinth.description,
-      icon: modrinth.icon_url ?? undefined,
-      downloads: modrinth.downloads,
-      categories: modrinth.display_categories ?? modrinth.categories ?? [],
-      loaders: modrinth.categories ?? [],
-      type: modrinth.project_type
-    }
-  }
-  const curse = hit as CurseForgeMod
+function normalizeHit(hit: ModrinthHit) {
   return {
-    id: String(curse.id),
-    title: curse.name,
-    description: curse.summary,
-    icon: curse.logo?.thumbnailUrl ?? curse.logo?.url,
-    downloads: curse.downloadCount,
-    categories: curse.categories?.map((category) => category.name) ?? [],
-    loaders: [],
-    type: curse.classId === 4471 ? 'modpack' : curse.classId === 12 ? 'resourcepack' : curse.classId === 6552 ? 'shader' : 'mod'
+    id: hit.project_id,
+    title: hit.title,
+    description: hit.description,
+    icon: hit.icon_url ?? undefined,
+    downloads: hit.downloads,
+    categories: hit.display_categories ?? hit.categories ?? [],
+    loaders: hit.categories ?? [],
+    type: hit.project_type
   }
 }

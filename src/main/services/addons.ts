@@ -4,7 +4,6 @@ import type {
   AddonDependency,
   AddonRecord,
   AddonType,
-  CurseForgeFile,
   Instance,
   LoaderType,
   ModrinthVersion
@@ -19,13 +18,6 @@ import {
   projectTypeToAddonType,
   selectBestVersion
 } from './modrinth'
-import {
-  curseForgeDownloadUrl,
-  curseForgeSha1,
-  getCurseForgeFiles,
-  getCurseForgeMod,
-  pickCurseForgeFile
-} from './curseforge'
 import { addonFolder } from './addonTypes'
 import { store } from './store'
 import { sha1File } from '../util/hash'
@@ -43,7 +35,7 @@ type Progress = (message: string, percent?: number) => void
 
 export async function installAddon(
   instanceId: string,
-  ref: { provider: 'modrinth' | 'curseforge'; projectId: string; versionId: string },
+  ref: { projectId: string; versionId: string },
   onProgress?: Progress
 ): Promise<InstallAddonResult> {
   const instance = store.instance(instanceId)
@@ -59,138 +51,81 @@ export async function installAddon(
 
 async function installRef(
   instance: Instance,
-  ref: { provider: 'modrinth' | 'curseforge'; projectId: string; versionId: string },
+  ref: { projectId: string; versionId: string },
   added: Map<string, AddonRecord>,
   visited: Set<string>,
   depth: number,
   onProgress?: Progress
 ): Promise<void> {
   if (depth > 6) return
-  const key = `${ref.provider}:${ref.projectId}`
+  const key = `modrinth:${ref.projectId}`
   if (visited.has(key)) return
   visited.add(key)
 
-  if (ref.provider === 'modrinth') {
-    const project = await getModrinthProject(ref.projectId)
-    const version = ref.versionId
-      ? await getModrinthVersion(ref.versionId)
-      : selectBestVersion(
-          await getModrinthVersions(ref.projectId, instance.versionId, instance.loader),
-          instance.versionId,
-          instance.loader,
-          projectTypeToAddonType(project.project_type)
-        )
-    if (!version) throw new Error(`${project.title} has no version compatible with ${instance.versionId}`)
-    const type = projectTypeToAddonType(project.project_type)
-    if (type === 'mod' && instance.loader === 'vanilla') {
-      throw new Error('This instance is vanilla and cannot load mods. Change the instance to Fabric, Quilt, Forge or NeoForge first.')
-    }
-    const file = pickPrimaryFile(version)
-    if (!file) throw new Error(`${project.title} has no downloadable file`)
-    onProgress?.(`Downloading ${project.title} ${version.version_number}`, 25)
-    const record = await materialiseFile(instance, {
-      provider: 'modrinth',
-      projectId: project.id,
-      versionId: version.id,
-      name: project.title,
-      slug: project.slug,
-      type,
-      filename: sanitizeFilename(file.filename),
-      versionNumber: version.version_number,
-      sha1: file.hashes.sha1,
-      size: file.size,
-      iconUrl: project.icon_url ?? undefined,
-      description: project.description,
-      sourceUrl: `https://modrinth.com/${project.project_type}/${project.slug}`,
-      dependencies: version.dependencies
-        .filter((dependency) => dependency.project_id)
-        .map((dependency) => ({
-          provider: 'modrinth' as const,
-          projectId: dependency.project_id ?? undefined,
-          versionId: dependency.version_id ?? undefined,
-          type: dependency.dependency_type
-        })),
-      url: file.url
-    })
-    added.set(record.id, record)
-    onProgress?.(`Installed ${project.title}`, 60)
-
-    for (const dependency of version.dependencies) {
-      if (dependency.dependency_type !== 'required' || !dependency.project_id) continue
-      if (instance.addons.some((addon) => addon.provider === 'modrinth' && addon.projectId === dependency.project_id)) continue
-      if (visited.has(`modrinth:${dependency.project_id}`)) continue
-      try {
-        await installRef(
-          instance,
-          {
-            provider: 'modrinth',
-            projectId: dependency.project_id,
-            versionId: dependency.version_id ?? ''
-          },
-          added,
-          visited,
-          depth + 1,
-          onProgress
-        )
-      } catch (error) {
-        logger.warn('addons', `Unable to install dependency ${dependency.project_id}`, error)
-      }
-    }
-    return
+  const project = await getModrinthProject(ref.projectId)
+  const version = ref.versionId
+    ? await getModrinthVersion(ref.versionId)
+    : selectBestVersion(
+        await getModrinthVersions(ref.projectId, instance.versionId, instance.loader),
+        instance.versionId,
+        instance.loader,
+        projectTypeToAddonType(project.project_type)
+      )
+  if (!version) throw new Error(`${project.title} has no version compatible with ${instance.versionId}`)
+  const type = projectTypeToAddonType(project.project_type)
+  if (type === 'mod' && instance.loader === 'vanilla') {
+    throw new Error(
+      'This instance is vanilla and cannot load mods. Change the instance to Fabric, Quilt, Forge or NeoForge first.'
+    )
   }
-
-  const project = await getCurseForgeMod(ref.projectId)
-  const files = await getCurseForgeFiles(ref.projectId, instance.versionId, instance.loader)
-  const file =
-    files.find((candidate) => String(candidate.id) === String(ref.versionId)) ??
-    pickCurseForgeFile(files)
-  if (!file) throw new Error(`${project.name} has no file compatible with ${instance.versionId}`)
-  const type = curseForgeType(project.classId)
-  onProgress?.(`Downloading ${project.name}`, 25)
+  const file = pickPrimaryFile(version)
+  if (!file) throw new Error(`${project.title} has no downloadable file`)
+  onProgress?.(`Downloading ${project.title} ${version.version_number}`, 25)
   const record = await materialiseFile(instance, {
-    provider: 'curseforge',
-    projectId: String(project.id),
-    versionId: String(file.id),
-    name: project.name,
+    provider: 'modrinth',
+    projectId: project.id,
+    versionId: version.id,
+    name: project.title,
     slug: project.slug,
     type,
-    filename: sanitizeFilename(file.fileName),
-    versionNumber: file.displayName,
-    sha1: curseForgeSha1(file),
-    size: file.fileLength,
-    iconUrl: project.logo?.thumbnailUrl ?? project.logo?.url,
-    description: project.summary,
-    sourceUrl: project.links?.websiteUrl,
-    dependencies: (file.dependencies ?? [])
-      .filter((dependency) => dependency.relationType === 3)
+    filename: sanitizeFilename(file.filename),
+    versionNumber: version.version_number,
+    sha1: file.hashes.sha1,
+    size: file.size,
+    iconUrl: project.icon_url ?? undefined,
+    description: project.description,
+    sourceUrl: `https://modrinth.com/${project.project_type}/${project.slug}`,
+    dependencies: version.dependencies
+      .filter((dependency) => dependency.project_id)
       .map((dependency) => ({
-        provider: 'curseforge' as const,
-        projectId: String(dependency.modId),
-        type: 'required' as const
+        provider: 'modrinth' as const,
+        projectId: dependency.project_id ?? undefined,
+        versionId: dependency.version_id ?? undefined,
+        type: dependency.dependency_type
       })),
-    url: curseForgeDownloadUrl(file)
+    url: file.url
   })
   added.set(record.id, record)
-  onProgress?.(`Installed ${project.name}`, 60)
+  onProgress?.(`Installed ${project.title}`, 60)
 
-  for (const dependency of file.dependencies ?? []) {
-    if (dependency.relationType !== 3) continue
-    const depKey = `curseforge:${dependency.modId}`
-    if (visited.has(depKey)) continue
-    if (instance.addons.some((addon) => addon.provider === 'curseforge' && addon.projectId === String(dependency.modId))) {
-      continue
-    }
+  for (const dependency of version.dependencies) {
+    if (dependency.dependency_type !== 'required' || !dependency.project_id) continue
+    if (instance.addons.some((addon) => addon.provider === 'modrinth' && addon.projectId === dependency.project_id)) continue
+    if (visited.has(`modrinth:${dependency.project_id}`)) continue
     try {
       await installRef(
         instance,
-        { provider: 'curseforge', projectId: String(dependency.modId), versionId: '' },
+        {
+          projectId: dependency.project_id,
+          versionId: dependency.version_id ?? ''
+        },
         added,
         visited,
         depth + 1,
         onProgress
       )
     } catch (error) {
-      logger.warn('addons', `Unable to install CurseForge dependency ${dependency.modId}`, error)
+      logger.warn('addons', `Unable to install dependency ${dependency.project_id}`, error)
     }
   }
 }
@@ -198,7 +133,7 @@ async function installRef(
 async function materialiseFile(
   instance: Instance,
   input: {
-    provider: 'modrinth' | 'curseforge'
+    provider: 'modrinth'
     projectId: string
     versionId: string
     name: string
@@ -308,26 +243,17 @@ export async function checkAddonUpdates(instanceId: string): Promise<AddonRecord
   if (!instance) throw new Error('Instance not found')
   const now = new Date().toISOString()
   for (const record of instance.addons) {
-    if (record.provider === 'local') continue
+    if (record.provider !== 'modrinth') continue
     try {
-      if (record.provider === 'modrinth') {
-        const versions = await getModrinthVersions(
-          record.projectId,
-          instance.versionId,
-          record.type === 'mod' || record.type === 'modpack' ? instance.loader : undefined
-        )
-        const best = selectBestVersion(versions, instance.versionId, instance.loader, record.type)
-        if (best) {
-          record.latestVersionId = best.id
-          record.latestVersionNumber = best.version_number
-        }
-      } else {
-        const files = await getCurseForgeFiles(record.projectId, instance.versionId, instance.loader)
-        const best = pickCurseForgeFile(files)
-        if (best) {
-          record.latestVersionId = String(best.id)
-          record.latestVersionNumber = best.displayName
-        }
+      const versions = await getModrinthVersions(
+        record.projectId,
+        instance.versionId,
+        record.type === 'mod' || record.type === 'modpack' ? instance.loader : undefined
+      )
+      const best = selectBestVersion(versions, instance.versionId, instance.loader, record.type)
+      if (best) {
+        record.latestVersionId = best.id
+        record.latestVersionNumber = best.version_number
       }
       record.updateCheckedAt = now
     } catch (error) {
@@ -346,16 +272,14 @@ export async function updateAllAddons(
   const instance = store.instance(instanceId)
   if (!instance) throw new Error('Instance not found')
   const pending = checked.filter(
-    (record) => record.latestVersionId && record.latestVersionId !== record.versionId && record.provider !== 'local'
+    (record) => record.latestVersionId && record.latestVersionId !== record.versionId && record.provider === 'modrinth'
   )
   let index = 0
   for (const record of pending) {
-    if (record.provider !== 'modrinth' && record.provider !== 'curseforge') continue
     index += 1
     onProgress?.(`Updating ${record.name} (${index}/${pending.length})`, Math.round((index / Math.max(1, pending.length)) * 100))
     try {
       await installAddon(instanceId, {
-        provider: record.provider,
         projectId: record.projectId,
         versionId: record.latestVersionId ?? ''
       })
@@ -502,14 +426,6 @@ export async function persistInstance(instance: Instance): Promise<void> {
     current.lastPlayedAt = instance.lastPlayedAt
     current.totalPlayTimeSec = instance.totalPlayTimeSec
   })
-}
-
-function curseForgeType(classId?: number): AddonType {
-  if (classId === 4471) return 'modpack'
-  if (classId === 12) return 'resourcepack'
-  if (classId === 6552) return 'shader'
-  if (classId === 4546) return 'world'
-  return 'mod'
 }
 
 export function inferAddonTypeFromFile(file: string): AddonType {

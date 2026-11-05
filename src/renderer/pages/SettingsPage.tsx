@@ -384,34 +384,7 @@ function PerformanceSection() {
 function DownloadsSection() {
   const settings = useSettings().data!
   const disk = useDiskUsage().data
-  const [key, setKey] = useState('')
-  const [busy, setBusy] = useState(false)
-  const [testing, setTesting] = useState(false)
   const queryClient = useQueryClient()
-
-  const saveKey = async (): Promise<void> => {
-    setBusy(true)
-    try {
-      await window.newbie.settings.setCurseforgeKey(key || null)
-      await queryClient.invalidateQueries({ queryKey: qk.settings })
-      setKey('')
-      toast('success', key ? 'CurseForge key saved' : 'CurseForge key removed')
-    } catch (error) {
-      toast('error', 'Could not save API key', errorMessage(error))
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  const test = async (): Promise<void> => {
-    setTesting(true)
-    try {
-      const ok = await window.newbie.settings.testCurseforgeKey(key)
-      toast(ok ? 'success' : 'error', ok ? 'Key works' : 'Key was rejected')
-    } finally {
-      setTesting(false)
-    }
-  }
 
   return (
     <>
@@ -445,36 +418,6 @@ function DownloadsSection() {
             </div>
           </div>
         </div>
-      </Card>
-
-      <Card className="p-5">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <h2 className="font-display text-[15px] font-semibold text-ink">CurseForge API key</h2>
-            <p className="mt-0.5 text-[11.5px] text-muted">Optional. Required to search and install CurseForge projects.</p>
-          </div>
-          <Badge tone={settings.curseforgeKeyPresent ? 'green' : 'neutral'}>{settings.curseforgeKeyPresent ? 'Configured' : 'Not set'}</Badge>
-        </div>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Input
-            type="password"
-            value={key}
-            onChange={(event) => setKey(event.target.value)}
-            placeholder={settings.curseforgeKeyPresent ? 'Enter a new key to replace the saved one' : '$2a$10$…'}
-            className="min-w-[260px] flex-1"
-          />
-          <Button variant="secondary" loading={testing} disabled={!key} onClick={() => void test()} icon={<Key size={14} />}>Test</Button>
-          <Button variant="primary" loading={busy} onClick={() => void saveKey()}>{settings.curseforgeKeyPresent ? 'Replace' : 'Save'}</Button>
-          {settings.curseforgeKeyPresent && (
-            <Button variant="ghost" onClick={() => void window.newbie.settings.setCurseforgeKey(null).then(() => queryClient.invalidateQueries({ queryKey: qk.settings }))}>
-              Remove
-            </Button>
-          )}
-        </div>
-        <p className="mt-2 text-[10px] leading-relaxed text-muted/60">
-          Create a key at console.curseforge.com. The key is encrypted with Windows DPAPI and only used for API requests from
-          the launcher process.
-        </p>
       </Card>
     </>
   )
@@ -579,7 +522,6 @@ function AboutSection() {
               <Badge tone="green">MIT</Badge>
               <Badge tone="neutral">Electron</Badge>
               <Badge tone="neutral">Modrinth</Badge>
-              <Badge tone="neutral">CurseForge</Badge>
             </div>
           </div>
           <div className="text-right">

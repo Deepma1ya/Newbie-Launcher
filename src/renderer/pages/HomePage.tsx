@@ -286,7 +286,7 @@ export function HomePage() {
           <div>
             <SectionTitle title="Keep exploring" />
             <p className="text-[12px] leading-relaxed text-muted">
-              Find performance mods, fresh world packs and shaders from Modrinth or CurseForge. Add them to the active
+              Find performance mods, fresh world packs and shaders from Modrinth. Add them to the active
               instance or build a separate loadout.
             </p>
           </div>

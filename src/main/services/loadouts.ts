@@ -5,7 +5,6 @@ import { store } from './store'
 import { addonFolder } from './addonTypes'
 import { addonCacheEntry, cacheFileFromUrl } from './installer'
 import { getModrinthVersion, pickPrimaryFile } from './modrinth'
-import { curseForgeDownloadUrl, curseForgeSha1, getCurseForgeFiles } from './curseforge'
 import { ensureDir, pathExists, uniqueId } from '../util/fs'
 import { paths } from './paths'
 import { persistInstance } from './addons'
@@ -196,26 +195,20 @@ export async function ensureAddonFile(instance: Instance, record: AddonRecord, f
 
   let source = await cachedPathFor(record)
   if (!source) {
-    source = await downloadRecord(instance, record)
+    source = await downloadRecord(record)
   }
   if (!source) throw new Error(`No download source for ${record.name}. Reinstall the add-on to repair it.`)
   await ensureDir(path.dirname(target))
   await fs.copyFile(source, target)
 }
 
-export async function downloadRecord(instance: Instance, record: AddonRecord): Promise<string | null> {
+export async function downloadRecord(record: AddonRecord): Promise<string | null> {
   try {
     if (record.provider === 'modrinth') {
       const version = await getModrinthVersion(record.versionId)
       const file = pickPrimaryFile(version)
       if (!file) return null
       return await cacheFileFromUrl(file.url, file.hashes.sha1, record.filename)
-    }
-    if (record.provider === 'curseforge') {
-      const files = await getCurseForgeFiles(record.projectId, instance.versionId, instance.loader)
-      const file = files.find((candidate) => String(candidate.id) === record.versionId)
-      if (!file) return null
-      return await cacheFileFromUrl(curseForgeDownloadUrl(file), curseForgeSha1(file), record.filename)
     }
   } catch (error) {
     logger.warn('loadouts', `Unable to download ${record.name}`, error)

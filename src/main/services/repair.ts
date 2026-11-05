@@ -222,17 +222,13 @@ async function tryInstallDependency(instance: Instance, dependencyId: string): P
       loader: instance.loader,
       limit: 8
     })
-    const hit = page.hits.find((candidate) => {
-      if (!('slug' in candidate)) return false
-      const title = 'title' in candidate ? candidate.title : candidate.name
-      return (
+    const hit = page.hits.find(
+      (candidate) =>
         candidate.slug.toLowerCase() === dependencyId.toLowerCase() ||
-        title.toLowerCase() === dependencyId.toLowerCase()
-      )
-    })
+        candidate.title.toLowerCase() === dependencyId.toLowerCase()
+    )
     if (!hit || !('project_id' in hit)) return false
     await installAddon(instance.id, {
-      provider: 'modrinth',
       projectId: hit.project_id,
       versionId: ''
     })

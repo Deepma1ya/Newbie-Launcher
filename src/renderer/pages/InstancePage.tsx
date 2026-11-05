@@ -276,7 +276,7 @@ export function InstancePage() {
               </div>
               <div className="grid gap-2 sm:grid-cols-2">
                 <ActionButton icon={<Wrench size={16} />} title="Repair instance" text="Duplicates, loader conflicts, dependencies" onClick={() => openModal('repair', { instanceId: instance.id })} />
-                <ActionButton icon={<ArrowsClockwise size={16} />} title="Update all add-ons" text={pendingUpdates ? `${pendingUpdates} update(s) available` : 'Check Modrinth and CurseForge'} onClick={() => void updateAll()} loading={updating} />
+                <ActionButton icon={<ArrowsClockwise size={16} />} title="Update all add-ons" text={pendingUpdates ? `${pendingUpdates} update(s) available` : 'Check Modrinth'} onClick={() => void updateAll()} loading={updating} />
                 <ActionButton icon={<Package size={16} />} title="Scan local files" text="Match jars you added manually" onClick={() => void scan()} loading={scanning} />
                 <ActionButton icon={<HardDrives size={16} />} title="Backup worlds" text="Create a restore point now" onClick={async () => { try { await window.newbie.system.createBackup(instance.id); toast('success', 'World backup created'); await queryClient.invalidateQueries({ queryKey: qk.backups(instance.id) }) } catch (error) { toast('error', 'Backup failed', errorMessage(error)) } }} />
                 <ActionButton icon={<FolderOpen size={16} />} title="Open game folder" text="Worlds, mods, configs and logs" onClick={() => void window.newbie.instances.openFolder(instance.id)} />
@@ -361,7 +361,7 @@ export function InstancePage() {
             <EmptyState
               icon={<Package size={22} />}
               title={instance.addons.length === 0 ? 'No add-ons yet' : 'Nothing matches'}
-              description="Browse Modrinth or CurseForge, or scan local jars you already placed in the mods folder."
+              description="Browse Modrinth, or scan local jars you already placed in the mods folder."
               action={<Button variant="primary" onClick={() => navigate(`/browse?instance=${instance.id}`)} icon={<Plus size={15} />}>Browse add-ons</Button>}
             />
           ) : (

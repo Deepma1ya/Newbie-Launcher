@@ -6,7 +6,6 @@ import { store } from './store'
 import { ensureLayout, paths, setDataDir } from './paths'
 import { directorySize, pathExists } from '../util/fs'
 import { logger } from '../util/log'
-import { testCurseForgeKey as testKey } from './curseforge'
 import { runningStates } from './launch'
 
 export function getSettings(): LauncherSettings {
@@ -16,7 +15,6 @@ export function getSettings(): LauncherSettings {
 export async function updateSettings(patch: DeepPartial<LauncherSettings>): Promise<LauncherSettings> {
   const sanitized = { ...patch } as DeepPartial<LauncherSettings>
   delete (sanitized as { dataDir?: string }).dataDir
-  delete (sanitized as { curseforgeKeyPresent?: boolean }).curseforgeKeyPresent
   if (sanitized.downloadConcurrency !== undefined) {
     sanitized.downloadConcurrency = Math.max(1, Math.min(16, Math.round(Number(sanitized.downloadConcurrency) || 6)))
   }
@@ -82,15 +80,3 @@ export async function revealDataDir(): Promise<string> {
   return paths.data
 }
 
-export async function setCurseforgeKey(key: string | null): Promise<LauncherSettings> {
-  if (key && key.trim()) {
-    const valid = await testKey(key.trim())
-    if (!valid) throw new Error('CurseForge rejected this API key')
-  }
-  await store.setCurseforgeKey(key)
-  return store.settings()
-}
-
-export async function testCurseforgeKey(key: string): Promise<boolean> {
-  return testKey(key)
-}

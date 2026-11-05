@@ -22,18 +22,14 @@ interface StoredAccount extends Omit<AuthAccount, 'accessToken' | 'refreshToken'
 
 interface PersistedState {
   schemaVersion: 1
-  settings: Omit<LauncherSettings, 'curseforgeKeyPresent'>
+  settings: LauncherSettings
   accounts: StoredAccount[]
   activeAccountId: string | null
   instances: Instance[]
   recentTasks: TaskRecord[]
 }
 
-interface SecretsFile {
-  curseforgeKey?: string
-}
-
-export const DEFAULT_SETTINGS: Omit<LauncherSettings, 'curseforgeKeyPresent'> = {
+export const DEFAULT_SETTINGS: LauncherSettings = {
   language: 'en',
   theme: 'dark',
   dataDir: '',
@@ -74,8 +70,6 @@ const EMPTY_STATE: PersistedState = {
 
 class AppStore {
   private state: PersistedState = structuredClone(EMPTY_STATE)
-  private secrets: SecretsFile = {}
-  private curseforgeKey = ''
   private saveTimer: NodeJS.Timeout | null = null
   private saveChain: Promise<void> = Promise.resolve()
   private initialised = false
@@ -100,16 +94,13 @@ class AppStore {
       }
     }
     this.state.settings.dataDir = paths.data
-    this.secrets = await readJson<SecretsFile>(paths.secretsFile, {})
-    this.curseforgeKey = decryptSecret(this.secrets.curseforgeKey) ?? ''
     logger.info('store', `Loaded ${this.state.instances.length} instance(s), ${this.state.accounts.length} account(s)`)
   }
 
   settings(): LauncherSettings {
     return {
       ...structuredClone(this.state.settings),
-      dataDir: paths.data,
-      curseforgeKeyPresent: Boolean(this.curseforgeKey)
+      dataDir: paths.data
     }
   }
 
@@ -119,16 +110,6 @@ class AppStore {
     this.state.settings = next
     this.scheduleSave()
     return this.settings()
-  }
-
-  curseforgeApiKey(): string {
-    return this.curseforgeKey
-  }
-
-  async setCurseforgeKey(key: string | null): Promise<void> {
-    this.curseforgeKey = key?.trim() ?? ''
-    this.secrets.curseforgeKey = this.curseforgeKey ? encryptSecret(this.curseforgeKey) : undefined
-    await writeJsonAtomic(paths.secretsFile, this.secrets)
   }
 
   accounts(): AccountSummary[] {
@@ -259,7 +240,7 @@ class AppStore {
   }
 }
 
-function mergeSettings(patch?: Partial<LauncherSettings> | DeepPartial<LauncherSettings>): Omit<LauncherSettings, 'curseforgeKeyPresent'> {
+function mergeSettings(patch?: Partial<LauncherSettings> | DeepPartial<LauncherSettings>): LauncherSettings {
   const merged = {
     ...DEFAULT_SETTINGS,
     ...(patch ?? {}),
@@ -267,8 +248,7 @@ function mergeSettings(patch?: Partial<LauncherSettings> | DeepPartial<LauncherS
     performance: { ...DEFAULT_SETTINGS.performance, ...(patch?.performance ?? {}) },
     backups: { ...DEFAULT_SETTINGS.backups, ...(patch?.backups ?? {}) }
   }
-  delete (merged as Partial<LauncherSettings>).curseforgeKeyPresent
-  return merged as Omit<LauncherSettings, 'curseforgeKeyPresent'>
+  return merged
 }
 
 function normaliseInstance(instance: Instance): Instance {
@@ -297,7 +277,14 @@ function normaliseInstance(instance: Instance): Instance {
     gameDir: instance.gameDir || paths.instanceGameDir(instance.id),
     loadouts,
     activeLoadoutId: instance.activeLoadoutId || loadouts[0]!.id,
-    addons: Array.isArray(instance.addons) ? instance.addons : [],
+    addons: Array.isArray(instance.addons)
+      ? instance.addons.map((addon) =>
+          // Legacy records from the removed CurseForge provider stay usable as local files.
+          (addon.provider as string) === 'curseforge'
+            ? { ...addon, provider: 'local' as const, projectId: addon.projectId || `cf_${addon.id}` }
+            : addon
+        )
+      : [],
     totalPlayTimeSec: instance.totalPlayTimeSec ?? 0
   }
 }

@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
-  AddonProvider,
   InstallProgress,
   LaunchState,
   MicrosoftAuthState,
@@ -21,7 +20,7 @@ interface ModalState {
   createInstanceSeed?: { versionId?: string; loader?: string; projectId?: string; modpackVersionId?: string }
   addAccount: boolean
   addAccountTab: 'microsoft' | 'tlauncher' | 'offline' | 'authlib'
-  modDetail: { provider: AddonProvider; id: string } | null
+  modDetail: { id: string } | null
   loadout: { instanceId: string; loadoutId?: string } | null
   repair: { instanceId: string } | null
   console: { instanceId: string } | null
@@ -135,9 +134,6 @@ export const useUi = create<UiStore>()(
   )
 )
 
-export function isAddonProvider(value: string): value is AddonProvider {
-  return value === 'modrinth' || value === 'curseforge' || value === 'local'
-}
 
 export function toast(kind: Toast['kind'], title: string, message?: string): void {
   useUi.getState().pushToast(kind, title, message)

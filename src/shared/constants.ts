@@ -1,6 +1,6 @@
 export const APP_NAME = 'Newbie Launcher'
 export const APP_ID = 'com.newbielauncher.app'
-export const APP_VERSION = '0.1.2'
+export const APP_VERSION = '0.1.3'
 export const GITHUB_OWNER = 'Deepma1ya'
 export const GITHUB_REPO = 'Newbie-Launcher'
 export const GITHUB_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
@@ -10,7 +10,6 @@ export const MOJANG_MANIFEST_URL = 'https://piston-meta.mojang.com/mc/game/versi
 export const MOJANG_RESOURCES_URL = 'https://resources.download.minecraft.net'
 export const MOJANG_LIBRARIES_URL = 'https://libraries.minecraft.net'
 export const MODRINTH_API = 'https://api.modrinth.com/v2'
-export const CURSEFORGE_API = 'https://api.curseforge.com/v1'
 export const FABRIC_META = 'https://meta.fabricmc.net/v2'
 export const QUILT_META = 'https://meta.quiltmc.org/v3'
 export const FORGE_PROMOTIONS = 'https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json'

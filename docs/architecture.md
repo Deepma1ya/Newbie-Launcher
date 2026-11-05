@@ -12,7 +12,7 @@ No renderer input reaches a shell. Every IPC call is validated with Zod in the m
 
 ## Persistence
 
-`launcher.json` stores settings, accounts (encrypted token fields), instances and recent tasks. Writes are atomic (temp file + rename) and debounced. `secrets.json` holds the CurseForge API key encrypted with Electron `safeStorage` (DPAPI on Windows).
+`launcher.json` stores settings, accounts (encrypted token fields), instances and recent tasks. Writes are atomic (temp file + rename) and debounced. Account credentials use Electron `safeStorage` (DPAPI on Windows) and never reach the renderer.
 
 The bootstrap file (`%APPDATA%/Newbie-Launcher/bootstrap.json`) points at the configurable data directory. Changing the data directory copies data first, then rewrites the bootstrap and all instance paths.
 
@@ -55,7 +55,6 @@ Modpacks can create a new instance or be applied to an existing instance. Applyi
 ## Add-ons
 
 - **Modrinth** — search facets, project/version endpoints, bulk hash lookup, recursive required-dependency resolution.
-- **CurseForge** — user-supplied API key, class/mod-loader mapping, file dependency relation 3 (required), edge CDN fallback.
 - **Modpacks** — `.mrpack` index parsing, file download with SHA-1 verification, `overrides/` and `client-overrides/` extraction, hash-to-project enrichment for later updates.
 - **Records** store provider, project ID, version ID, file name, hash, size, dependencies and update state.
 

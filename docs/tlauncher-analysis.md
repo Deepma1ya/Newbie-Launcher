@@ -94,7 +94,7 @@ Newbie uses this public endpoint for **launcher-side avatar sync** only. TLaunch
 | Modpack catalogue with enable/disable lists | Named loadouts with managed materialisation and two storage modes |
 | Compatibility warnings after a crash | One-click Repair *before* launch: duplicate IDs, wrong loader, incompatible deps, missing deps, missing files |
 | Account types | Microsoft OAuth, TLauncher nickname/skin, offline, generic authlib |
-| Proprietary launch stack | Electron + TypeScript, typed IPC, official Mojang metadata, Modrinth and CurseForge APIs |
+| Proprietary launch stack | Electron + TypeScript, typed IPC, official Mojang metadata and the Modrinth API |
 | TLauncher skin injection | Launcher avatar sync now; optional in-game provider on the roadmap |
 
 ## Evidence limits

@@ -1,21 +1,17 @@
-# Newbie Launcher 0.1.2
+# Newbie Launcher 0.1.3
 
-Modpack targeting and a few reliability fixes.
+CurseForge has been removed.
 
-## Added
+## Removed
 
-- Modpacks can now be added to an **existing instance** instead of only creating a new one.
-- The install target selector only lists instances with the **same Minecraft version and loader** as the selected pack version.
-- Adding a pack to an existing instance creates a safety backup of mods, configs, scripts and packs before writing anything.
-- Pack installation merges by project ID or filename, replacing existing mod versions instead of creating duplicate records.
+- The CurseForge provider, browser tab and API-key requirement.
+- CurseForge account settings, IPC endpoints, services and modpack handling.
+- CurseForge mentions from the README, settings, onboarding and browse screens.
 
-## Fixed
+## Kept
 
-- Modal dialogs now use unique accessible title IDs, so stacked confirmations (such as adding a modpack) are announced and targeted correctly.
-- Modpack version selectors no longer truncate older pack versions, so a 1.20.1 build remains selectable in large packs.
+- Modrinth browsing, dependency resolution, updates and modpacks.
+- Installing a modpack into a compatible existing instance.
+- Existing locally installed files are untouched. Any legacy CurseForge add-on records are migrated to local records so they can still be toggled, removed or rescanned, but they are no longer update-checked or downloaded.
 
-## Notes
-
-- Applying a modpack leaves the instance's Minecraft version and loader untouched. If the pack does not match, the backend refuses the operation with a clear error.
-- The active loadout keeps its storage mode when adding an existing-instance pack.
-- Everything from 0.1.1 is included.
+Modrinth needs no account, key or approval process, so the default browsing and install flow now works for everyone out of the box.

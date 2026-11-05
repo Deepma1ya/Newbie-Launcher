@@ -10,8 +10,6 @@ import type {
   MinecraftVersionSummary,
   ModrinthProject,
   ModrinthVersion,
-  CurseForgeFile,
-  CurseForgeMod,
   SearchPage,
   SearchQuery,
   SystemInfo,
@@ -32,9 +30,9 @@ export const qk = {
   versions: ['versions', 'minecraft'] as const,
   loaders: (type: LoaderType, version: string) => ['versions', 'loaders', type, version] as const,
   search: (query: SearchQuery) => ['search', query] as const,
-  project: (provider: string, id: string) => ['project', provider, id] as const,
-  projectVersions: (provider: string, id: string, game?: string, loader?: string) =>
-    ['project-versions', provider, id, game, loader] as const,
+  project: (id: string) => ['project', id] as const,
+  projectVersions: (id: string, game?: string, loader?: string) =>
+    ['project-versions', id, game, loader] as const,
   backups: (id?: string) => ['backups', id ?? 'all'] as const,
   disk: ['disk'] as const
 }
@@ -100,27 +98,23 @@ export function useSearch(query: SearchQuery, enabled = true): UseQueryResult<Se
   })
 }
 
-export function useProject(
-  provider: 'modrinth' | 'curseforge',
-  id?: string
-): UseQueryResult<ModrinthProject | CurseForgeMod> {
+export function useProject(id?: string): UseQueryResult<ModrinthProject> {
   return useQuery({
-    queryKey: qk.project(provider, id ?? ''),
-    queryFn: () => api.addons.project(provider, id!),
+    queryKey: qk.project(id ?? ''),
+    queryFn: () => api.addons.project(id!),
     enabled: Boolean(id),
     staleTime: 5 * 60_000
   })
 }
 
 export function useProjectVersions(
-  provider: 'modrinth' | 'curseforge',
   id?: string,
   gameVersion?: string,
   loader?: LoaderType
-): UseQueryResult<(ModrinthVersion | CurseForgeFile)[]> {
+): UseQueryResult<ModrinthVersion[]> {
   return useQuery({
-    queryKey: qk.projectVersions(provider, id ?? '', gameVersion, loader),
-    queryFn: () => api.addons.versions(provider, id!, gameVersion, loader),
+    queryKey: qk.projectVersions(id ?? '', gameVersion, loader),
+    queryFn: () => api.addons.versions(id!, gameVersion, loader),
     enabled: Boolean(id),
     staleTime: 60_000
   })

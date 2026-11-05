@@ -24,7 +24,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/17/21+ from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + skin sync, offline profiles, and generic authlib/Yggdrasil servers |
-| **Browse** | Modrinth and CurseForge. Required dependencies are resolved recursively; modpacks install as new instances or into a matching existing instance |
+| **Browse** | Modrinth. Required dependencies are resolved recursively; modpacks install as new instances or into a matching existing instance. No API key required. |
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
 | **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
 | **Repair** | Duplicate mods, wrong-loader jars, incompatible mods, missing dependencies and missing files — one-click safe fixes with a backup first |
@@ -88,7 +88,7 @@ If your npm version blocks Electron's install script, run `node node_modules/ele
 src/
   main/              Electron main process
     auth/            Microsoft, TLauncher, offline, authlib
-    services/        installs, launch, loaders, Java, Modrinth, CurseForge,
+    services/        installs, launch, loaders, Java, Modrinth,
                      add-ons, loadouts, repair, backups, updater, settings
     util/            hashing, HTTP, archives, tokens
   preload/           contextBridge API (no Node in the renderer)
@@ -129,7 +129,7 @@ docs/                architecture notes and the TLauncher investigation
 - `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`
 - Typed IPC with Zod validation in the main process
 - External links restricted to HTTPS; navigation blocked outside the app
-- Tokens encrypted at rest with DPAPI; CurseForge key stored separately
+- Tokens encrypted at rest with Windows DPAPI
 - No arbitrary shell execution from the renderer
 
 ## TLauncher investigation
@@ -140,13 +140,12 @@ The TLauncher installer and its feature surface were inspected with REA for inte
 
 - Bedrock Edition support
 - In-game TLauncher skin provider (optional)
-- CurseForge modpack manifest polish
 - OptiFine one-click compatibility
 - Additional UI languages
 - Signed Windows binaries
 
 ## Legal
 
-Newbie Launcher is an independent project, not affiliated with Mojang, Microsoft, TLauncher, Modrinth or CurseForge. “Minecraft” is a trademark of Mojang Synergies AB. Mods and packs remain the property of their authors and are downloaded from their official APIs.
+Newbie Launcher is an independent project, not affiliated with Mojang, Microsoft, TLauncher or Modrinth. “Minecraft” is a trademark of Mojang Synergies AB. Mods and packs remain the property of their authors and are downloaded from Modrinth's official API.
 
 Licensed under the [MIT License](LICENSE).

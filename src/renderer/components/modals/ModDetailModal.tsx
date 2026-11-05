@@ -10,7 +10,7 @@ import {
   Star,
   WarningCircle
 } from '@phosphor-icons/react'
-import type { CurseForgeFile, CurseForgeMod, LoaderType, ModrinthProject, ModrinthVersion } from '@shared/types'
+import type { LoaderType, ModrinthProject, ModrinthVersion } from '@shared/types'
 import { isPackCompatible } from '@shared/packCompatibility'
 import { useActiveInstance, useInstances, useProject, useProjectVersions, qk } from '../../hooks/queries'
 import { toast, useUi } from '../../store/ui'
@@ -27,17 +27,11 @@ export function ModDetailModal() {
   const askConfirm = useUi((state) => state.askConfirm)
   const activeInstance = useActiveInstance()
   const instances = useInstances().data ?? []
-  const provider = detail?.provider === 'curseforge' ? 'curseforge' : 'modrinth'
-  const projectQuery = useProject(provider, detail?.id)
+  const projectQuery = useProject(detail?.id)
   const project = projectQuery.data
-
-  const isModrinth = provider === 'modrinth'
-  const projectType = isModrinth
-    ? (project as ModrinthProject | undefined)?.project_type
-    : cfType((project as CurseForgeMod | undefined)?.classId)
+  const projectType = project?.project_type
   const filterLoader = projectType === 'mod' ? activeInstance?.loader : undefined
   const versionsQuery = useProjectVersions(
-    provider,
     detail?.id,
     projectType === 'modpack' ? undefined : activeInstance?.versionId,
     projectType === 'modpack' ? undefined : filterLoader
@@ -89,24 +83,14 @@ export function ModDetailModal() {
     }
   }, [compatibleInstances, selectedInstanceId])
 
-  const title = isModrinth ? (project as ModrinthProject | undefined)?.title : (project as CurseForgeMod | undefined)?.name
-  const description = isModrinth
-    ? (project as ModrinthProject | undefined)?.description
-    : (project as CurseForgeMod | undefined)?.summary
-  const icon = isModrinth
-    ? (project as ModrinthProject | undefined)?.icon_url
-    : (project as CurseForgeMod | undefined)?.logo?.thumbnailUrl ?? (project as CurseForgeMod | undefined)?.logo?.url
-  const downloads = isModrinth
-    ? (project as ModrinthProject | undefined)?.downloads
-    : (project as CurseForgeMod | undefined)?.downloadCount
-  const body = isModrinth ? (project as ModrinthProject | undefined)?.body : undefined
-  const gallery = isModrinth ? (project as ModrinthProject | undefined)?.gallery ?? [] : []
-  const categories = isModrinth
-    ? (project as ModrinthProject | undefined)?.categories ?? []
-    : (project as CurseForgeMod | undefined)?.categories?.map((category) => category.name) ?? []
-  const sourceUrl = isModrinth
-    ? (project as ModrinthProject | undefined)?.source_url
-    : (project as CurseForgeMod | undefined)?.links?.websiteUrl
+  const title = project?.title
+  const description = project?.description
+  const icon = project?.icon_url
+  const downloads = project?.downloads
+  const body = project?.body
+  const gallery = project?.gallery ?? []
+  const categories = project?.categories ?? []
+  const sourceUrl = project?.source_url
 
   const install = async (): Promise<void> => {
     if (!selected || !detail) return
@@ -146,7 +130,6 @@ export function ModDetailModal() {
         return
       }
       await window.newbie.addons.install(activeInstance.id, {
-        provider,
         projectId: detail.id,
         versionId: versionId(selected)
       })
@@ -168,7 +151,7 @@ export function ModDetailModal() {
       open={Boolean(detail)}
       onClose={close}
       title={title ?? 'Loading project'}
-      description={projectType ? `${addonTypeLabel(projectType)} · ${provider === 'modrinth' ? 'Modrinth' : 'CurseForge'}` : undefined}
+      description={projectType ? `${addonTypeLabel(projectType)} · Modrinth` : undefined}
       size="xl"
       footer={
         <>
@@ -236,16 +219,12 @@ export function ModDetailModal() {
               <Stat
                 icon={<Star size={15} />}
                 label="Followers"
-                value={formatNumber(
-                  isModrinth
-                    ? (project as ModrinthProject).followers
-                    : (project as CurseForgeMod).downloadCount ?? 0
-                )}
+                value={formatNumber(project.followers)}
               />
               <Stat
                 icon={<Calendar size={15} />}
                 label="Updated"
-                value={relativeTime(isModrinth ? (project as ModrinthProject).updated : (project as CurseForgeMod).latestFiles?.[0]?.fileDate)}
+                value={relativeTime(project.updated)}
               />
             </div>
 
@@ -432,18 +411,17 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
   )
 }
 
-function versionId(version: ModrinthVersion | CurseForgeFile): string {
-  return 'version_number' in version ? version.id : String(version.id)
+function versionId(version: ModrinthVersion): string {
+  return version.id
 }
 
-function packCompatibility(version?: ModrinthVersion | CurseForgeFile): {
+function packCompatibility(version?: ModrinthVersion): {
   gameVersions: string[]
   loaders: LoaderType[]
 } {
   if (!version) return { gameVersions: [], loaders: [] }
-  const gameVersions = 'game_versions' in version ? version.game_versions : version.gameVersions
-  const rawLoaders = 'loaders' in version ? version.loaders : version.gameVersions
-  const loaders = rawLoaders
+  const gameVersions = version.game_versions
+  const loaders = version.loaders
     .map((loader) => loader.toLowerCase())
     .map((loader) => (loader === 'minecraft' ? 'vanilla' : loader))
     .filter((loader): loader is LoaderType =>
@@ -452,37 +430,26 @@ function packCompatibility(version?: ModrinthVersion | CurseForgeFile): {
   return { gameVersions, loaders }
 }
 
-function versionName(version: ModrinthVersion | CurseForgeFile): string {
-  return 'version_number' in version ? version.version_number : version.displayName
+function versionName(version: ModrinthVersion): string {
+  return version.version_number
 }
 
-function versionSize(version: ModrinthVersion | CurseForgeFile): number {
-  if ('files' in version) return version.files.find((file) => file.primary)?.size ?? version.files[0]?.size ?? 0
-  return version.fileLength
+function versionSize(version: ModrinthVersion): number {
+  return version.files.find((file) => file.primary)?.size ?? version.files[0]?.size ?? 0
 }
 
-function versionMeta(version: ModrinthVersion | CurseForgeFile): string {
-  if ('game_versions' in version) {
-    return `${version.game_versions.slice(-3).join(', ')} · ${version.loaders.join(', ')}`
-  }
-  return `${version.gameVersions.slice(-3).join(', ')} · ${version.releaseType === 1 ? 'Release' : version.releaseType === 2 ? 'Beta' : 'Alpha'}`
+function versionMeta(version: ModrinthVersion): string {
+  return `${version.game_versions.slice(-3).join(', ')} · ${version.loaders.join(', ')}`
 }
 
-function versionDate(version: ModrinthVersion | CurseForgeFile): string {
-  return relativeTime('date_published' in version ? version.date_published : version.fileDate)
+function versionDate(version: ModrinthVersion): string {
+  return relativeTime(version.date_published)
 }
 
-function versionChannel(version: ModrinthVersion | CurseForgeFile): string {
-  if ('version_type' in version) return version.version_type
-  return version.releaseType === 1 ? 'release' : version.releaseType === 2 ? 'beta' : 'alpha'
+function versionChannel(version: ModrinthVersion): string {
+  return version.version_type
 }
 
-function cfType(classId?: number): string {
-  if (classId === 4471) return 'modpack'
-  if (classId === 12) return 'resourcepack'
-  if (classId === 6552) return 'shader'
-  return 'mod'
-}
 
 function stripMarkdown(value: string): string {
   return value

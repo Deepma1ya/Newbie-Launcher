@@ -30,9 +30,7 @@ const api: NewbieApi = {
     update: (patch) => ipcRenderer.invoke(IPC.settingsUpdate, patch),
     pickDataDir: () => ipcRenderer.invoke(IPC.settingsPickDataDir),
     changeDataDir: (dir) => ipcRenderer.invoke(IPC.settingsChangeDataDir, dir),
-    revealDataDir: () => ipcRenderer.invoke(IPC.settingsRevealDataDir),
-    setCurseforgeKey: (key) => ipcRenderer.invoke(IPC.settingsSetCurseforgeKey, key),
-    testCurseforgeKey: (key) => ipcRenderer.invoke(IPC.settingsTestCurseforgeKey, key)
+    revealDataDir: () => ipcRenderer.invoke(IPC.settingsRevealDataDir)
   },
   accounts: {
     list: () => ipcRenderer.invoke(IPC.accountsList),
@@ -66,9 +64,9 @@ const api: NewbieApi = {
   },
   addons: {
     search: (query) => ipcRenderer.invoke(IPC.addonsSearch, query),
-    project: (provider, id) => ipcRenderer.invoke(IPC.addonsProject, provider, id),
-    versions: (provider, projectId, gameVersion, loader) =>
-      ipcRenderer.invoke(IPC.addonsVersions, provider, projectId, gameVersion, loader),
+    project: (id) => ipcRenderer.invoke(IPC.addonsProject, id),
+    versions: (projectId, gameVersion, loader) =>
+      ipcRenderer.invoke(IPC.addonsVersions, projectId, gameVersion, loader),
     install: (instanceId, ref) => ipcRenderer.invoke(IPC.addonsInstall, instanceId, ref),
     remove: (instanceId, addonId, deleteFile) => ipcRenderer.invoke(IPC.addonsRemove, instanceId, addonId, deleteFile),
     toggle: (instanceId, addonId, enabled) => ipcRenderer.invoke(IPC.addonsToggle, instanceId, addonId, enabled),

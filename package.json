@@ -1,7 +1,7 @@
 {
   "name": "newbie-launcher",
-  "version": "0.1.2",
-  "description": "Newbie Launcher — a calm, fast Minecraft: Java Edition launcher with Modrinth, CurseForge, loadouts and one-click repair.",
+  "version": "0.1.3",
+  "description": "Newbie Launcher — a calm, fast Minecraft: Java Edition launcher with Modrinth, loadouts and one-click repair.",
   "main": "./out/main/index.js",
   "author": {
     "name": "Deepma1ya",

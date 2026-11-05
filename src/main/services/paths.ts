@@ -51,9 +51,6 @@ export const paths = {
   get launcherFile() {
     return path.join(dataDir(), 'launcher.json')
   },
-  get secretsFile() {
-    return path.join(dataDir(), 'secrets.json')
-  },
   get versions() {
     return path.join(dataDir(), 'versions')
   },

@@ -10,7 +10,7 @@ import type {
   SearchQuery
 } from '@shared/types'
 import { fetchJson } from './http'
-import { addonTypeToLoaderCategories, loaderTypeToModrinth } from './addonTypes'
+import { loaderTypeToModrinth } from './addonTypes'
 
 const modrinthUsage = {
   lastRequest: 0
@@ -166,5 +166,3 @@ export function modrinthHitToFriendly(hit: ModrinthHit): ModrinthHit {
     categories: hit.display_categories ?? hit.categories ?? []
   }
 }
-
-export { addonTypeToLoaderCategories }

@@ -155,7 +155,7 @@ export function Onboarding({ open, onDone }: { open: boolean; onDone: () => void
                     {[
                       { title: 'Any version', text: 'Vanilla, Fabric, Quilt, Forge and NeoForge.' },
                       { title: 'Any account', text: 'Microsoft, TLauncher, offline or authlib.' },
-                      { title: 'Modrinth + CurseForge', text: 'Install and update add-ons in one click.' },
+                      { title: 'Modrinth catalog', text: 'Install and update add-ons in one click.' },
                       { title: 'Never lose a world', text: 'Automatic world backups before launch.' }
                     ].map((feature) => (
                       <div key={feature.title} className="rounded-xl border border-line/50 bg-card/45 p-3">

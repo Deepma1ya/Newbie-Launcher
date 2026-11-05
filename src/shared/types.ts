@@ -1,6 +1,6 @@
 export type LoaderType = 'vanilla' | 'fabric' | 'quilt' | 'forge' | 'neoforge'
 export type AddonType = 'mod' | 'resourcepack' | 'shader' | 'modpack' | 'datapack' | 'world'
-export type AddonProvider = 'modrinth' | 'curseforge' | 'local'
+export type AddonProvider = 'modrinth' | 'local'
 export type LoadoutMode = 'offline' | 'download'
 export type AccountType = 'microsoft' | 'tlauncher' | 'offline' | 'authlib'
 export type ThemeMode = 'dark' | 'light' | 'system'
@@ -50,7 +50,6 @@ export interface LauncherSettings {
   backups: BackupSettings
   onboardingComplete: boolean
   tlauncherSkins: boolean
-  curseforgeKeyPresent: boolean
 }
 
 export interface AccountSummary {
@@ -154,7 +153,6 @@ export interface CreateInstanceInput {
   iconUrl?: string
   color?: string
   modpack?: {
-    provider: 'modrinth' | 'curseforge'
     projectId: string
     versionId: string
   }
@@ -336,33 +334,6 @@ export interface ModrinthProject {
   team?: string
 }
 
-export interface CurseForgeMod {
-  id: number
-  name: string
-  slug: string
-  summary: string
-  downloadCount: number
-  logo?: { thumbnailUrl?: string; url?: string }
-  links?: { websiteUrl?: string }
-  latestFiles?: CurseForgeFile[]
-  categories?: { id: number; name: string }[]
-  classId?: number
-}
-
-export interface CurseForgeFile {
-  id: number
-  modId: number
-  displayName: string
-  fileName: string
-  releaseType: 1 | 2 | 3
-  fileDate: string
-  fileLength: number
-  downloadUrl: string | null
-  gameVersions: string[]
-  dependencies?: { modId: number; relationType: number }[]
-  hashes?: { value: string; algo: number }[]
-}
-
 export interface SearchQuery {
   query: string
   type: AddonType
@@ -372,12 +343,11 @@ export interface SearchQuery {
   sort?: 'relevance' | 'downloads' | 'follows' | 'newest' | 'updated'
   offset?: number
   limit?: number
-  provider?: 'modrinth' | 'curseforge'
 }
 
 export interface SearchPage {
-  provider: 'modrinth' | 'curseforge'
-  hits: (ModrinthHit | CurseForgeMod)[]
+  provider: 'modrinth'
+  hits: ModrinthHit[]
   total: number
   offset: number
   limit: number

@@ -169,7 +169,7 @@ export function LibraryPage() {
             <EmptyState
               icon={<Package size={22} />}
               title={addons.length === 0 ? 'This instance is empty' : 'No add-ons match'}
-              description={addons.length === 0 ? 'Browse Modrinth or CurseForge and install your first add-on.' : 'Try a different type filter or search term.'}
+              description={addons.length === 0 ? 'Browse Modrinth and install your first add-on.' : 'Try a different type filter or search term.'}
               action={<Button variant="primary" onClick={() => navigate(`/browse?instance=${instance!.id}`)}>Browse add-ons</Button>}
             />
           ) : (

@@ -19,7 +19,7 @@ import type {
   UpdateInstanceInput
 } from '@shared/types'
 import { store } from './services/store'
-import { getSettings, updateSettings, changeDataDir, setCurseforgeKey, testCurseforgeKey } from './services/settings'
+import { getSettings, updateSettings, changeDataDir } from './services/settings'
 import { paths } from './services/paths'
 import {
   listMinecraftVersions,
@@ -47,7 +47,6 @@ import {
   updateAllAddons
 } from './services/addons'
 import { searchModrinth, getModrinthProject, getModrinthVersions } from './services/modrinth'
-import { searchCurseForge, getCurseForgeMod, getCurseForgeFiles } from './services/curseforge'
 import {
   activateLoadout,
   backupLoadout,
@@ -136,7 +135,6 @@ const createInstanceSchema = z.object({
   color: z.string().max(32).optional(),
   modpack: z
     .object({
-      provider: z.enum(['modrinth', 'curseforge']),
       projectId: z.string().min(1).max(200),
       versionId: z.string().min(1).max(200)
     })
@@ -166,8 +164,7 @@ const searchSchema = z.object({
   categories: z.array(z.string().max(60)).max(12).optional(),
   sort: z.enum(['relevance', 'downloads', 'follows', 'newest', 'updated']).optional(),
   offset: z.number().min(0).max(10000).optional(),
-  limit: z.number().min(1).max(50).optional(),
-  provider: z.enum(['modrinth', 'curseforge']).optional()
+  limit: z.number().min(1).max(50).optional()
 })
 
 export function registerIpc(): void {
@@ -215,12 +212,6 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.settingsRevealDataDir, async () => {
     await shell.openPath(paths.data)
   })
-  ipcMain.handle(IPC.settingsSetCurseforgeKey, async (_event, key: string | null) =>
-    setCurseforgeKey(key ? z.string().max(200).parse(key) : null)
-  )
-  ipcMain.handle(IPC.settingsTestCurseforgeKey, async (_event, key: string) =>
-    testCurseforgeKey(z.string().max(200).parse(key))
-  )
 
   ipcMain.handle(IPC.accountsList, (): AccountSummary[] => store.accounts())
   ipcMain.handle(IPC.accountsAddOffline, async (_event, username: string) =>
@@ -331,22 +322,17 @@ export function registerIpc(): void {
 
   ipcMain.handle(IPC.addonsSearch, async (_event, raw: unknown) => {
     const query = searchSchema.parse(raw) as SearchQuery
-    return query.provider === 'curseforge' ? searchCurseForge(query) : searchModrinth(query)
+    return searchModrinth(query)
   })
-  ipcMain.handle(IPC.addonsProject, async (_event, provider: string, id: string) =>
-    provider === 'curseforge' ? getCurseForgeMod(id) : getModrinthProject(id)
-  )
+  ipcMain.handle(IPC.addonsProject, async (_event, id: string) => getModrinthProject(id))
   ipcMain.handle(
     IPC.addonsVersions,
-    async (_event, provider: string, projectId: string, gameVersion?: string, loader?: LoaderType) =>
-      provider === 'curseforge'
-        ? getCurseForgeFiles(projectId, gameVersion, loader)
-        : getModrinthVersions(projectId, gameVersion, loader)
+    async (_event, projectId: string, gameVersion?: string, loader?: LoaderType) =>
+      getModrinthVersions(projectId, gameVersion, loader)
   )
   ipcMain.handle(IPC.addonsInstall, async (_event, instanceId: string, ref: unknown) => {
     const value = z
       .object({
-        provider: z.enum(['modrinth', 'curseforge']),
         projectId: z.string().max(200),
         versionId: z.string().max(200)
       })
