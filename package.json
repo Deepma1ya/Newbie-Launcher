@@ -1,6 +1,6 @@
 {
   "name": "newbie-launcher",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Newbie Launcher — a calm, fast Minecraft: Java Edition launcher with Modrinth, CurseForge, loadouts and one-click repair.",
   "main": "./out/main/index.js",
   "author": {

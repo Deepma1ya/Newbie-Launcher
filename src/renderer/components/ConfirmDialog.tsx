@@ -30,6 +30,7 @@ export function ConfirmDialog() {
       title={request?.title ?? ''}
       description={request?.description}
       size="sm"
+      zIndex={140}
       footer={
         <>
           <Button variant="ghost" onClick={close} disabled={loading}>

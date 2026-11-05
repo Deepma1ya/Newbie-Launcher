@@ -11,6 +11,7 @@ import {
 import { parseJavaVersion } from '@main/services/java'
 import { offlineUuid, sha1Buffer } from '@main/util/hash'
 import { formatBytes, safeJoin, sanitizeFilename } from '@main/util/fs'
+import { isPackCompatible } from '@shared/packCompatibility'
 
 const baseVersion: VersionJson = {
   id: '1.20.1',
@@ -153,6 +154,21 @@ describe('arguments', () => {
     expect(args.game).toContain('--width')
     expect(args.game).toContain('1280')
     expect(args.classpath).toContain('fabric-loader-0.15.0.jar')
+  })
+})
+
+describe('modpack compatibility', () => {
+  it('accepts the same Minecraft version and loader', () => {
+    expect(isPackCompatible('1.20.1', 'fabric', '1.20.1', 'fabric')).toBe(true)
+  })
+
+  it('rejects a different game version', () => {
+    expect(isPackCompatible('1.20.1', 'fabric', '1.21.1', 'fabric')).toBe(false)
+  })
+
+  it('rejects a different loader', () => {
+    expect(isPackCompatible('1.20.1', 'fabric', '1.20.1', 'forge')).toBe(false)
+    expect(isPackCompatible('1.20.1', 'vanilla', '1.20.1', 'fabric')).toBe(false)
   })
 })
 

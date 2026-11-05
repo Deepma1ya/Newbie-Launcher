@@ -48,6 +48,10 @@ The process manager stores a bounded in-memory log ring, streams a per-launch lo
 
 Tokens live encrypted in `launcher.json`; the renderer receives only sanitized `AccountSummary` objects.
 
+## Modpacks
+
+Modpacks can create a new instance or be applied to an existing instance. Applying to an existing instance requires an exact Minecraft version and loader match. Before any files are written, Newbie creates a streaming backup of `mods`, `config`, `defaultconfigs`, `kubejs`, `scripts`, `resourcepacks`, `shaderpacks` and `options.txt`. Pack files are merged by project ID or filename, so updating a mod already present replaces the record instead of creating a duplicate. The active loadout keeps its existing storage mode when adding to an instance.
+
 ## Add-ons
 
 - **Modrinth** — search facets, project/version endpoints, bulk hash lookup, recursive required-dependency resolution.

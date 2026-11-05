@@ -96,6 +96,9 @@ export const paths = {
   get repairBackups() {
     return path.join(dataDir(), 'backups', 'repairs')
   },
+  get modpackBackups() {
+    return path.join(dataDir(), 'backups', 'modpacks')
+  },
   get logs() {
     return path.join(dataDir(), 'logs')
   },
@@ -142,6 +145,7 @@ export async function ensureLayout(dir: string): Promise<void> {
     ensureDir(path.join(dir, 'cache', 'downloads')),
     ensureDir(path.join(dir, 'backups', 'worlds')),
     ensureDir(path.join(dir, 'backups', 'repairs')),
+    ensureDir(path.join(dir, 'backups', 'modpacks')),
     ensureDir(path.join(dir, 'logs'))
   ])
 }

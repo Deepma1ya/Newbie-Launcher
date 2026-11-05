@@ -94,6 +94,7 @@ export const IPC = {
   loadoutsBackup: 'loadouts:backup',
 
   modpacksInstall: 'modpacks:install',
+  modpacksInstallToInstance: 'modpacks:install-to-instance',
 
   systemInfo: 'system:info',
   systemDetectJava: 'system:detect-java',
@@ -205,6 +206,7 @@ export interface NewbieApi {
   }
   modpacks: {
     install(projectId: string, versionId: string): Promise<Instance>
+    installToInstance(instanceId: string, projectId: string, versionId: string): Promise<Instance>
   }
   system: {
     info(): Promise<SystemInfo>

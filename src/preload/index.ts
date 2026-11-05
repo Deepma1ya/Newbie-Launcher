@@ -85,7 +85,9 @@ const api: NewbieApi = {
     backup: (instanceId, loadoutId) => ipcRenderer.invoke(IPC.loadoutsBackup, instanceId, loadoutId)
   },
   modpacks: {
-    install: (projectId, versionId) => ipcRenderer.invoke(IPC.modpacksInstall, projectId, versionId)
+    install: (projectId, versionId) => ipcRenderer.invoke(IPC.modpacksInstall, projectId, versionId),
+    installToInstance: (instanceId, projectId, versionId) =>
+      ipcRenderer.invoke(IPC.modpacksInstallToInstance, instanceId, projectId, versionId)
   },
   system: {
     info: () => ipcRenderer.invoke(IPC.systemInfo),

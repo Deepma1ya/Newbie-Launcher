@@ -1,4 +1,4 @@
-import { useEffect, useRef, type ReactNode } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { createPortal } from 'react-dom'
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { X } from '@phosphor-icons/react'
@@ -13,7 +13,8 @@ export function Modal({
   children,
   footer,
   size = 'md',
-  closeOnBackdrop = true
+  closeOnBackdrop = true,
+  zIndex = 100
 }: {
   open: boolean
   onClose: () => void
@@ -23,8 +24,10 @@ export function Modal({
   footer?: ReactNode
   size?: 'sm' | 'md' | 'lg' | 'xl'
   closeOnBackdrop?: boolean
+  zIndex?: number
 }) {
   const panelRef = useRef<HTMLDivElement>(null)
+  const titleId = useId()
   const reduced = useReducedMotion()
 
   useEffect(() => {
@@ -70,7 +73,8 @@ export function Modal({
     <AnimatePresence>
       {open && (
         <motion.div
-          className="fixed inset-0 z-[100] flex items-center justify-center p-5"
+          className="fixed inset-0 flex items-center justify-center p-5"
+          style={{ zIndex }}
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
@@ -85,7 +89,7 @@ export function Modal({
             ref={panelRef}
             role="dialog"
             aria-modal="true"
-            aria-labelledby="modal-title"
+            aria-labelledby={titleId}
             initial={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.965, y: 14 }}
             animate={reduced ? { opacity: 1 } : { opacity: 1, scale: 1, y: 0 }}
             exit={reduced ? { opacity: 0 } : { opacity: 0, scale: 0.975, y: 8 }}
@@ -97,7 +101,7 @@ export function Modal({
           >
             <div className="flex items-start justify-between gap-6 border-b border-line/45 px-6 py-5">
               <div className="min-w-0">
-                <h2 id="modal-title" className="font-display text-[18px] font-semibold text-ink">
+                <h2 id={titleId} className="font-display text-[18px] font-semibold text-ink">
                   {title}
                 </h2>
                 {description && <p className="mt-1 text-[12.5px] leading-relaxed text-muted">{description}</p>}

@@ -1,17 +1,21 @@
-# Newbie Launcher 0.1.1
+# Newbie Launcher 0.1.2
 
-Patch release focused on input reliability.
+Modpack targeting and a few reliability fixes.
+
+## Added
+
+- Modpacks can now be added to an **existing instance** instead of only creating a new one.
+- The install target selector only lists instances with the **same Minecraft version and loader** as the selected pack version.
+- Adding a pack to an existing instance creates a safety backup of mods, configs, scripts and packs before writing anything.
+- Pack installation merges by project ID or filename, replacing existing mod versions instead of creating duplicate records.
 
 ## Fixed
 
-- Toggle switches now use a real accessible checkbox inside a full-row label.
-- Clicking the switch label or description now toggles it — not only the tiny track.
-- Rapid clicks no longer read stale state; the switch updates optimistically while the setting is saved.
-- Settings switches (close-to-tray, Java auto-download, auto-update, backups, performance auto-apply and others) now persist correctly and re-sync after the IPC round-trip.
-- The TLauncher skin/cape sync choice is now actually persisted and respected when adding or refreshing a TLauncher account.
-- The “Releases only” toggle in Create Instance now toggles from its full label and updates the version list without a double event.
+- Modal dialogs now use unique accessible title IDs, so stacked confirmations (such as adding a modpack) are announced and targeted correctly.
+- Modpack version selectors no longer truncate older pack versions, so a 1.20.1 build remains selectable in large packs.
 
 ## Notes
 
-- Everything from 0.1.0 remains included.
-- Auto-update metadata is published with this release, so installed 0.1.0 copies can update in place.
+- Applying a modpack leaves the instance's Minecraft version and loader untouched. If the pack does not match, the backend refuses the operation with a clear error.
+- The active loadout keeps its storage mode when adding an existing-instance pack.
+- Everything from 0.1.1 is included.

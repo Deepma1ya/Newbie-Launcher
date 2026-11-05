@@ -10,8 +10,9 @@ import {
   Star,
   WarningCircle
 } from '@phosphor-icons/react'
-import type { CurseForgeFile, CurseForgeMod, ModrinthProject, ModrinthVersion } from '@shared/types'
-import { useActiveInstance, useProject, useProjectVersions, qk } from '../../hooks/queries'
+import type { CurseForgeFile, CurseForgeMod, LoaderType, ModrinthProject, ModrinthVersion } from '@shared/types'
+import { isPackCompatible } from '@shared/packCompatibility'
+import { useActiveInstance, useInstances, useProject, useProjectVersions, qk } from '../../hooks/queries'
 import { toast, useUi } from '../../store/ui'
 import { addonTypeLabel, errorMessage, formatBytes, formatNumber, loaderLabel, relativeTime } from '../../lib/utils'
 import { Modal } from '../ui/Modal'
@@ -23,7 +24,9 @@ export function ModDetailModal() {
   const detail = useUi((state) => state.modal.modDetail)
   const closeModal = useUi((state) => state.closeModal)
   const openModal = useUi((state) => state.openModal)
+  const askConfirm = useUi((state) => state.askConfirm)
   const activeInstance = useActiveInstance()
+  const instances = useInstances().data ?? []
   const provider = detail?.provider === 'curseforge' ? 'curseforge' : 'modrinth'
   const projectQuery = useProject(provider, detail?.id)
   const project = projectQuery.data
@@ -32,11 +35,17 @@ export function ModDetailModal() {
   const projectType = isModrinth
     ? (project as ModrinthProject | undefined)?.project_type
     : cfType((project as CurseForgeMod | undefined)?.classId)
-  const filterLoader = projectType === 'mod' || projectType === 'modpack' ? activeInstance?.loader : undefined
-  const versionsQuery = useProjectVersions(provider, detail?.id, activeInstance?.versionId, filterLoader)
+  const filterLoader = projectType === 'mod' ? activeInstance?.loader : undefined
+  const versionsQuery = useProjectVersions(
+    provider,
+    detail?.id,
+    projectType === 'modpack' ? undefined : activeInstance?.versionId,
+    projectType === 'modpack' ? undefined : filterLoader
+  )
   const vanillaBlocked = projectType === 'mod' && activeInstance?.loader === 'vanilla'
   const versions = versionsQuery.data ?? []
   const [selectedVersion, setSelectedVersion] = useState('')
+  const [selectedInstanceId, setSelectedInstanceId] = useState('')
   const [installing, setInstalling] = useState(false)
   const [installed, setInstalled] = useState(false)
   const queryClient = useQueryClient()
@@ -44,6 +53,7 @@ export function ModDetailModal() {
   useEffect(() => {
     if (!detail) {
       setSelectedVersion('')
+      setSelectedInstanceId('')
       setInstalled(false)
       setInstalling(false)
     }
@@ -59,6 +69,25 @@ export function ModDetailModal() {
     () => versions.find((version) => versionId(version) === selectedVersion) ?? versions[0],
     [versions, selectedVersion]
   )
+
+  const packInfo = useMemo(() => packCompatibility(selected), [selected])
+  const compatibleInstances = useMemo(() => {
+    if (projectType !== 'modpack') return []
+    return instances.filter((instance) =>
+      packInfo.gameVersions.some((gameVersion) =>
+        packInfo.loaders.some((loader) =>
+          isPackCompatible(gameVersion, loader, instance.versionId, instance.loader)
+        )
+      )
+    )
+  }, [instances, packInfo, projectType])
+  const targetInstance = compatibleInstances.find((instance) => instance.id === selectedInstanceId)
+
+  useEffect(() => {
+    if (selectedInstanceId && !compatibleInstances.some((instance) => instance.id === selectedInstanceId)) {
+      setSelectedInstanceId('')
+    }
+  }, [compatibleInstances, selectedInstanceId])
 
   const title = isModrinth ? (project as ModrinthProject | undefined)?.title : (project as CurseForgeMod | undefined)?.name
   const description = isModrinth
@@ -81,6 +110,25 @@ export function ModDetailModal() {
 
   const install = async (): Promise<void> => {
     if (!selected || !detail) return
+    if (projectType === 'modpack' && targetInstance) {
+      askConfirm({
+        title: `Add ${title ?? 'modpack'} to ${targetInstance.name}?`,
+        description:
+          'The pack files and overrides will be added to this instance. Existing add-ons are kept where possible, and a backup of mods, configs and packs is created before anything changes.',
+        confirmLabel: 'Add modpack',
+        action: async () => {
+          await window.newbie.modpacks.installToInstance(targetInstance.id, detail.id, versionId(selected))
+          await queryClient.invalidateQueries({ queryKey: qk.instances })
+          await queryClient.invalidateQueries({ queryKey: qk.instance(targetInstance.id) })
+          await queryClient.invalidateQueries({ queryKey: qk.disk })
+          useUi.getState().setActiveInstance(targetInstance.id)
+          closeModal('modDetail')
+          toast('success', 'Modpack added', `${title ?? 'The pack'} was applied to ${targetInstance.name}`)
+          window.location.hash = `#/instances/${targetInstance.id}`
+        }
+      })
+      return
+    }
     setInstalling(true)
     try {
       if (projectType === 'modpack') {
@@ -142,7 +190,9 @@ export function ModDetailModal() {
               {vanillaBlocked
                 ? 'Vanilla cannot load mods'
                 : projectType === 'modpack'
-                  ? 'Create instance from modpack'
+                  ? targetInstance
+                    ? `Add to ${targetInstance.name}`
+                    : 'Create instance from modpack'
                   : activeInstance
                     ? `Install to ${activeInstance.name}`
                     : 'Create an instance first'}
@@ -228,7 +278,9 @@ export function ModDetailModal() {
             <div className="mt-5">
               <div className="mb-2 flex items-center justify-between">
                 <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">
-                  Versions {activeInstance ? `for ${activeInstance.versionId}` : ''}
+                  {projectType === 'modpack'
+                    ? 'Pack versions'
+                    : `Versions${activeInstance ? ` for ${activeInstance.versionId}` : ''}`}
                 </div>
                 {sourceUrl && (
                   <button
@@ -277,7 +329,7 @@ export function ModDetailModal() {
               <div className="text-[11px] font-semibold uppercase tracking-[0.1em] text-muted">Install</div>
               <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
                 {projectType === 'modpack'
-                  ? 'Creates a new instance and installs every pack file, with overrides applied.'
+                  ? 'Create a fresh instance, or add the pack to an existing instance with the same version and loader.'
                   : activeInstance
                     ? `Target: ${activeInstance.name} · ${activeInstance.versionId} · ${loaderLabel(activeInstance.loader)}`
                     : 'Create an instance first, then install this project into it.'}
@@ -285,7 +337,7 @@ export function ModDetailModal() {
               <div className="mt-3">
                 <Field label="Version">
                   <Select value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)}>
-                    {versions.slice(0, 60).map((version) => (
+                    {versions.map((version) => (
                       <option key={versionId(version)} value={versionId(version)}>
                         {versionName(version)}
                       </option>
@@ -294,6 +346,25 @@ export function ModDetailModal() {
                   </Select>
                 </Field>
               </div>
+              {projectType === 'modpack' && (
+                <div className="mt-3">
+                  <Field label="Install target">
+                    <Select value={selectedInstanceId} onChange={(event) => setSelectedInstanceId(event.target.value)}>
+                      <option value="">New instance</option>
+                      {compatibleInstances.map((instance) => (
+                        <option key={instance.id} value={instance.id}>
+                          {instance.name} · {instance.versionId} · {loaderLabel(instance.loader)}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <p className="mt-1.5 text-[10px] leading-relaxed text-muted/70">
+                    {compatibleInstances.length > 0
+                      ? `${compatibleInstances.length} existing instance${compatibleInstances.length === 1 ? '' : 's'} match this pack version.`
+                      : 'No existing instance matches this pack version and loader yet.'}
+                  </p>
+                </div>
+              )}
               {selected && (
                 <div className="mt-3 space-y-1.5 text-[10.5px] text-muted/75">
                   <div className="flex justify-between gap-2">
@@ -363,6 +434,22 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
 
 function versionId(version: ModrinthVersion | CurseForgeFile): string {
   return 'version_number' in version ? version.id : String(version.id)
+}
+
+function packCompatibility(version?: ModrinthVersion | CurseForgeFile): {
+  gameVersions: string[]
+  loaders: LoaderType[]
+} {
+  if (!version) return { gameVersions: [], loaders: [] }
+  const gameVersions = 'game_versions' in version ? version.game_versions : version.gameVersions
+  const rawLoaders = 'loaders' in version ? version.loaders : version.gameVersions
+  const loaders = rawLoaders
+    .map((loader) => loader.toLowerCase())
+    .map((loader) => (loader === 'minecraft' ? 'vanilla' : loader))
+    .filter((loader): loader is LoaderType =>
+      ['vanilla', 'fabric', 'quilt', 'forge', 'neoforge'].includes(loader)
+    )
+  return { gameVersions, loaders }
 }
 
 function versionName(version: ModrinthVersion | CurseForgeFile): string {

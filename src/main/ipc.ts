@@ -56,7 +56,7 @@ import {
   removeLoadout,
   updateLoadout
 } from './services/loadouts'
-import { installModpack } from './services/modpacks'
+import { installModpack, installModpackToInstance } from './services/modpacks'
 import {
   applyGpuPreference,
   diskUsage,
@@ -463,6 +463,34 @@ export function registerIpc(): void {
       throw error
     }
   })
+  ipcMain.handle(
+    IPC.modpacksInstallToInstance,
+    async (_event, instanceId: string, projectId: string, versionId: string) => {
+      const target = store.instance(z.string().parse(instanceId))
+      const handle = tasks.start('modpack', 'Adding modpack', target?.name, instanceId)
+      try {
+        const instance = await installModpackToInstance(
+          instanceId,
+          z.string().parse(projectId),
+          z.string().parse(versionId),
+          (message, percent) =>
+            handle.progress({
+              stage: 'addons',
+              message,
+              current: percent ?? 0,
+              total: 100,
+              percent: percent ?? 5,
+              instanceId
+            })
+        )
+        await handle.done('Modpack added')
+        return instance
+      } catch (error) {
+        await handle.fail(error)
+        throw error
+      }
+    }
+  )
 
   ipcMain.handle(IPC.systemInfo, async (): Promise<SystemInfo> => {
     const info = await systemInfo()
