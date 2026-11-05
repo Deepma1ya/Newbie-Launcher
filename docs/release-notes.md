@@ -1,3 +1,21 @@
+# Newbie Launcher 0.1.43
+
+Bedrock fix files are applied automatically before every launch.
+
+## Bedrock fix folder
+
+- Added a **Bedrock fix files** card to the Bedrock page. Choose any folder, and its contents are copied into the installed Minecraft for Windows package before the game starts.
+- The default folder is `minecraft bedrock fix` next to the launcher. The card can point Newbie at another folder at any time.
+- Subfolders are preserved, and files are checked by size and modified time. Only new or changed files are copied, so a normal Play does not trigger an administrator prompt when nothing changed.
+- The Windows Security exclusion still runs first. The copy then uses one administrator prompt when Windows protects the Store package folder, verifies each copied file, and only starts Minecraft after every file succeeds.
+- If the copy fails or the administrator prompt is cancelled, Newbie stops and shows the exact file and reason instead of launching with an incomplete fix.
+- The fix folder never includes temporary files, partial downloads or Windows junk such as `Thumbs.db` and `desktop.ini`.
+
+## Also included
+
+- Bedrock uninstall and version replacement preserve worlds and package data (0.1.42).
+- Editable instance resolution fields, with validation and Backspace support (0.1.41).
+
 # Newbie Launcher 0.1.42
 
 Bedrock uninstall and version replacement work on Store-installed Minecraft.

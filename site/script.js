@@ -7,7 +7,7 @@
   const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)')
   const finePointer = window.matchMedia('(hover: hover) and (pointer: fine)')
   const REPO = 'Deepma1ya/Newbie-Launcher'
-  const FALLBACK_VERSION = '0.1.42'
+  const FALLBACK_VERSION = '0.1.43'
   const GITHUB_RELEASES = `https://github.com/${REPO}/releases/latest`
   let downloadUrl = GITHUB_RELEASES
 
