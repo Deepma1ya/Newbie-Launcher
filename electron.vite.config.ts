@@ -12,7 +12,7 @@ export default defineConfig({
       }
     },
     build: {
-      sourcemap: true,
+      sourcemap: false,
       rollupOptions: {
         input: { index: resolve('src/main/index.ts') }
       }
@@ -26,7 +26,7 @@ export default defineConfig({
       }
     },
     build: {
-      sourcemap: true,
+      sourcemap: false,
       rollupOptions: {
         input: { index: resolve('src/preload/index.ts') }
       }
@@ -41,8 +41,8 @@ export default defineConfig({
     },
     plugins: [react()],
     build: {
-      sourcemap: true,
-      minify: false,
+      sourcemap: false,
+      minify: true,
       rollupOptions: {
         input: { index: resolve('src/renderer/index.html') }
       }
