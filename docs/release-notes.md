@@ -1,17 +1,20 @@
-# Newbie Launcher 0.1.3
+# Newbie Launcher 0.1.4
 
-CurseForge has been removed.
+Faster add-on installation.
 
-## Removed
+## Added
 
-- The CurseForge provider, browser tab and API-key requirement.
-- CurseForge account settings, IPC endpoints, services and modpack handling.
-- CurseForge mentions from the README, settings, onboarding and browse screens.
+- Every Browse card now has a **+** button. It installs the latest compatible version of that project into the currently selected instance without opening the detail view.
+- Required dependencies are resolved automatically, and the card switches to a checkmark once the project is installed.
+- Modpacks use the same button to open their target/version chooser, because a whole pack needs a compatible instance selection.
 
-## Kept
+## Fixed
 
-- Modrinth browsing, dependency resolution, updates and modpacks.
-- Installing a modpack into a compatible existing instance.
-- Existing locally installed files are untouched. Any legacy CurseForge add-on records are migrated to local records so they can still be toggled, removed or rescanned, but they are no longer update-checked or downloaded.
+- Quick installation chooses the correct version filters for resource packs and shaders instead of applying the mod loader filter to them.
+- Browse cards no longer nest interactive controls incorrectly. Mouse clicks still open details, while the title and + button remain keyboard-accessible.
 
-Modrinth needs no account, key or approval process, so the default browsing and install flow now works for everyone out of the box.
+## Notes
+
+- + is disabled until an instance is selected.
+- A vanilla instance cannot accept mods quickly; the button opens the detail view so the instance can be switched to Fabric/Forge/Quilt/NeoForge.
+- Everything from 0.1.3 (CurseForge removal) is included.

@@ -63,16 +63,20 @@ async function installRef(
   visited.add(key)
 
   const project = await getModrinthProject(ref.projectId)
+  const type = projectTypeToAddonType(project.project_type)
   const version = ref.versionId
     ? await getModrinthVersion(ref.versionId)
     : selectBestVersion(
-        await getModrinthVersions(ref.projectId, instance.versionId, instance.loader),
+        await getModrinthVersions(
+          ref.projectId,
+          instance.versionId,
+          type === 'mod' || type === 'modpack' ? instance.loader : undefined
+        ),
         instance.versionId,
         instance.loader,
-        projectTypeToAddonType(project.project_type)
+        type
       )
   if (!version) throw new Error(`${project.title} has no version compatible with ${instance.versionId}`)
-  const type = projectTypeToAddonType(project.project_type)
   if (type === 'mod' && instance.loader === 'vanilla') {
     throw new Error(
       'This instance is vanilla and cannot load mods. Change the instance to Fabric, Quilt, Forge or NeoForge first.'

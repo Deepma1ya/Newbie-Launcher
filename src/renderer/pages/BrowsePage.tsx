@@ -3,19 +3,22 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowClockwise,
+  Check,
+  CircleNotch,
   Compass,
   Cube,
   Funnel,
   Image,
   MagnifyingGlass,
   Package,
+  Plus,
   Sparkle,
   SquaresFour
 } from '@phosphor-icons/react'
 import type { AddonType, LoaderType, ModrinthHit, SearchPage, SearchQuery } from '@shared/types'
 import { useActiveInstance, useInstances, useMinecraftVersions, useSearch, qk } from '../hooks/queries'
-import { useUi } from '../store/ui'
-import { addonTypeLabel, formatNumber, loaderLabel } from '../lib/utils'
+import { toast, useUi } from '../store/ui'
+import { addonTypeLabel, errorMessage, formatNumber, loaderLabel } from '../lib/utils'
 import { PageHeader } from '../components/PageHeader'
 import { ProjectIcon } from '../components/ui/BlockIcon'
 import { Badge, Card, EmptyState, Input, Segmented, Select, Skeleton } from '../components/ui/primitives'
@@ -47,6 +50,7 @@ export function BrowsePage() {
   const [sort, setSort] = useState<NonNullable<SearchQuery['sort']>>('relevance')
   const [offset, setOffset] = useState(0)
   const [accumulated, setAccumulated] = useState<SearchPage['hits']>([])
+  const [quickInstalling, setQuickInstalling] = useState<Record<string, boolean>>({})
 
   const targetInstance = instances.find((instance) => instance.id === params.get('instance')) ?? active
 
@@ -104,6 +108,42 @@ export function BrowsePage() {
 
   const results = accumulated
   const canLoadMore = (search.data?.offset ?? 0) + (search.data?.limit ?? 0) < (search.data?.total ?? 0)
+
+  const quickInstall = async (data: ReturnType<typeof normalizeHit>): Promise<void> => {
+    if (!targetInstance) {
+      toast('info', 'Choose an instance first', 'Create or open an instance, then use + to install.')
+      return
+    }
+    if (data.type === 'modpack') {
+      openModal('modDetail', { id: data.id })
+      return
+    }
+    if (data.type === 'mod' && targetInstance.loader === 'vanilla') {
+      toast('info', 'Vanilla cannot load mods', 'Open the details to switch this instance to a mod loader.')
+      openModal('modDetail', { id: data.id })
+      return
+    }
+    if (targetInstance.addons.some((addon) => addon.projectId === data.id)) {
+      toast('info', 'Already installed', `${data.title} is already in ${targetInstance.name}.`)
+      return
+    }
+    setQuickInstalling((current) => ({ ...current, [data.id]: true }))
+    try {
+      await window.newbie.addons.install(targetInstance.id, { projectId: data.id, versionId: '' })
+      await queryClient.invalidateQueries({ queryKey: qk.instances })
+      await queryClient.invalidateQueries({ queryKey: qk.instance(targetInstance.id) })
+      await queryClient.invalidateQueries({ queryKey: qk.disk })
+      toast('success', 'Installed', `${data.title} was added to ${targetInstance.name}`)
+    } catch (error) {
+      toast('error', 'Install failed', errorMessage(error))
+    } finally {
+      setQuickInstalling((current) => {
+        const next = { ...current }
+        delete next[data.id]
+        return next
+      })
+    }
+  }
 
   return (
     <div>
@@ -199,16 +239,59 @@ export function BrowsePage() {
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {results.map((hit) => {
               const data = normalizeHit(hit)
+              const installed = targetInstance?.addons.some((addon) => addon.projectId === data.id) ?? false
+              const installing = Boolean(quickInstalling[data.id])
+              const quickLabel = !targetInstance
+                ? 'Choose an instance first'
+                : installed
+                  ? `${data.title} is already installed`
+                  : data.type === 'modpack'
+                    ? 'Choose a pack version and target'
+                    : data.type === 'mod' && targetInstance.loader === 'vanilla'
+                      ? 'Open details to enable a mod loader'
+                      : `Install ${data.title} to ${targetInstance.name}`
               return (
-                <button
+                <div
                   key={data.id}
                   onClick={() => openModal('modDetail', { id: data.id })}
-                  className="card-hover flex min-h-[148px] flex-col rounded-2xl border border-line/55 bg-card/65 p-4 text-left"
+                  className="card-hover relative flex min-h-[148px] cursor-pointer flex-col rounded-2xl border border-line/55 bg-card/65 p-4 text-left"
                 >
-                  <div className="flex items-start gap-3">
+                  <button
+                    type="button"
+                    disabled={!targetInstance || installed || installing}
+                    title={quickLabel}
+                    aria-label={quickLabel}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void quickInstall(data)
+                    }}
+                    className={
+                      installed
+                        ? 'absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg border border-grass/30 bg-grass/10 text-grass'
+                        : 'absolute right-3 top-3 flex h-8 w-8 items-center justify-center rounded-lg border border-line/60 bg-canvas/60 text-muted transition-colors hover:border-grass/40 hover:bg-grass/10 hover:text-grass disabled:pointer-events-none disabled:opacity-35'
+                    }
+                  >
+                    {installing ? (
+                      <CircleNotch size={15} className="animate-spin" />
+                    ) : installed ? (
+                      <Check size={15} weight="bold" />
+                    ) : (
+                      <Plus size={16} weight="bold" />
+                    )}
+                  </button>
+                  <div className="flex items-start gap-3 pr-8">
                     <ProjectIcon url={data.icon} name={data.title} size={46} className="rounded-xl" />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate font-display text-[13.5px] font-semibold text-ink">{data.title}</div>
+                      <button
+                        type="button"
+                        onClick={(event) => {
+                          event.stopPropagation()
+                          openModal('modDetail', { id: data.id })
+                        }}
+                        className="block max-w-full truncate text-left font-display text-[13.5px] font-semibold text-ink outline-none focus-visible:underline"
+                      >
+                        {data.title}
+                      </button>
                       <div className="mt-0.5 text-[10px] uppercase tracking-[0.08em] text-muted/65">
                         {addonTypeLabel(data.type)} · {formatNumber(data.downloads)} downloads
                       </div>
@@ -225,7 +308,7 @@ export function BrowsePage() {
                       </span>
                     )}
                   </div>
-                </button>
+                </div>
               )
             })}
           </div>

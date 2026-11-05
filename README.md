@@ -24,7 +24,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/17/21+ from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + skin sync, offline profiles, and generic authlib/Yggdrasil servers |
-| **Browse** | Modrinth. Required dependencies are resolved recursively; modpacks install as new instances or into a matching existing instance. No API key required. |
+| **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
 | **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
 | **Repair** | Duplicate mods, wrong-loader jars, incompatible mods, missing dependencies and missing files — one-click safe fixes with a backup first |
