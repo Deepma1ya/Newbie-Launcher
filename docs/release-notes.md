@@ -1,21 +1,17 @@
-# Newbie Launcher 0.1.33
+# Newbie Launcher 0.1.34
 
-A sharper server dashboard — and a new home on the web.
+Take your modpack with you.
 
-## Servers
+## Pack sharing
 
-- **Command snippets:** 80+ ready-made console commands with player pickers, item suggestions, coordinate fields and careful warnings for destructive commands.
-- **TPS dashboard:** live TPS, MSPT and online player counts sampled from the server console, with 1m, 5m and 15m readings.
-- **Resource packs:** install a pack from Modrinth or add your own `.zip`, then let Newbie write the URL, SHA-1, required flag and prompt into `server.properties`.
-- **Scheduled restarts:** restart every few hours or daily at a local time, with an in-game warning before the server cycles.
-- Command snippets, TPS and player data only appear for the server type that supports them.
-
-## Website
-
-- New product site at [deepma1ya.github.io/Newbie-Launcher](https://deepma1ya.github.io/Newbie-Launcher/) with a feature tour, live screenshots, latest release download, FAQ and light/dark themes.
-- The launcher now links to the website from Home and the About settings.
+- **Export a standard `.mrpack`** from every enabled mod, resource pack, datapack and shader in an instance.
+- **Create a temporary download link** that friends can open in a browser. It is token-protected, serves only that pack, and stops when you close the window.
+- **Import packs** from the Instances page. Newbie creates a matching Minecraft + loader instance, extracts the files and rebuilds the add-on records.
+- **Copy add-ons to another instance** with per-type selection, optional disabled files and optional replacement of existing files.
+- Worlds, configs, accounts and disabled add-ons are never included in a shared pack.
 
 ## Also included
 
-- The Bedrock Defender exclusion fix from 0.1.32: every newly installed Bedrock version is checked before Play.
-- Everything from 0.1.32 and earlier is included.
+- Server command snippets, live TPS and player metrics, server resource packs and scheduled restarts from 0.1.33.
+- The product site and latest installer link at [deepma1ya.github.io/Newbie-Launcher](https://deepma1ya.github.io/Newbie-Launcher/).
+- Everything from 0.1.33 and earlier is included.
