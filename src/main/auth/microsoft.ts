@@ -144,7 +144,7 @@ async function completeCodeLogin(code: string, flow: ActiveFlow): Promise<void> 
   try {
     const token = await exchangeCode(code)
     if (flow.cancelled) return
-    const account = await completeLogin(token)
+    const account = await completeLogin(token, true)
     notify({ status: 'success', account })
   } catch (error) {
     logger.error('microsoft', 'Microsoft code exchange failed', error)
@@ -187,7 +187,7 @@ export function cancelMicrosoftFlow(): void {
   notify({ status: 'cancelled' })
 }
 
-export async function completeLogin(token: TokenResponse): Promise<AccountSummary> {
+export async function completeLogin(token: TokenResponse, activate = false): Promise<AccountSummary> {
   const xbl = await fetchJson<XboxResponse>(
     'https://user.auth.xboxlive.com/user/authenticate',
     {
@@ -267,6 +267,11 @@ export async function completeLogin(token: TokenResponse): Promise<AccountSummar
   }
 
   const summary = await store.upsertAccount(account)
+  if (activate) {
+    await store.setActiveAccount(account.id)
+    logger.info('microsoft', `Signed in as ${profile.name} and set active`)
+    return { ...summary, active: true }
+  }
   logger.info('microsoft', `Signed in as ${profile.name}`)
   return summary
 }

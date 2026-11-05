@@ -39,7 +39,13 @@ export function useAppEvents(): void {
           ui.setAuth(event.payload)
           if (event.payload.status === 'success') {
             void queryClient.invalidateQueries({ queryKey: qk.accounts })
-            toast('success', 'Signed in to Microsoft', event.payload.account?.username)
+            toast(
+              'success',
+              'Signed in to Microsoft',
+              event.payload.account
+                ? `${event.payload.account.username} is now your active account`
+                : undefined
+            )
             ui.closeModal('addAccount')
           }
           if (event.payload.status === 'error') {
