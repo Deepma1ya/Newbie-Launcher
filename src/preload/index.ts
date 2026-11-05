@@ -105,6 +105,15 @@ const api: NewbieApi = {
     check: () => ipcRenderer.invoke(IPC.updaterCheck),
     install: () => ipcRenderer.invoke(IPC.updaterInstall),
     state: () => ipcRenderer.invoke(IPC.updaterState)
+  },
+  bedrock: {
+    state: (forceRefresh) => ipcRenderer.invoke(IPC.bedrockState, forceRefresh),
+    download: (id) => ipcRenderer.invoke(IPC.bedrockDownload, id),
+    cancel: (id) => ipcRenderer.invoke(IPC.bedrockCancel, id),
+    install: (id, replaceInstalled) => ipcRenderer.invoke(IPC.bedrockInstall, id, replaceInstalled),
+    launch: (channel) => ipcRenderer.invoke(IPC.bedrockLaunch, channel),
+    delete: (id) => ipcRenderer.invoke(IPC.bedrockDelete, id),
+    addExclusion: () => ipcRenderer.invoke(IPC.bedrockAddExclusion)
   }
 }
 

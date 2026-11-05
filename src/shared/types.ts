@@ -446,6 +446,70 @@ export interface UpdateState {
   message?: string
 }
 
+export type BedrockChannel = 'release' | 'preview'
+
+export interface BedrockVersion {
+  /** Exact Windows package full name, e.g. Microsoft.MinecraftUWP_1.26.6201.0_x64__8wekyb3d8bbwe. */
+  id: string
+  /** Friendly Minecraft version, e.g. 1.26.62.1. */
+  version: string
+  /** Windows package version, e.g. 1.26.6201.0. */
+  packageVersion: string
+  channel: BedrockChannel
+  urls: string[]
+  latest: boolean
+  downloaded: boolean
+  partialBytes?: number
+  installed: boolean
+}
+
+export interface BedrockInstallation {
+  channel: BedrockChannel
+  packageFullName: string
+  version: string
+  packageVersion: string
+  installLocation: string
+  familyName: string
+  appId: string
+  running: boolean
+}
+
+export interface BedrockSetup {
+  developerMode: boolean
+  gamingServices: boolean
+  windowsBuild: string
+  defenderExclusion: 'unknown' | 'added'
+  defenderCheckedAt?: string
+  dataDir: string
+  gameDataDirs: string[]
+}
+
+export interface BedrockState {
+  setup: BedrockSetup
+  installations: BedrockInstallation[]
+  versions: BedrockVersion[]
+  catalogUpdatedAt?: string
+  catalogError?: string
+}
+
+export interface BedrockProgress {
+  id: string
+  version: string
+  stage: 'downloading' | 'verifying' | 'installing' | 'done' | 'error' | 'cancelled'
+  transferred: number
+  total: number
+  percent: number
+  bytesPerSecond?: number
+  message?: string
+}
+
+export interface BedrockExclusionResult {
+  ok: boolean
+  cancelled?: boolean
+  paths: string[]
+  error?: string
+}
+
 export interface BackupRecord {
   filename: string
   path: string
@@ -461,6 +525,7 @@ export type AppEvent =
   | { type: 'task'; payload: TaskRecord }
   | { type: 'microsoft-auth'; payload: MicrosoftAuthState }
   | { type: 'update'; payload: UpdateState }
+  | { type: 'bedrock-progress'; payload: BedrockProgress }
   | { type: 'toast'; payload: { kind: 'success' | 'error' | 'info'; title: string; message?: string } }
   | { type: 'navigate'; payload: { page: string; params?: Record<string, string> } }
 

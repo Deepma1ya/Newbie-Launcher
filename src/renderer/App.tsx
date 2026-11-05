@@ -8,6 +8,7 @@ import { useUi } from './store/ui'
 import { LogoMark } from './components/Sidebar'
 import { HomePage } from './pages/HomePage'
 import { InstancesPage } from './pages/InstancesPage'
+import { BedrockPage } from './pages/BedrockPage'
 import { InstancePage } from './pages/InstancePage'
 import { BrowsePage } from './pages/BrowsePage'
 import { LibraryPage } from './pages/LibraryPage'
@@ -98,6 +99,7 @@ export default function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/instances" element={<InstancesPage />} />
               <Route path="/instances/:id" element={<InstancePage />} />
+              <Route path="/bedrock" element={<BedrockPage />} />
               <Route path="/browse" element={<BrowsePage />} />
               <Route path="/library" element={<LibraryPage />} />
               <Route path="/downloads" element={<DownloadsPage />} />

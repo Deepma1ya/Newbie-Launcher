@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom'
 import {
   Books,
   Compass,
+  Cube,
   DownloadSimple,
   GearSix,
   House,
@@ -18,6 +19,7 @@ import { Tooltip } from './ui/primitives'
 const nav = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/instances', label: 'Instances', icon: SquaresFour },
+  { to: '/bedrock', label: 'Bedrock', icon: Cube },
   { to: '/browse', label: 'Browse', icon: Compass },
   { to: '/library', label: 'Library', icon: Books },
   { to: '/downloads', label: 'Downloads', icon: DownloadSimple },

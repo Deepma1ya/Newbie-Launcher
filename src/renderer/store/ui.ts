@@ -30,6 +30,7 @@ interface ModalState {
 export interface ConfirmRequest {
   title: string
   description?: string
+  body?: string
   confirmLabel?: string
   danger?: boolean
   action: () => Promise<void> | void

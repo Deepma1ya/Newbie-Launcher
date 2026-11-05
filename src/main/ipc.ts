@@ -65,6 +65,15 @@ import { detectJavaRuntimes, installJavaRuntime } from './services/java'
 import { createBackupNow, listBackups } from './services/backups'
 import { tasks } from './services/tasks'
 import { checkForUpdates, installUpdate, updaterState } from './services/updater'
+import {
+  addBedrockExclusion,
+  cancelBedrockDownload,
+  deleteBedrockDownload,
+  downloadBedrockVersion,
+  getBedrockState,
+  installBedrockVersion,
+  launchBedrock
+} from './services/bedrock'
 import { addOfflineAccount } from './auth/offline'
 import { addTLauncherAccount, refreshTLauncherAccount } from './auth/tlauncher'
 import { addAuthlibAccount, refreshAuthlibAccount } from './auth/authlib'
@@ -85,6 +94,8 @@ const usernameSchema = z.string().trim().min(3).max(16).regex(/^[A-Za-z0-9_]+$/)
 const pathSchema = z.string().min(3).max(4096)
 const loaderSchema = z.enum(['vanilla', 'fabric', 'quilt', 'forge', 'neoforge'])
 const addonTypeSchema = z.enum(['mod', 'resourcepack', 'shader', 'modpack', 'datapack', 'world'])
+const bedrockChannelSchema = z.enum(['release', 'preview'])
+const bedrockIdSchema = z.string().min(3).max(200)
 
 const settingsPatchSchema = z
   .object({
@@ -526,6 +537,25 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.updaterCheck, () => checkForUpdates())
   ipcMain.handle(IPC.updaterInstall, () => installUpdate())
   ipcMain.handle(IPC.updaterState, () => updaterState())
+
+  ipcMain.handle(IPC.bedrockState, (_event, forceRefresh?: unknown) =>
+    getBedrockState(z.boolean().optional().parse(forceRefresh) ?? false)
+  )
+  ipcMain.handle(IPC.bedrockDownload, (_event, id: unknown) =>
+    downloadBedrockVersion(bedrockIdSchema.parse(id))
+  )
+  ipcMain.handle(IPC.bedrockCancel, (_event, id: unknown) => cancelBedrockDownload(bedrockIdSchema.parse(id)))
+  ipcMain.handle(IPC.bedrockInstall, (_event, id: unknown, replaceInstalled?: unknown) =>
+    installBedrockVersion(
+      bedrockIdSchema.parse(id),
+      z.boolean().optional().parse(replaceInstalled) ?? false
+    )
+  )
+  ipcMain.handle(IPC.bedrockLaunch, (_event, channel: unknown) =>
+    launchBedrock(bedrockChannelSchema.parse(channel))
+  )
+  ipcMain.handle(IPC.bedrockDelete, (_event, id: unknown) => deleteBedrockDownload(bedrockIdSchema.parse(id)))
+  ipcMain.handle(IPC.bedrockAddExclusion, () => addBedrockExclusion())
 
   nativeTheme.themeSource = 'dark'
   logger.info('ipc', 'IPC handlers registered')

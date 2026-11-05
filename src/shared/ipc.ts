@@ -4,6 +4,9 @@ import type {
   AppEvent,
   AppInfo,
   BackupRecord,
+  BedrockChannel,
+  BedrockExclusionResult,
+  BedrockState,
   CreateInstanceInput,
   GpuApplyResult,
   Instance,
@@ -106,7 +109,15 @@ export const IPC = {
 
   updaterCheck: 'updater:check',
   updaterInstall: 'updater:install',
-  updaterState: 'updater:state'
+  updaterState: 'updater:state',
+
+  bedrockState: 'bedrock:state',
+  bedrockDownload: 'bedrock:download',
+  bedrockCancel: 'bedrock:cancel',
+  bedrockInstall: 'bedrock:install',
+  bedrockLaunch: 'bedrock:launch',
+  bedrockDelete: 'bedrock:delete',
+  bedrockAddExclusion: 'bedrock:add-exclusion'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
@@ -220,5 +231,14 @@ export interface NewbieApi {
     check(): Promise<UpdateState>
     install(): Promise<void>
     state(): Promise<UpdateState>
+  }
+  bedrock: {
+    state(forceRefresh?: boolean): Promise<BedrockState>
+    download(id: string): Promise<void>
+    cancel(id: string): Promise<boolean>
+    install(id: string, replaceInstalled?: boolean): Promise<BedrockState>
+    launch(channel: BedrockChannel): Promise<void>
+    delete(id: string): Promise<void>
+    addExclusion(): Promise<BedrockExclusionResult>
   }
 }
