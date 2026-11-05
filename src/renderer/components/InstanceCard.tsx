@@ -68,7 +68,7 @@ export function InstanceCard({ instance, compact = false }: { instance: Instance
       aria-label={`Open ${instance.name}`}
     >
       <div
-        className="relative h-[76px] overflow-hidden border-b border-line/40"
+        className="relative h-[76px] overflow-hidden rounded-t-2xl border-b border-line/40"
         style={{
           background: `radial-gradient(160% 120% at 10% -10%, ${instance.color}38 0%, transparent 58%), linear-gradient(120deg, #111A13, #0B100C)`
         }}
