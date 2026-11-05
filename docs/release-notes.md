@@ -1,18 +1,19 @@
-# Newbie Launcher 0.1.39
+# Newbie Launcher 0.1.40
 
-Modrinth `.mrpack` import is now available where you export packs.
+The launcher now gets out of the way while you play.
 
-## Modpack import
+## Tray mode
 
-- The **Share or move your modpack** dialog now includes an **Import a .mrpack** card, right next to Export.
-- **Import .mrpack** on the Instances page keeps working and has a clearer label.
-- Newbie reads `modrinth.index.json`, creates a matching instance from the pack's Minecraft version and loader, downloads its client files, extracts `overrides` and `client-overrides`, then scans the imported add-ons.
-- Your current instance is never changed by an import.
-- A failed import cleans up the incomplete instance instead of leaving a broken entry behind.
-- After a successful import, Newbie opens the new instance.
+- Starting a Java or Bedrock game hides Newbie in the notification area instead of leaving it over the game.
+- When the last running game closes, Newbie reopens automatically and comes back to the foreground.
+- Multiple games are tracked together: the launcher stays hidden until every game has closed.
+- **Open Newbie Launcher** or a double-click on the tray icon restores the window, including when it was minimized.
+- The setting is now called **Hide to tray while a game runs** and is enabled by default. Its description explains the automatic reopen.
+- If the tray icon cannot be created, Newbie falls back to minimizing the window instead.
+- Duplicate game-exit signals no longer update playtime or restore the window twice.
 
 ## Also included
 
-- Bedrock Microsoft account card, Xbox app shortcut, and Bedrock server player allow lists from 0.1.38.
-- Microsoft sign-in activation fix from 0.1.37.
-- Bedrock Dedicated Server creation, Windows Security exclusion fixes, server tools, resource packs and scheduled restarts from earlier releases.
+- `.mrpack` import from the pack-sharing dialog and the Instances page (0.1.39).
+- Bedrock Microsoft account card, Xbox app shortcut, and Bedrock server allow lists (0.1.38).
+- Microsoft sign-in activation fix, Bedrock Dedicated Server creation, server tools, resource packs and scheduled restarts from earlier releases.
