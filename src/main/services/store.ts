@@ -34,7 +34,7 @@ export const DEFAULT_SETTINGS: LauncherSettings = {
   theme: 'dark',
   dataDir: '',
   closeToTray: true,
-  minimizeOnLaunch: false,
+  minimizeOnLaunch: true,
   autoCheckUpdates: true,
   allowPrerelease: false,
   downloadConcurrency: 6,

@@ -10,6 +10,8 @@ import { logger } from './util/log'
 let mainWindow: BrowserWindow | null = null
 let tray: Tray | null = null
 let quitting = false
+let hiddenForGame = false
+let activeGameSessions = 0
 
 function appIconPath(): string {
   if (app.isPackaged) {
@@ -157,6 +159,13 @@ export async function pickSaveFile(
   return result.canceled ? null : result.filePath ?? null
 }
 
+function revealMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  if (mainWindow.isMinimized()) mainWindow.restore()
+  mainWindow.show()
+  mainWindow.focus()
+}
+
 export function initTray(): void {
   try {
     const iconPath = appIconPath()
@@ -171,10 +180,7 @@ export function initTray(): void {
       Menu.buildFromTemplate([
         {
           label: 'Open Newbie Launcher',
-          click: () => {
-            mainWindow?.show()
-            mainWindow?.focus()
-          }
+          click: () => revealMainWindow()
         },
         { type: 'separator' },
         {
@@ -186,10 +192,7 @@ export function initTray(): void {
         }
       ])
     )
-    tray.on('double-click', () => {
-      mainWindow?.show()
-      mainWindow?.focus()
-    })
+    tray.on('double-click', () => revealMainWindow())
   } catch (error) {
     logger.warn('window', 'Tray unavailable', error)
     tray = null
@@ -204,6 +207,35 @@ export function minimizeWindow(): void {
   mainWindow?.minimize()
 }
 
+/**
+ * Hide the launcher while a game is running. The tray icon stays available,
+ * and gameSessionEnded restores the window when the last game exits.
+ */
+export function gameSessionStarted(): void {
+  activeGameSessions += 1
+  if (activeGameSessions > 1) return
+  if (!store.settings().minimizeOnLaunch) return
+  if (!mainWindow || mainWindow.isDestroyed()) return
+  hiddenForGame = true
+  if (tray) {
+    mainWindow.hide()
+  } else {
+    // Tray creation failed: keep the old minimize fallback.
+    mainWindow.minimize()
+  }
+  logger.info('window', 'Launcher hidden while a game is running')
+}
+
+export function gameSessionEnded(allowRestore = true): void {
+  activeGameSessions = Math.max(0, activeGameSessions - 1)
+  if (!allowRestore) return
+  if (activeGameSessions > 0 || !hiddenForGame) return
+  hiddenForGame = false
+  if (quitting) return
+  revealMainWindow()
+  logger.info('window', 'Launcher restored after the game exited')
+}
+
 export function toggleMaximize(): void {
   if (!mainWindow) return
   if (mainWindow.isMaximized()) mainWindow.unmaximize()
@@ -215,6 +247,5 @@ export function hideWindow(): void {
 }
 
 export function showWindow(): void {
-  mainWindow?.show()
-  mainWindow?.focus()
+  revealMainWindow()
 }

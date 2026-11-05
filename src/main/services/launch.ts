@@ -22,6 +22,7 @@ import { syncTlsCape } from './tlskincape'
 import { ensureDir, pathExists } from '../util/fs'
 import { logger } from '../util/log'
 import { extractZip } from '../util/zip'
+import { gameSessionEnded, gameSessionStarted } from '../window'
 
 interface RunningProcess {
   child: ChildProcessWithoutNullStreams
@@ -30,6 +31,7 @@ interface RunningProcess {
   logs: string[]
   logStream: ReturnType<typeof createWriteStream>
   stopping: boolean
+  finished: boolean
   xmlBuffer: string
 }
 
@@ -205,9 +207,11 @@ export async function launchInstance(instanceId: string): Promise<void> {
       logs: [],
       logStream,
       stopping: false,
+      finished: false,
       xmlBuffer: ''
     }
     running.set(instanceId, entry)
+    gameSessionStarted()
     appendLog(entry, 'system', `Launching ${instance.name} (${instance.versionId})`)
     appendLog(entry, 'system', `Java: ${javaPath}`)
     appendLog(entry, 'system', `Memory: ${instance.memoryMb} MB`)
@@ -252,6 +256,9 @@ export async function launchInstance(instanceId: string): Promise<void> {
     throw error
   } finally {
     launching.delete(instanceId)
+    // If the last game exited while another instance was still preparing, and
+    // that launch failed, there is nothing left to trigger the restore.
+    if (running.size === 0 && launching.size === 0) gameSessionEnded()
   }
 }
 
@@ -261,6 +268,8 @@ async function finish(
   signal: string | null,
   spawnError: boolean
 ): Promise<void> {
+  if (entry.finished) return
+  entry.finished = true
   running.delete(entry.instanceId)
   const durationSec = Math.round((Date.now() - entry.startedAt) / 1000)
   const crashed = isCrashedExit(code, spawnError, entry.stopping)
@@ -294,6 +303,7 @@ async function finish(
   }
   emit({ type: 'launch-exit', payload })
   emit({ type: 'launch-state', payload: { instanceId: entry.instanceId, status: 'stopped', startedAt: Date.now() } })
+  gameSessionEnded(running.size === 0 && launching.size === 0)
   await store.flush()
 }
 

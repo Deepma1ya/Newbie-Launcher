@@ -645,7 +645,6 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.instancesLaunch, async (_event, id: string) => {
     await launchInstance(z.string().parse(id))
-    if (getSettings().minimizeOnLaunch) minimizeWindow()
   })
   ipcMain.handle(IPC.instancesStop, async (_event, id: string) => stopInstance(z.string().parse(id)))
   ipcMain.handle(IPC.instancesRunning, () => runningStates())

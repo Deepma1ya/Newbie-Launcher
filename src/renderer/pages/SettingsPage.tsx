@@ -139,8 +139,8 @@ export function SettingsPage() {
                 <Switch
                   checked={settings.minimizeOnLaunch}
                   onChange={(checked) => void save({ minimizeOnLaunch: checked })}
-                  label="Minimize when Minecraft starts"
-                  description="Get out of the way after the game process is launched."
+                  label="Hide to tray while a game runs"
+                  description="Keep Newbie in the notification area after Minecraft starts, then reopen it when the game closes."
                 />
                 <div className="flex items-center justify-between gap-3 border-t border-line/40 pt-4">
                   <div>

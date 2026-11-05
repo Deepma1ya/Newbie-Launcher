@@ -32,8 +32,14 @@ import { fetchJson } from './http'
 import { paths, freeSpaceMb } from './paths'
 import { ensureDir, pathExists, readJson, sanitizeFilename, writeJsonAtomic } from '../util/fs'
 import { logger } from '../util/log'
+import { gameSessionEnded, gameSessionStarted } from '../window'
 
 const execFileAsync = promisify(execFile)
+const TASKLIST = path.join(
+  process.env.SystemRoot || 'C:\\Windows',
+  'System32',
+  'tasklist.exe'
+)
 const POWERSHELL = path.join(
   process.env.SystemRoot || 'C:\\Windows',
   'System32',
@@ -62,6 +68,7 @@ interface ExclusionMarker {
 }
 
 const activeDownloads = new Map<string, AbortController>()
+let bedrockSessionToken = 0
 
 function bedrockRoot(): string {
   return path.join(paths.data, 'bedrock')
@@ -764,6 +771,43 @@ export async function launchBedrock(channel: BedrockChannel): Promise<void> {
     throw new Error(`Windows could not start Minecraft. ${cleanPowerShellError(result)}`)
   }
   logger.info('bedrock', `Launched ${target.packageFullName}`)
+  gameSessionStarted()
+  monitorBedrockSession()
+}
+
+async function bedrockClientRunning(): Promise<boolean> {
+  if (process.platform !== 'win32') return false
+  try {
+    const { stdout } = await execFileAsync(
+      TASKLIST,
+      ['/FI', 'IMAGENAME eq Minecraft.Windows.exe', '/NH'],
+      { windowsHide: true, timeout: 15_000, maxBuffer: 1024 * 1024 }
+    )
+    return /Minecraft\.Windows\.exe/i.test(String(stdout ?? ''))
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Bedrock is launched through Windows rather than a child process we own.
+ * Poll the Minecraft process so the launcher can come back after it closes.
+ */
+function monitorBedrockSession(): void {
+  const token = ++bedrockSessionToken
+  const deadline = Date.now() + 90_000
+  let seen = false
+  const poll = async (): Promise<void> => {
+    if (token !== bedrockSessionToken) return
+    if (await bedrockClientRunning()) {
+      seen = true
+    } else if (seen || Date.now() > deadline) {
+      gameSessionEnded()
+      return
+    }
+    setTimeout(() => void poll(), 4_000)
+  }
+  setTimeout(() => void poll(), 2_000)
 }
 
 /**
