@@ -181,6 +181,10 @@ describe('java version parsing', () => {
     expect(parseJavaVersion('openjdk version "21.0.4" 2024-07-16')).toEqual({ version: '21.0.4', major: 21 })
   })
 
+  it('parses Java 25 and newer releases', () => {
+    expect(parseJavaVersion('openjdk version "25.0.1" 2025-10-21')).toEqual({ version: '25.0.1', major: 25 })
+  })
+
   it('rejects unrelated output', () => {
     expect(parseJavaVersion('not java')).toBeNull()
   })

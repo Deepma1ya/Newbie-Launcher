@@ -17,7 +17,7 @@ import {
   WarningCircle
 } from '@phosphor-icons/react'
 import type { PerformanceProfile } from '@shared/types'
-import { APP_VERSION, GITHUB_URL } from '@shared/constants'
+import { APP_VERSION, GITHUB_URL, JAVA_MAJORS } from '@shared/constants'
 import { useDiskUsage, useJavaRuntimes, useSettings, useSystemInfo, qk } from '../hooks/queries'
 import { toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
@@ -228,8 +228,8 @@ function JavaSection() {
           <div>
             <h2 className="font-display text-[15px] font-semibold text-ink">Automatic Java</h2>
             <p className="mt-0.5 max-w-xl text-[11.5px] leading-relaxed text-muted">
-              Minecraft versions need Java 8, 17 or 21. Newbie downloads the matching Eclipse Temurin JRE and verifies its
-              SHA-256 checksum.
+              Minecraft versions usually need Java 8, 11, 17 or 21; newer setups can use Java 25. Newbie downloads the
+              matching Eclipse Temurin JRE and verifies its SHA-256 checksum.
             </p>
           </div>
           <Switch
@@ -239,10 +239,26 @@ function JavaSection() {
           />
         </div>
         <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="secondary" size="sm" loading={busy === 21} onClick={() => void install(21)}>Install Java 21</Button>
-          <Button variant="secondary" size="sm" loading={busy === 17} onClick={() => void install(17)}>Install Java 17</Button>
-          <Button variant="ghost" size="sm" loading={busy === 8} onClick={() => void install(8)}>Install Java 8</Button>
+          {JAVA_MAJORS.map((major) => {
+            const installed = java.some((runtime) => runtime.major === major)
+            return (
+              <Button
+                key={major}
+                variant={major === 8 ? 'ghost' : 'secondary'}
+                size="sm"
+                loading={busy === major}
+                disabled={installed}
+                onClick={() => void install(major)}
+              >
+                {installed ? `Java ${major} installed` : `Install Java ${major}`}
+              </Button>
+            )
+          })}
         </div>
+        <p className="mt-2 text-[10px] leading-relaxed text-muted/60">
+          Java 25 is optional. Use it only for versions or mods that support it; each instance can still choose its own
+          runtime.
+        </p>
       </Card>
 
       <Card className="p-5">

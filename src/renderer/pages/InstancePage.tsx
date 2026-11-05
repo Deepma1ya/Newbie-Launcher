@@ -20,6 +20,7 @@ import {
   Wrench
 } from '@phosphor-icons/react'
 import type { Instance, LoaderType, PerformanceProfile } from '@shared/types'
+import { JAVA_MAJORS } from '@shared/constants'
 import { findTlsCapeArtifact } from '@shared/tlskincape'
 import {
   useAccounts,
@@ -492,6 +493,7 @@ function InstanceSettings({
   const [javaPath, setJavaPath] = useState(instance.javaPath ?? '')
   const [jvmArgs, setJvmArgs] = useState(instance.jvmArgs)
   const [saving, setSaving] = useState(false)
+  const [installingJava, setInstallingJava] = useState<number | null>(null)
   const [capeBusy, setCapeBusy] = useState(false)
   const [capeEnabled, setCapeEnabled] = useState(instance.tlauncherCape !== false)
   const [error, setError] = useState<string | null>(null)
@@ -530,6 +532,27 @@ function InstanceSettings({
       toast(result.ok ? 'success' : 'error', 'GPU preference', result.message)
     } catch (error) {
       toast('error', 'GPU preference failed', errorMessage(error))
+    }
+  }
+
+  const chooseJava = async (value: string): Promise<void> => {
+    if (!value.startsWith('major:')) {
+      setJavaPath(value)
+      return
+    }
+    const major = Number(value.slice('major:'.length))
+    if (!Number.isFinite(major)) return
+    setInstallingJava(major)
+    setError(null)
+    try {
+      const runtime = await window.newbie.system.installJava(major)
+      await queryClient.invalidateQueries({ queryKey: qk.java })
+      setJavaPath(runtime.path)
+      toast('success', `Java ${runtime.major} ready`, runtime.path)
+    } catch (cause) {
+      setError(errorMessage(cause))
+    } finally {
+      setInstallingJava(null)
     }
   }
 
@@ -605,16 +628,40 @@ function InstanceSettings({
             </Field>
           </div>
           <Switch checked={fullscreen} onChange={setFullscreen} label="Launch in fullscreen" />
-          <Field label="Java runtime" hint={java.length ? `${java.length} detected` : 'None detected'}>
-            <Select value={javaPath} onChange={setJavaPath}>
+          <Field
+            label="Java runtime"
+            hint={
+              installingJava !== null
+                ? `Installing Java ${installingJava}…`
+                : java.length
+                  ? `${java.length} detected`
+                  : 'None detected'
+            }
+          >
+            <Select
+              value={javaPath}
+              onChange={(value) => void chooseJava(value)}
+              disabled={installingJava !== null}
+            >
               <option value="">Automatic (recommended)</option>
               {java.map((runtime) => (
                 <option key={runtime.path} value={runtime.path}>
                   {runtime.vendor} {runtime.major} · {runtime.arch}
                 </option>
               ))}
+              {JAVA_MAJORS.filter((major) => !java.some((runtime) => runtime.major === major)).map(
+                (major) => (
+                  <option key={`install-java-${major}`} value={`major:${major}`}>
+                    Java {major} · install Temurin
+                  </option>
+                )
+              )}
             </Select>
           </Field>
+          <p className="text-[10px] leading-relaxed text-muted/60">
+            Choosing an uninstalled version downloads Eclipse Temurin now. Java 25 is available for newer versions and
+            mods that support it.
+          </p>
           <Field label="Extra JVM arguments" hint="space separated">
             <Input value={jvmArgs} onChange={(event) => setJvmArgs(event.target.value)} placeholder="-XX:+UseG1GC" />
           </Field>

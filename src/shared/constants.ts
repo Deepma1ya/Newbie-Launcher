@@ -1,6 +1,6 @@
 export const APP_NAME = 'Newbie Launcher'
 export const APP_ID = 'com.newbielauncher.app'
-export const APP_VERSION = '0.1.20'
+export const APP_VERSION = '0.1.21'
 export const GITHUB_OWNER = 'Deepma1ya'
 export const GITHUB_REPO = 'Newbie-Launcher'
 export const GITHUB_URL = `https://github.com/${GITHUB_OWNER}/${GITHUB_REPO}`
@@ -15,6 +15,12 @@ export const QUILT_META = 'https://meta.quiltmc.org/v3'
 export const FORGE_PROMOTIONS = 'https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json'
 export const NEOFORGE_MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml'
 export const ADOPTIUM_API = 'https://api.adoptium.net/v3'
+
+/**
+ * Java majors exposed in the launcher. Minecraft itself usually needs 8, 17
+ * or 21, but users can explicitly install and select newer LTS runtimes.
+ */
+export const JAVA_MAJORS = [25, 21, 17, 11, 8] as const
 
 /**
  * Public, MIT-licensed GdkLinks catalog used by the Bedrock Launcher project.

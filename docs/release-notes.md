@@ -1,20 +1,20 @@
-# Newbie Launcher 0.1.20
+# Newbie Launcher 0.1.21
 
-Essential mods stay protected during repair.
+Java 25 and more Java choices.
 
-## Repair
+## Java
 
-- Repair no longer chooses essential mods as the mod to disable when resolving a conflict.
-- Protected out of the box: Fabric API, Fabric Language Kotlin, Quilt API/QSL, Sodium, Embeddium, Rubidium, Iris, Oculus, Indium, Lithium, FerriteCore, Krypton, ModernFix, ImmediatelyFast, EntityCulling, C2ME, Noisium, ThreadTweak, BadOptimizations, MemoryLeakFix, Debugify, Cloth Config, Architectury, Forge Config API Port, YACL and Mod Menu.
-- If another mod conflicts with a protected mod, the other mod is offered for disabling instead.
-- If two protected mods conflict, Newbie disables neither and reports a manual conflict.
-- A mod required by another active mod is also protected from conflict disables, even if it is not in the curated list.
-- Missing-dependency fallbacks never disable essential or required mods. They are left enabled and the problem is reported for manual review.
+- Added Java 25 to the Java settings page, alongside Java 21, 17, 11 and 8.
+- Install buttons now show when a major is already installed; only missing versions are offered for download.
+- The per-instance **Java runtime** picker now includes direct install options for missing majors:
+  - choose **Java 25 · install Temurin** and Newbie downloads it, then selects it for that instance;
+  - the same works for Java 21, 17, 11 and 8;
+  - detected runtimes from any vendor remain selectable.
+- Automatic Java now prefers the exact major a Minecraft version needs. A newer installed runtime no longer silently replaces it — for example, Java 25 will not be used for a Java 21 instance unless you select it explicitly.
+- Java 25 is optional and intended for newer versions or mods that explicitly support it. The instance picker warns about this.
 
 ## Notes
 
-- Protection applies to conflict resolution and dependency fallbacks.
-- Unreadable, wrong-loader or duplicate copies can still be disabled after confirmation because they cannot stay active as-is. Duplicate cleanup always keeps one working copy.
-- The Repair window now states that essential mods are protected.
-
-Everything from 0.1.19 (datapacks), 0.1.18 (TLSkinCape) and earlier is included.
+- Adoptium JRE downloads are still verified against their SHA-256 checksum.
+- Java 8, 11, 17, 21 and 25 are all available from the same installer.
+- Everything from 0.1.20 (essential mod protection), 0.1.19 (datapacks) and earlier is included.

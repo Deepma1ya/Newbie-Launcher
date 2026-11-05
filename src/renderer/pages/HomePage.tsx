@@ -260,7 +260,7 @@ export function HomePage() {
               'Modrinth dependency resolution',
               'One-click mod conflict repair',
               'TLauncher skin account support',
-              'Automatic Java 8–21 setup',
+              'Automatic Java 8–25 setup',
               'World backups before every launch'
             ].map((item) => (
               <div key={item} className="flex items-center gap-2 rounded-lg border border-line/40 bg-canvas/25 px-2.5 py-2 text-[11px] text-muted">

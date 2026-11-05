@@ -171,11 +171,11 @@ export async function ensureJava(major: number, autoInstall = true): Promise<Jav
   const runtimes = await detectJavaRuntimes()
   const exact = runtimes.find((runtime) => runtime.major === major)
   if (exact) return exact
-  const newer = runtimes
-    .filter((runtime) => runtime.major > major && runtime.major <= major + 4)
-    .sort((a, b) => a.major - b.major)[0]
-  if (newer) return newer
   if (!autoInstall) {
+    const newer = runtimes
+      .filter((runtime) => runtime.major > major && runtime.major <= major + 4)
+      .sort((a, b) => a.major - b.major)[0]
+    if (newer) return newer
     throw new Error(
       `Java ${major} is required but was not found. Install Temurin ${major} or enable automatic Java downloads in Settings.`
     )
