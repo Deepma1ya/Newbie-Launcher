@@ -1,3 +1,13 @@
+# Newbie Launcher 0.1.47
+
+The home page instance actions are aligned and moved into a footer.
+
+## Home
+
+- The **Play/Start** and **Manage** buttons now use the same large size and fixed width.
+- Both buttons sit in a bottom action bar on the active instance card instead of under the instance name.
+- **Console** and any pending update actions are grouped on the right side of the same footer and wrap cleanly on narrow windows.
+
 # Newbie Launcher 0.1.46
 
 Bedrock fix files now ship with the launcher instead of a user-managed folder.
