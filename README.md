@@ -32,6 +32,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Bedrock** | Minecraft for Windows versions: download official signed GDK packages, install through Windows/Gaming Services, launch the installed package, and switch versions without touching Java |
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
 | **Servers** | One-click local Vanilla, Paper, Fabric, Quilt, Forge and NeoForge servers with a live console, GUI settings and Modrinth plugins, mods and datapacks |
+| **Sharing** | Play with friends through playit.gg, port forwarding, Radmin VPN, ngrok or Cloudflare. Detects LAN/Radmin/public addresses, shows difficulty levels, and lets you copy and test the address. |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/11/17/21/25 from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, and generic authlib/Yggdrasil servers |
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
@@ -105,6 +106,18 @@ The **Servers** page creates and runs Minecraft servers on this PC. It is a laun
 - Datapacks go into the active world's `datapacks` folder, so they keep working after the world folder is renamed.
 
 Servers are stored under `<dataDir>/servers/<id>`. Each folder contains `server.json`, `server.properties`, the installed software, the world, add-on folders and logs. Newbie keeps its captured console in `logs/launcher-console.log` so it does not compete with Minecraft's own `logs/latest.log`.
+
+## Playing with friends
+
+The server **Share** tab detects your LAN, Radmin VPN and public addresses, your router gateway and a remembered friends address. It can copy the address and test it: private addresses use a local TCP check, while public/tunnel addresses use the public Minecraft status API.
+
+- **playit.gg** — recommended for most groups. The host runs the free agent; friends only need the playit address and vanilla Minecraft. The tab shows the exact `127.0.0.1:<port>` target and opens the download/tunnel pages.
+- **Port forwarding** — shows the LAN target, public address, router-page shortcut, CGNAT warning and firewall/router steps.
+- **Radmin VPN** — detects the Radmin adapter and gives friends the exact `RadminIP:port`; everyone needs Radmin installed.
+- **ngrok** — shows the exact `ngrok tcp <port>` command and links; the host needs an ngrok account and TCP endpoints require card verification on the free plan.
+- **Cloudflare Tunnel** — honest advanced guidance: Cloudflare's public tunnel is HTTP-oriented, so Minecraft Java friends need cloudflared/WARP (or a client mod) and authentication.
+- **Same Wi-Fi** — LAN address for players on the same network.
+- A warning reminds you to enable online mode and the whitelist before sharing a public address.
 
 ## Accounts, honestly
 

@@ -76,6 +76,7 @@ import { clearRepairFailures } from './services/repair'
 import { syncTlsCape } from './services/tlskincape'
 import { copyInstanceSettings } from './services/instanceSettings'
 import { getServer, listServers } from './services/serverStore'
+import { getServerShareInfo, testServerAddress } from './services/serverShare'
 import {
   createServer,
   removeServer,
@@ -403,6 +404,12 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.serversCommand, async (_event, id: string, command: string) => {
     sendServerCommand(z.string().parse(id), z.string().max(1000).parse(command))
   })
+  ipcMain.handle(IPC.serversShare, async (_event, id: string) =>
+    getServerShareInfo(z.string().parse(id))
+  )
+  ipcMain.handle(IPC.serversTestAddress, async (_event, address: string) =>
+    testServerAddress(z.string().min(1).max(300).parse(address))
+  )
   ipcMain.handle(IPC.serversProperties, async (_event, id: string) =>
     serverProperties(z.string().parse(id))
   )

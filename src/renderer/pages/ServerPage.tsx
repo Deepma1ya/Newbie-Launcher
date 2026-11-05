@@ -13,6 +13,7 @@ import {
   Plus,
   Stop,
   Trash,
+  UsersThree,
   WarningCircle
 } from '@phosphor-icons/react'
 import type {
@@ -46,8 +47,9 @@ import { Badge, Card, Field, Input, Segmented, Select, Skeleton, Switch } from '
 import { Button, IconButton } from '../components/ui/Button'
 import { ProjectIcon } from '../components/ui/BlockIcon'
 import { PageHeader } from '../components/PageHeader'
+import { ServerSharePanel } from '../components/ServerSharePanel'
 
-type Tab = 'console' | 'settings' | 'addons'
+type Tab = 'console' | 'share' | 'settings' | 'addons'
 
 export function ServerPage() {
   const { id } = useParams<{ id: string }>()
@@ -165,6 +167,7 @@ export function ServerPage() {
           onChange={setTab}
           options={[
             { value: 'console', label: 'Console', icon: <PaperPlaneTilt size={14} /> },
+            { value: 'share', label: 'Share', icon: <UsersThree size={14} /> },
             { value: 'settings', label: 'Settings', icon: <HardDrives size={14} /> },
             { value: 'addons', label: `Add-ons ${server.addons.length}`, icon: <Package size={14} /> }
           ]}
@@ -183,6 +186,14 @@ export function ServerPage() {
 
       {tab === 'console' && (
         <ServerConsole server={server} status={status} running={running} onStart={() => void action('start')} busy={busy} />
+      )}
+      {tab === 'share' && (
+        <ServerSharePanel
+          server={server}
+          running={running}
+          onStart={() => void action('start')}
+          onOpenSettings={() => setTab('settings')}
+        />
       )}
       {tab === 'settings' && <ServerSettings server={server} running={running} />}
       {tab === 'addons' && <ServerAddons server={server} running={running} />}
@@ -362,6 +373,7 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
       }
       await window.newbie.servers.saveProperties(server.id, draft)
       await queryClient.invalidateQueries({ queryKey: qk.serverProperties(server.id) })
+      await queryClient.invalidateQueries({ queryKey: qk.serverShare(server.id) })
       await queryClient.invalidateQueries({ queryKey: qk.server(server.id) })
       await queryClient.invalidateQueries({ queryKey: qk.servers })
       toast(

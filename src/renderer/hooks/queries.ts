@@ -15,6 +15,8 @@ import type {
   SearchQuery,
   ServerRecord,
   ServerRuntimeStatus,
+  ServerShareInfo,
+  ServerAddressTest,
   ServerSearchQuery,
   SystemInfo,
   TaskRecord,
@@ -47,6 +49,7 @@ export const qk = {
   serverStatus: (id: string) => ['servers', id, 'status'] as const,
   serverLogs: (id: string) => ['servers', id, 'logs'] as const,
   serverProperties: (id: string) => ['servers', id, 'properties'] as const,
+  serverShare: (id: string) => ['servers', id, 'share'] as const,
   serverSearch: (query: ServerSearchQuery) => ['server-search', query] as const
 }
 
@@ -123,6 +126,15 @@ export function useServerProperties(id?: string | null): UseQueryResult<Record<s
     queryKey: qk.serverProperties(id ?? ''),
     queryFn: () => api.servers.properties(id!),
     enabled: Boolean(id)
+  })
+}
+
+export function useServerShare(id?: string | null): UseQueryResult<ServerShareInfo> {
+  return useQuery({
+    queryKey: qk.serverShare(id ?? ''),
+    queryFn: () => api.servers.share(id!),
+    enabled: Boolean(id),
+    staleTime: 30_000
   })
 }
 

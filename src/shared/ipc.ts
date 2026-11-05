@@ -37,6 +37,8 @@ import type {
   ServerAddonType,
   ServerSearchQuery,
   CreateServerInput,
+  ServerShareInfo,
+  ServerAddressTest,
   UpdateServerInput
 } from './types'
 import type { TlsCapeSyncResult } from './tlskincape'
@@ -104,6 +106,8 @@ export const IPC = {
   serversStatuses: 'servers:statuses',
   serversLogs: 'servers:logs',
   serversCommand: 'servers:command',
+  serversShare: 'servers:share',
+  serversTestAddress: 'servers:test-address',
   serversProperties: 'servers:properties',
   serversSaveProperties: 'servers:save-properties',
   serversSearchAddons: 'servers:search-addons',
@@ -222,6 +226,8 @@ export interface NewbieApi {
     statuses(): Promise<ServerRuntimeStatus[]>
     logs(id: string): Promise<string[]>
     command(id: string, command: string): Promise<void>
+    share(id: string): Promise<ServerShareInfo>
+    testAddress(address: string): Promise<ServerAddressTest>
     properties(id: string): Promise<Record<string, string>>
     saveProperties(id: string, patch: Record<string, string>): Promise<Record<string, string>>
     searchAddons(query: ServerSearchQuery): Promise<SearchPage>

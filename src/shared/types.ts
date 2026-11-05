@@ -629,6 +629,33 @@ export interface ServerSearchQuery {
   limit?: number
 }
 
+export interface ServerShareAddress {
+  interface: string
+  address: string
+}
+
+export interface ServerShareInfo {
+  serverId: string
+  port: number
+  running: boolean
+  localAddress: string
+  lan: ServerShareAddress[]
+  radminAddress?: string
+  publicIp?: string
+  publicAddress?: string
+  gateway?: string
+}
+
+export interface ServerAddressTest {
+  address: string
+  online: boolean
+  playersOnline?: number
+  playersMax?: number
+  version?: string
+  note?: string
+  error?: string
+}
+
 export type AppEvent =
   | { type: 'install-progress'; payload: InstallProgress }
   | { type: 'launch-log'; payload: LaunchLog }
