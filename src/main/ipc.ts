@@ -65,6 +65,7 @@ import { detectJavaRuntimes, installJavaRuntime } from './services/java'
 import { createBackupNow, listBackups } from './services/backups'
 import { tasks } from './services/tasks'
 import { checkForUpdates, installUpdate, updaterState } from './services/updater'
+import { clearRepairFailures } from './services/repair'
 import { addOfflineAccount } from './auth/offline'
 import { addTLauncherAccount, refreshTLauncherAccount } from './auth/tlauncher'
 import { addAuthlibAccount, refreshAuthlibAccount } from './auth/authlib'
@@ -319,12 +320,17 @@ export function registerIpc(): void {
     const handle = tasks.start('repair', 'Repairing instance', 'Scanning for conflicts', instanceId)
     try {
       const report = await repair(instanceId, true)
-      await handle.done(`${report.fixed} issue(s) fixed`)
+      await handle.done(
+        `${report.fixed} issue(s) fixed${report.failed ? `, ${report.failed} failed` : ''}`
+      )
       return report
     } catch (error) {
       await handle.fail(error)
       throw error
     }
+  })
+  ipcMain.handle(IPC.instancesClearRepairFailures, async (_event, id: string) => {
+    await clearRepairFailures(z.string().parse(id))
   })
 
   ipcMain.handle(IPC.addonsSearch, async (_event, raw: unknown) => {

@@ -73,6 +73,7 @@ export const IPC = {
   instancesLogs: 'instances:logs',
   instancesOpenFolder: 'instances:open-folder',
   instancesRepair: 'instances:repair',
+  instancesClearRepairFailures: 'instances:clear-repair-failures',
 
   addonsSearch: 'addons:search',
   addonsProject: 'addons:project',
@@ -172,6 +173,7 @@ export interface NewbieApi {
     logs(id: string): Promise<string[]>
     openFolder(id: string, sub?: string): Promise<void>
     repair(id: string, apply: boolean): Promise<RepairReport>
+    clearRepairFailures(id: string): Promise<void>
   }
   addons: {
     search(query: SearchQuery): Promise<SearchPage>

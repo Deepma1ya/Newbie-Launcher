@@ -2,42 +2,163 @@ import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import type { Instance, RepairIssue, RepairReport } from '@shared/types'
 import { store } from './store'
-import { addonFolder } from './addonTypes'
 import { metadataLoaderMatches, readJarMeta, type JarMeta } from './jarMeta'
-import { compareVersions } from './loaders'
-import { installAddon, persistInstance, toggleAddon } from './addons'
+import { installAddon, persistInstance } from './addons'
+import { ensureAddonFile } from './loadouts'
 import { searchModrinth } from './modrinth'
 import { zipPaths } from '../util/archive'
 import { paths } from './paths'
-import { pathExists, uniqueId } from '../util/fs'
+import { pathExists, safeJoin, uniqueId } from '../util/fs'
 import { logger } from '../util/log'
 
-interface ScannedJar {
+interface ScannedMod {
+  /** Active or disabled filename without the .disabled suffix. */
   filename: string
+  /** Path relative to the game directory, including mods/ and any .disabled suffix. */
+  relative: string
+  /** Absolute path on disk. */
   path: string
   meta: JarMeta
+  disabled: boolean
+  corrupt: boolean
+}
+
+type RepairAction =
+  | { type: 'disable'; relative: string; recordId?: string }
+  | { type: 'enable'; recordId: string }
+  | { type: 'install-dependency'; dependencyId: string }
+  | { type: 'restore'; recordId: string }
+  | { type: 'clean-state'; recordId: string; keepActive: boolean }
+
+interface RepairPlan {
+  issues: RepairIssue[]
+  actions: Map<string, RepairAction[]>
+  blocked: number
+}
+
+interface ApplyResult {
+  fixed: number
+  failed: number
+  failedFingerprints: Set<string>
 }
 
 export async function repairInstance(instanceId: string, apply: boolean): Promise<RepairReport> {
   const instance = store.instance(instanceId)
   if (!instance) throw new Error('Instance not found')
-  const jars = await scanJars(instance)
-  const issues: RepairIssue[] = []
-  const byModId = new Map<string, ScannedJar[]>()
 
-  for (const jar of jars) {
-    const key = jar.meta.modId
+  const plan = await buildRepairPlan(instance, new Set())
+  if (!apply) return makeReport(instanceId, plan, 0, 0, undefined)
+
+  const actionCount = [...plan.actions.values()].reduce((total, actions) => total + actions.length, 0)
+  if (actionCount === 0) {
+    await pruneRepairFailures(instance, plan.issues)
+    return makeReport(instanceId, plan, 0, 0, undefined)
+  }
+
+  let backupPath: string | undefined
+  backupPath = path.join(
+    paths.repairBackups,
+    `${instance.id}-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`
+  )
+  try {
+    await zipPaths(instance.gameDir, ['mods', 'resourcepacks', 'shaderpacks'], backupPath)
+  } catch (error) {
+    logger.warn('repair', 'Could not create repair backup', error)
+    backupPath = undefined
+  }
+
+  const applied = await applyPlan(instance, plan)
+  const after = await buildRepairPlan(instance, applied.failedFingerprints)
+  await pruneRepairFailures(instance, after.issues)
+  const skipped = after.issues.filter((issue) => !issue.autoFixable).length
+  logger.info(
+    'repair',
+    `Repair for ${instance.name}: ${plan.issues.length} issue(s), ${applied.fixed} fixed, ${applied.failed} failed, ${skipped} manual`
+  )
+  return makeReport(instanceId, after, applied.fixed, applied.failed, backupPath)
+}
+
+export async function clearRepairFailures(instanceId: string): Promise<void> {
+  const instance = store.instance(instanceId)
+  if (!instance) throw new Error('Instance not found')
+  instance.repairFailures = {}
+  await persistInstance(instance)
+}
+
+function makeReport(
+  instanceId: string,
+  plan: RepairPlan,
+  fixed: number,
+  failed: number,
+  backupPath?: string
+): RepairReport {
+  return {
+    instanceId,
+    scannedAt: new Date().toISOString(),
+    issues: plan.issues,
+    fixed,
+    failed,
+    blocked: plan.blocked,
+    skipped: plan.issues.filter((issue) => !issue.autoFixable).length,
+    backupPath
+  }
+}
+
+async function pruneRepairFailures(instance: Instance, issues: RepairIssue[]): Promise<void> {
+  const current = new Set(issues.map(issueFingerprint))
+  let pruned = false
+  for (const fingerprint of Object.keys(instance.repairFailures ?? {})) {
+    if (current.has(fingerprint)) continue
+    delete instance.repairFailures![fingerprint]
+    pruned = true
+  }
+  if (pruned) await persistInstance(instance)
+}
+
+async function buildRepairPlan(instance: Instance, failedFingerprints: Set<string>): Promise<RepairPlan> {
+  const plan: RepairPlan = { issues: [], actions: new Map(), blocked: 0 }
+  const persistedFailures = instance.repairFailures ?? {}
+  const push = (issue: Omit<RepairIssue, 'id'>, actions: RepairAction[]): void =>
+    addIssue(plan, failedFingerprints, persistedFailures, issue, actions)
+  const scanned = await scanMods(instance)
+  const active = scanned.filter((mod) => !mod.disabled && !mod.corrupt)
+  const disabled = scanned.filter((mod) => mod.disabled && !mod.corrupt)
+  const corruptActive = scanned.filter((mod) => !mod.disabled && mod.corrupt)
+  const plannedDisabled = new Set<string>()
+  const managedFilenames = new Set(
+    instance.addons.filter((record) => record.type === 'mod').map((record) => record.filename.toLowerCase())
+  )
+
+  for (const mod of corruptActive) {
+    plannedDisabled.add(mod.relative)
+    push(
+      {
+        kind: 'corrupt',
+        severity: 'error',
+        title: `${path.basename(mod.relative)} is not a readable mod file`,
+        detail: 'The file could not be opened as a mod archive. It will be disabled so the loader cannot crash on it.',
+        files: [mod.relative],
+        autoFixable: true,
+        fixLabel: 'Disable unreadable file'
+      },
+      [{ type: 'disable', relative: mod.relative, recordId: recordIdForRelative(instance, mod.relative) }]
+    )
+  }
+
+  const byModId = new Map<string, ScannedMod[]>()
+  for (const mod of active) {
+    if (plannedDisabled.has(mod.relative)) continue
+    const key = mod.meta.modId.toLowerCase()
     const list = byModId.get(key) ?? []
-    list.push(jar)
+    list.push(mod)
     byModId.set(key, list)
   }
 
   for (const [modId, duplicates] of byModId) {
     if (duplicates.length <= 1) continue
-    const managed = new Set(instance.addons.map((addon) => addon.filename))
     const sorted = [...duplicates].sort((a, b) => {
-      const aManaged = managed.has(a.filename) ? 0 : 1
-      const bManaged = managed.has(b.filename) ? 0 : 1
+      const aManaged = managedFilenames.has(a.filename.toLowerCase()) ? 0 : 1
+      const bManaged = managedFilenames.has(b.filename.toLowerCase()) ? 0 : 1
       if (aManaged !== bManaged) return aManaged - bManaged
       const versionDiff = compareVersions(b.meta.version, a.meta.version)
       if (versionDiff !== 0) return versionDiff
@@ -45,172 +166,394 @@ export async function repairInstance(instanceId: string, apply: boolean): Promis
     })
     const keep = sorted[0]!
     const remove = sorted.slice(1)
-    issues.push({
-      id: uniqueId('issue'),
-      severity: 'error',
-      kind: 'duplicate',
-      title: `Duplicate ${keep.meta.name}`,
-      detail: `${duplicates.length} copies of ${modId} are installed. Keeping ${keep.meta.version}, disabling ${remove.map((item) => item.meta.version).join(', ')}.`,
-      files: remove.map((item) => item.filename),
-      autoFixable: true,
-      fixLabel: 'Keep newest, disable the rest'
-    })
+    for (const mod of remove) plannedDisabled.add(mod.relative)
+    push(
+      {
+        kind: 'duplicate',
+        severity: 'error',
+        title: `Duplicate ${keep.meta.name}`,
+        detail: `${duplicates.length} copies of ${modId} are installed. Keeping ${keep.meta.version}; ${remove
+          .map((mod) => mod.meta.version)
+          .join(', ')} will be disabled.`,
+        files: remove.map((mod) => mod.relative),
+        autoFixable: true,
+        fixLabel: 'Keep newest and disable duplicates'
+      },
+      remove.map((mod) => ({
+        type: 'disable' as const,
+        relative: mod.relative,
+        recordId: recordIdForRelative(instance, mod.relative)
+      }))
+    )
   }
 
-  for (const jar of jars) {
-    if (!metadataLoaderMatches(jar.meta, instance.loader)) {
-      issues.push({
-        id: uniqueId('issue'),
-        severity: 'error',
+  for (const mod of active) {
+    if (plannedDisabled.has(mod.relative)) continue
+    if (metadataLoaderMatches(mod.meta, instance.loader)) continue
+    plannedDisabled.add(mod.relative)
+    push(
+      {
         kind: 'loader-mismatch',
-        title: `${jar.meta.name} is built for ${jar.meta.loader}`,
-        detail: `This ${instance.loader} instance cannot load a ${jar.meta.loader} mod. It will be disabled.`,
-        files: [jar.filename],
+        severity: 'error',
+        title: `${mod.meta.name} is built for ${mod.meta.loader}`,
+        detail: `This ${instance.loader} instance cannot load a ${mod.meta.loader} mod. It will be disabled.`,
+        files: [mod.relative],
         autoFixable: true,
         fixLabel: 'Disable incompatible mod'
-      })
+      },
+      [{ type: 'disable', relative: mod.relative, recordId: recordIdForRelative(instance, mod.relative) }]
+    )
+  }
+
+  const conflictPairs = new Set<string>()
+  for (const mod of active) {
+    if (plannedDisabled.has(mod.relative)) continue
+    for (const dependency of mod.meta.dependencies) {
+      if (!dependency.incompatible) continue
+      const other = active.find(
+        (candidate) =>
+          !plannedDisabled.has(candidate.relative) &&
+          candidate.relative !== mod.relative &&
+          candidate.meta.modId.toLowerCase() === dependency.id.toLowerCase()
+      )
+      if (!other) continue
+
+      const pairKey = [mod.meta.modId.toLowerCase(), other.meta.modId.toLowerCase()].sort().join('|')
+      if (conflictPairs.has(pairKey)) continue
+      conflictPairs.add(pairKey)
+
+      const modBreaksOther = declaresIncompatibility(mod, other)
+      const otherBreaksMod = declaresIncompatibility(other, mod)
+      const loser =
+        modBreaksOther && !otherBreaksMod
+          ? other
+          : otherBreaksMod && !modBreaksOther
+            ? mod
+            : lowerPriority(mod, other, managedFilenames)
+      if (plannedDisabled.has(loser.relative)) continue
+      plannedDisabled.add(loser.relative)
+      push(
+        {
+          kind: 'incompatible',
+          severity: 'error',
+          title: `${mod.meta.name} conflicts with ${other.meta.name}`,
+          detail: `The two mods declare an incompatibility. ${
+            modBreaksOther && otherBreaksMod ? 'This is mutual; Newbie keeps the higher-priority mod. ' : ''
+          }Disabling ${loser.meta.name}.`,
+          files: [loser.relative],
+          autoFixable: true,
+          fixLabel: 'Disable conflicting mod'
+        },
+        [{ type: 'disable', relative: loser.relative, recordId: recordIdForRelative(instance, loser.relative) }]
+      )
     }
   }
 
-  const installedIds = new Set(jars.flatMap((jar) => [jar.meta.modId, ...jar.meta.provided]))
-  for (const jar of jars) {
-    for (const dependency of jar.meta.dependencies) {
-      if (dependency.incompatible && installedIds.has(dependency.id)) {
-        const offender = jars.find((candidate) => candidate.meta.modId === dependency.id)
-        if (offender) {
-          issues.push({
-            id: uniqueId('issue'),
-            severity: 'error',
-            kind: 'incompatible',
-            title: `${jar.meta.name} conflicts with ${offender.meta.name}`,
-            detail: `${jar.meta.name} declares ${offender.meta.name} as incompatible. Disabling the conflicting mod.`,
-            files: [offender.filename],
-            autoFixable: true,
-            fixLabel: 'Disable conflicting mod'
-          })
-        }
-      } else if (dependency.required && !installedIds.has(dependency.id) && !isIgnoredDependency(dependency.id)) {
-        issues.push({
-          id: uniqueId('issue'),
-          severity: 'warning',
-          kind: 'missing-dependency',
-          title: `${jar.meta.name} needs ${dependency.id}`,
-          detail: `Required dependency ${dependency.id}${dependency.versionRange ? ` ${dependency.versionRange}` : ''} is missing. Newbie Launcher can try to install it from Modrinth.`,
-          files: [jar.filename],
-          autoFixable: true,
-          fixLabel: 'Install missing dependency'
-        })
+  const remainingActive = active.filter((mod) => !plannedDisabled.has(mod.relative))
+  const activeIds = idsOf(remainingActive)
+  const unavailable = [...disabled, ...active.filter((mod) => plannedDisabled.has(mod.relative))]
+  const disabledIds = idsOf(unavailable)
+
+  const missing = new Map<string, { dependents: ScannedMod[]; ranges: Set<string> }>()
+  const disabledDependencies = new Map<string, { dependents: ScannedMod[]; provider?: ScannedMod }>()
+  for (const mod of remainingActive) {
+    for (const dependency of mod.meta.dependencies) {
+      if (!dependency.required || isIgnoredDependency(dependency.id)) continue
+      const id = dependency.id.toLowerCase()
+      if (activeIds.has(id)) continue
+      if (disabledIds.has(id)) {
+        const entry = disabledDependencies.get(id) ?? { dependents: [] }
+        entry.dependents.push(mod)
+        entry.provider =
+          entry.provider ??
+          unavailable.find(
+            (candidate) =>
+              candidate.meta.modId.toLowerCase() === id ||
+              candidate.meta.provided.some((provided) => provided.toLowerCase() === id)
+          )
+        disabledDependencies.set(id, entry)
+      } else {
+        const entry = missing.get(id) ?? { dependents: [], ranges: new Set<string>() }
+        entry.dependents.push(mod)
+        if (dependency.versionRange) entry.ranges.add(dependency.versionRange)
+        missing.set(id, entry)
       }
     }
   }
 
+  for (const [id, entry] of missing) {
+    push(
+      {
+        kind: 'missing-dependency',
+        severity: 'warning',
+        title: `Missing dependency: ${id}`,
+        detail: `Required by ${dependentNames(entry.dependents)}${
+          entry.ranges.size ? ` (${[...entry.ranges].join(', ')})` : ''
+        }. Newbie can try to install it from Modrinth.`,
+        files: entry.dependents.map((mod) => mod.relative),
+        autoFixable: true,
+        fixLabel: 'Install missing dependency'
+      },
+      [{ type: 'install-dependency', dependencyId: id }]
+    )
+  }
+
+  for (const [id, entry] of disabledDependencies) {
+    push(
+      {
+        kind: 'disabled-dependency',
+        severity: 'warning',
+        title: `Dependency ${id} is disabled`,
+        detail: `${entry.provider?.meta.name ?? id} is present but disabled, and ${dependentNames(
+          entry.dependents
+        )} requires it. Enable it manually if it is compatible, or remove the dependent mod.`,
+        files: entry.dependents.map((mod) => mod.relative),
+        autoFixable: false
+      },
+      []
+    )
+  }
+
+  await addRecordStateIssues(instance, plan, failedFingerprints, plannedDisabled)
+  return plan
+}
+
+async function addRecordStateIssues(
+  instance: Instance,
+  plan: RepairPlan,
+  failedFingerprints: Set<string>,
+  plannedDisabled: Set<string>
+): Promise<void> {
+  const persistedFailures = instance.repairFailures ?? {}
+  const push = (issue: Omit<RepairIssue, 'id'>, actions: RepairAction[]): void =>
+    addIssue(plan, failedFingerprints, persistedFailures, issue, actions)
+  const loadout = instance.loadouts.find((entry) => entry.id === instance.activeLoadoutId)
+  const expected = new Set(loadout?.addonIds ?? [])
+  for (const record of instance.addons) {
+    if (record.type !== 'mod' || !expected.has(record.id)) continue
+    if (plannedDisabled.has(`mods/${record.filename}`)) continue
+    const active = path.join(instance.gameDir, 'mods', record.filename)
+    const disabled = `${active}.disabled`
+    const [hasActive, hasDisabled] = await Promise.all([pathExists(active), pathExists(disabled)])
+
+    if (!hasActive && !hasDisabled) {
+      const downloadable = record.provider === 'modrinth' && record.enabled
+      push(
+        {
+          kind: 'corrupt',
+          severity: 'warning',
+          title: `${record.name} is missing its file`,
+          detail: downloadable
+            ? 'The add-on is in the active loadout but its file is gone. Newbie can download it again from Modrinth.'
+            : 'The add-on is in the active loadout but its file is gone. Reinstall it to restore the loadout.',
+          files: [record.filename],
+          autoFixable: downloadable,
+          fixLabel: downloadable ? 'Re-download add-on' : undefined
+        },
+        downloadable ? [{ type: 'restore', recordId: record.id }] : []
+      )
+      continue
+    }
+
+    if (hasActive && hasDisabled) {
+      push(
+        {
+          kind: 'state-mismatch',
+          severity: 'warning',
+          title: `${record.name} has two copies`,
+          detail: `Both an active and disabled copy exist. Newbie keeps the ${
+            record.enabled ? 'active' : 'disabled'
+          } copy and moves the other one aside.`,
+          files: [record.filename],
+          autoFixable: true,
+          fixLabel: 'Resolve add-on state'
+        },
+        [{ type: 'clean-state', recordId: record.id, keepActive: record.enabled }]
+      )
+      continue
+    }
+
+    if (!hasActive && hasDisabled && record.enabled) {
+      push(
+        {
+          kind: 'state-mismatch',
+          severity: 'warning',
+          title: `${record.name} is marked enabled but disabled on disk`,
+          detail: 'The add-on is in the active loadout and marked enabled, so the disabled copy will be restored.',
+          files: [record.filename],
+          autoFixable: true,
+          fixLabel: 'Enable add-on'
+        },
+        [{ type: 'enable', recordId: record.id }]
+      )
+      continue
+    }
+
+    if (hasActive && !hasDisabled && !record.enabled) {
+      push(
+        {
+          kind: 'state-mismatch',
+          severity: 'warning',
+          title: `${record.name} is marked disabled but active on disk`,
+          detail: 'The add-on is marked disabled, so the active file will be disabled to match the add-on state.',
+          files: [record.filename],
+          autoFixable: true,
+          fixLabel: 'Disable add-on'
+        },
+        [
+          {
+            type: 'disable',
+            relative: `mods/${record.filename}`,
+            recordId: record.id
+          }
+        ]
+      )
+    }
+  }
+}
+
+async function applyPlan(instance: Instance, plan: RepairPlan): Promise<ApplyResult> {
+  let fixed = 0
+  let failed = 0
+  const failedFingerprints = new Set<string>()
+  const disabledRecordIds = new Set<string>()
+
+  for (const issue of plan.issues) {
+    if (!issue.autoFixable) continue
+    const actions = plan.actions.get(issue.id) ?? []
+    if (actions.length === 0) continue
+    let resolved = false
+    let actionFailed = false
+    for (const action of actions) {
+      try {
+        const ok = await applyAction(instance, action)
+        if (ok) {
+          resolved = true
+          if (action.type === 'disable' && action.recordId) disabledRecordIds.add(action.recordId)
+        } else {
+          actionFailed = true
+        }
+      } catch (error) {
+        actionFailed = true
+        logger.warn('repair', `Could not apply repair: ${issue.title}`, error)
+      }
+    }
+    if (resolved && !actionFailed) {
+      fixed += 1
+      delete instance.repairFailures?.[issueFingerprint(issue)]
+    } else {
+      failed += 1
+      const fingerprint = issueFingerprint(issue)
+      failedFingerprints.add(fingerprint)
+      instance.repairFailures = {
+        ...(instance.repairFailures ?? {}),
+        [fingerprint]: { at: new Date().toISOString(), message: issue.title }
+      }
+    }
+  }
+
+  await syncRecordState(instance, disabledRecordIds)
+  return { fixed, failed, failedFingerprints }
+}
+
+async function applyAction(instance: Instance, action: RepairAction): Promise<boolean> {
+  switch (action.type) {
+    case 'disable':
+      return disableFile(instance, action.relative)
+    case 'enable':
+      return enableRecord(instance, action.recordId)
+    case 'install-dependency':
+      return tryInstallDependency(instance, action.dependencyId)
+    case 'restore':
+      return restoreRecord(instance, action.recordId)
+    case 'clean-state':
+      return cleanRecordState(instance, action.recordId, action.keepActive)
+  }
+}
+
+async function disableFile(instance: Instance, relative: string): Promise<boolean> {
+  const active = safeJoin(instance.gameDir, relative)
+  const disabled = `${active}.disabled`
+  if (!(await pathExists(active))) {
+    // The desired end state is already present if the disabled copy exists.
+    return pathExists(disabled)
+  }
+  if (await pathExists(disabled)) {
+    // Never silently skip a disable because a stale disabled file exists.
+    await moveAside(disabled)
+  }
+  await fs.rename(active, disabled)
+  return true
+}
+
+async function enableRecord(instance: Instance, recordId: string): Promise<boolean> {
+  const record = instance.addons.find((entry) => entry.id === recordId)
+  if (!record) return false
+  const active = path.join(instance.gameDir, 'mods', record.filename)
+  const disabled = `${active}.disabled`
+  if (!(await pathExists(disabled))) return pathExists(active)
+  if (await pathExists(active)) {
+    await moveAside(disabled)
+    return true
+  }
+  await fs.rename(disabled, active)
+  return true
+}
+
+async function restoreRecord(instance: Instance, recordId: string): Promise<boolean> {
+  const record = instance.addons.find((entry) => entry.id === recordId)
+  if (!record) return false
+  await ensureAddonFile(instance, record)
+  return pathExists(path.join(instance.gameDir, 'mods', record.filename))
+}
+
+async function cleanRecordState(instance: Instance, recordId: string, keepActive: boolean): Promise<boolean> {
+  const record = instance.addons.find((entry) => entry.id === recordId)
+  if (!record) return false
+  const active = path.join(instance.gameDir, 'mods', record.filename)
+  const disabled = `${active}.disabled`
+  const [hasActive, hasDisabled] = await Promise.all([pathExists(active), pathExists(disabled)])
+  if (keepActive) {
+    if (hasDisabled) await moveAside(disabled)
+    return hasActive || (await pathExists(active))
+  }
+  if (hasActive) {
+    if (hasDisabled) {
+      await moveAside(active)
+      return true
+    }
+    await fs.rename(active, disabled)
+    return true
+  }
+  return hasDisabled
+}
+
+async function syncRecordState(instance: Instance, disabledRecordIds: Set<string>): Promise<void> {
   for (const record of instance.addons) {
     if (record.type !== 'mod') continue
     const active = path.join(instance.gameDir, 'mods', record.filename)
     const disabled = `${active}.disabled`
-    if (!(await pathExists(active)) && !(await pathExists(disabled))) {
-      issues.push({
-        id: uniqueId('issue'),
-        severity: 'warning',
-        kind: 'corrupt',
-        title: `${record.name} is missing its file`,
-        detail: 'The add-on record exists but the file is gone. Reinstall it to restore the loadout.',
-        files: [record.filename],
-        autoFixable: false
-      })
+    const [hasActive, hasDisabled] = await Promise.all([pathExists(active), pathExists(disabled)])
+    if (hasActive && hasDisabled) {
+      // The record's enabled flag decides which copy is authoritative.
+      if (record.enabled) await moveAside(disabled)
+      else await moveAside(active)
+      record.enabled = await pathExists(active)
+    } else if (hasActive) {
+      record.enabled = true
+    } else if (hasDisabled) {
+      record.enabled = false
     }
   }
 
-  let fixed = 0
-  let skipped = 0
-  let backupPath: string | undefined
-  if (apply && issues.some((issue) => issue.autoFixable)) {
-    const modsDir = path.join(instance.gameDir, 'mods')
-    backupPath = path.join(
-      paths.repairBackups,
-      `${instance.id}-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`
-    )
-    try {
-      await zipPaths(instance.gameDir, ['mods', 'resourcepacks', 'shaderpacks'], backupPath)
-    } catch (error) {
-      logger.warn('repair', 'Could not create repair backup', error)
-      backupPath = undefined
-    }
-
-    for (const issue of issues) {
-      if (!issue.autoFixable) {
-        skipped += 1
-        continue
-      }
-      try {
-        if (issue.kind === 'duplicate' || issue.kind === 'loader-mismatch' || issue.kind === 'incompatible') {
-          for (const filename of issue.files) {
-            await disableFile(instance, filename)
-          }
-          fixed += 1
-        } else if (issue.kind === 'missing-dependency') {
-          const depId = issue.title.split(' needs ')[1]?.trim()
-          if (depId && (await tryInstallDependency(instance, depId))) fixed += 1
-          else skipped += 1
-        }
-      } catch (error) {
-        logger.warn('repair', `Failed to apply repair: ${issue.title}`, error)
-        skipped += 1
-      }
-    }
-
-    // Keep records in sync with the files that were disabled above.
-    for (const record of instance.addons) {
-      if (record.type !== 'mod') continue
-      const active = path.join(instance.gameDir, 'mods', record.filename)
-      const disabled = `${active}.disabled`
-      record.enabled = (await pathExists(active)) && !(await pathExists(disabled))
-    }
-    await persistInstance(instance)
-    void modsDir
-  }
-
-  logger.info('repair', `Repair scan for ${instance.name}: ${issues.length} issue(s), ${fixed} fixed, ${skipped} skipped`)
-  return {
-    instanceId,
-    scannedAt: new Date().toISOString(),
-    issues,
-    fixed,
-    skipped,
-    backupPath
-  }
-}
-
-async function scanJars(instance: Instance): Promise<ScannedJar[]> {
-  const result: ScannedJar[] = []
-  for (const folder of new Set([addonFolder('mod'), addonFolder('resourcepack'), addonFolder('shader')])) {
-    const dir = path.join(instance.gameDir, folder)
-    let entries
-    try {
-      entries = await fs.readdir(dir, { withFileTypes: true })
-    } catch {
-      continue
-    }
-    for (const entry of entries) {
-      if (!entry.isFile() || !/\.(jar|zip)$/i.test(entry.name)) continue
-      const file = path.join(dir, entry.name)
-      const meta = readJarMeta(file)
-      if (meta) result.push({ filename: entry.name, path: file, meta })
+  if (disabledRecordIds.size > 0) {
+    const loadout = instance.loadouts.find((entry) => entry.id === instance.activeLoadoutId)
+    if (loadout) {
+      loadout.addonIds = loadout.addonIds.filter((id) => !disabledRecordIds.has(id))
+      loadout.updatedAt = new Date().toISOString()
     }
   }
-  return result
-}
-
-async function disableFile(instance: Instance, filename: string): Promise<void> {
-  const folder = filename.endsWith('.zip') ? 'resourcepacks' : 'mods'
-  const candidates = [path.join(instance.gameDir, 'mods', filename), path.join(instance.gameDir, 'resourcepacks', filename), path.join(instance.gameDir, 'shaderpacks', filename)]
-  for (const active of candidates) {
-    if (!(await pathExists(active))) continue
-    const disabled = `${active}.disabled`
-    if (!(await pathExists(disabled))) await fs.rename(active, disabled)
-    return
-  }
-  void folder
+  await persistInstance(instance)
 }
 
 async function tryInstallDependency(instance: Instance, dependencyId: string): Promise<boolean> {
@@ -220,27 +563,157 @@ async function tryInstallDependency(instance: Instance, dependencyId: string): P
       type: 'mod',
       gameVersion: instance.versionId,
       loader: instance.loader,
-      limit: 8
+      limit: 12
     })
-    const hit = page.hits.find(
-      (candidate) =>
-        candidate.slug.toLowerCase() === dependencyId.toLowerCase() ||
-        candidate.title.toLowerCase() === dependencyId.toLowerCase()
-    )
-    if (!hit || !('project_id' in hit)) return false
-    await installAddon(instance.id, {
-      projectId: hit.project_id,
-      versionId: ''
+    const target = normalizedDependencyId(dependencyId)
+    const hit = page.hits.find((candidate) => {
+      const values = [candidate.slug, candidate.title].filter((value): value is string => Boolean(value))
+      return values.some((value) => normalizedDependencyId(value) === target)
     })
-    return true
+    if (!hit) return false
+    await installAddon(instance.id, { projectId: hit.project_id, versionId: '' })
+    const after = await scanMods(instance)
+    return idsOf(after.filter((mod) => !mod.disabled && !mod.corrupt)).has(dependencyId.toLowerCase())
   } catch (error) {
     logger.warn('repair', `Could not auto-install dependency ${dependencyId}`, error)
     return false
   }
 }
 
+async function scanMods(instance: Instance): Promise<ScannedMod[]> {
+  const dir = path.join(instance.gameDir, 'mods')
+  let entries
+  try {
+    entries = await fs.readdir(dir, { withFileTypes: true })
+  } catch {
+    return []
+  }
+
+  const result: ScannedMod[] = []
+  for (const entry of entries) {
+    if (!entry.isFile()) continue
+    const disabled = /\.disabled$/i.test(entry.name)
+    const base = disabled ? entry.name.replace(/\.disabled$/i, '') : entry.name
+    if (!/\.(jar|zip)$/i.test(base)) continue
+    const file = path.join(dir, entry.name)
+    const meta = readJarMeta(file)
+    result.push({
+      filename: base,
+      relative: `mods/${entry.name}`,
+      path: file,
+      meta: meta ?? fallbackMeta(entry.name),
+      disabled,
+      corrupt: !meta
+    })
+  }
+  return result
+}
+
+function fallbackMeta(filename: string): JarMeta {
+  const base = filename.replace(/\.(jar|zip)(\.disabled)?$/i, '')
+  return {
+    loader: 'unknown',
+    modId: base,
+    name: base,
+    version: 'unknown',
+    dependencies: [],
+    entries: [],
+    provided: []
+  }
+}
+
+function idsOf(mods: ScannedMod[]): Set<string> {
+  const ids = new Set<string>()
+  for (const mod of mods) {
+    if (mod.corrupt) continue
+    ids.add(mod.meta.modId.toLowerCase())
+    for (const provided of mod.meta.provided) ids.add(provided.toLowerCase())
+  }
+  return ids
+}
+
+function declaresIncompatibility(from: ScannedMod, to: ScannedMod): boolean {
+  return from.meta.dependencies.some(
+    (dependency) =>
+      dependency.incompatible && dependency.id.toLowerCase() === to.meta.modId.toLowerCase()
+  )
+}
+
+function lowerPriority(a: ScannedMod, b: ScannedMod, managed: Set<string>): ScannedMod {
+  const aManaged = managed.has(a.filename.toLowerCase())
+  const bManaged = managed.has(b.filename.toLowerCase())
+  if (aManaged !== bManaged) return aManaged ? b : a
+  const versionDiff = compareVersions(a.meta.version, b.meta.version)
+  if (versionDiff !== 0) return versionDiff < 0 ? a : b
+  return a.filename.localeCompare(b.filename) > 0 ? a : b
+}
+
+function recordIdForRelative(instance: Instance, relative: string): string | undefined {
+  const filename = path.basename(relative).toLowerCase()
+  return instance.addons.find(
+    (record) => record.type === 'mod' && record.filename.toLowerCase() === filename
+  )?.id
+}
+
+function dependentNames(mods: ScannedMod[]): string {
+  return mods.map((mod) => mod.meta.name).join(', ')
+}
+
+function normalizedDependencyId(value: string): string {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, '').replace(/api$/, '')
+}
+
 function isIgnoredDependency(id: string): boolean {
-  return ['minecraft', 'java', 'fabricloader', 'fabric', 'quilt_loader', 'forge', 'neoforge', 'cloth-config'].includes(
+  return ['minecraft', 'java', 'fabricloader', 'fabric', 'quilt_loader', 'forge', 'neoforge'].includes(
     id.toLowerCase()
   )
+}
+
+function compareVersions(a: string, b: string): number {
+  const pa = a.split(/[.+-]/).map((part) => Number(part) || 0)
+  const pb = b.split(/[.+-]/).map((part) => Number(part) || 0)
+  const length = Math.max(pa.length, pb.length)
+  for (let index = 0; index < length; index += 1) {
+    const diff = (pa[index] ?? 0) - (pb[index] ?? 0)
+    if (diff !== 0) return diff
+  }
+  return 0
+}
+
+function issueFingerprint(issue: RepairIssue): string {
+  return `${issue.kind}|${issue.title}|${[...issue.files].sort().join(',')}`
+}
+
+async function moveAside(file: string): Promise<void> {
+  const target = `${file}.newbie-backup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
+  await fs.rename(file, target)
+}
+
+function addIssue(
+  plan: RepairPlan,
+  failedFingerprints: Set<string>,
+  persistedFailures: Record<string, { at: string; message?: string }>,
+  issue: Omit<RepairIssue, 'id'>,
+  actions: RepairAction[]
+): void {
+  const withId: RepairIssue = { ...issue, id: uniqueId('issue') }
+  const fingerprint = issueFingerprint(withId)
+  const failedNow = failedFingerprints.has(fingerprint)
+  const failedBefore = persistedFailures[fingerprint]
+  if (failedNow || failedBefore) {
+    if (failedBefore) plan.blocked += 1
+    plan.issues.push({
+      ...withId,
+      autoFixable: false,
+      fixLabel: undefined,
+      detail: `${withId.detail} ${
+        failedBefore
+          ? `Automatic repair failed previously (${new Date(failedBefore.at).toLocaleDateString()}); fix it manually or use Retry automatic fixes.`
+          : 'Automatic repair failed in this session; fix it manually.'
+      }`
+    })
+    return
+  }
+  plan.issues.push(withId)
+  if (withId.autoFixable && actions.length > 0) plan.actions.set(withId.id, actions)
 }

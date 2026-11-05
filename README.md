@@ -35,7 +35,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
 | **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
-| **Repair** | Duplicate mods, wrong-loader jars, incompatible mods, missing dependencies and missing files — one-click safe fixes with a backup first |
+| **Repair** | Duplicate mods, wrong-loader jars, incompatible mods, missing dependencies and missing files — idempotent fixes with a backup first. Failed automatic fixes pause instead of looping |
 | **Launcher updates** | Built-in updater over free GitHub Releases: background download, live progress and speed, release notes, restart-and-install, stable or beta channel |
 | **Backups** | World ZIPs before launch, with retention and size limits |
 | **Performance** | Balanced/FPS/Quality profiles written to `options.txt`, plus the Windows high-performance GPU preference for Java |

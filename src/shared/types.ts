@@ -116,6 +116,11 @@ export interface AddonRecord {
   updateCheckedAt?: string
 }
 
+export interface RepairFailure {
+  at: string
+  message?: string
+}
+
 export interface Instance {
   id: string
   name: string
@@ -142,6 +147,8 @@ export interface Instance {
   addons: AddonRecord[]
   modpackProjectId?: string
   modpackVersionId?: string
+  /** Fingerprints of automatic repairs that failed, so Repair does not retry them in a loop. */
+  repairFailures?: Record<string, RepairFailure>
 }
 
 export interface CreateInstanceInput {
@@ -357,8 +364,10 @@ export type RepairIssueKind =
   | 'duplicate'
   | 'loader-mismatch'
   | 'missing-dependency'
+  | 'disabled-dependency'
   | 'incompatible'
   | 'corrupt'
+  | 'state-mismatch'
   | 'unmanaged'
 
 export interface RepairIssue {
@@ -377,6 +386,8 @@ export interface RepairReport {
   scannedAt: string
   issues: RepairIssue[]
   fixed: number
+  failed: number
+  blocked: number
   skipped: number
   backupPath?: string
 }

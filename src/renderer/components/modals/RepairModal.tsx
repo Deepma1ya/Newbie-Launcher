@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle, ShieldCheck, Warning, WarningCircle, Wrench } from '@phosphor-icons/react'
+import { ArrowClockwise, CheckCircle, ShieldCheck, Warning, WarningCircle, Wrench } from '@phosphor-icons/react'
 import type { RepairReport } from '@shared/types'
 import { useInstance, qk } from '../../hooks/queries'
 import { toast, useUi } from '../../store/ui'
@@ -18,24 +18,27 @@ export function RepairModal() {
   const [report, setReport] = useState<RepairReport | null>(null)
   const [scanning, setScanning] = useState(false)
   const [fixing, setFixing] = useState(false)
+  const [retrying, setRetrying] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [ran, setRan] = useState(false)
 
-  useEffect(() => {
+  const scan = useCallback(async (): Promise<void> => {
     if (!state?.instanceId) return
     setReport(null)
-    setRan(false)
     setError(null)
     setScanning(true)
-    window.newbie.instances
-      .repair(state.instanceId, false)
-      .then((result) => {
-        setReport(result)
-        setRan(true)
-      })
-      .catch((cause) => setError(errorMessage(cause)))
-      .finally(() => setScanning(false))
+    try {
+      const result = await window.newbie.instances.repair(state.instanceId, false)
+      setReport(result)
+    } catch (cause) {
+      setError(errorMessage(cause))
+    } finally {
+      setScanning(false)
+    }
   }, [state?.instanceId])
+
+  useEffect(() => {
+    void scan()
+  }, [scan])
 
   const fix = async (): Promise<void> => {
     if (!state?.instanceId) return
@@ -43,15 +46,36 @@ export function RepairModal() {
     setError(null)
     try {
       const result = await window.newbie.instances.repair(state.instanceId, true)
-      const after = await window.newbie.instances.repair(state.instanceId, false)
-      setReport({ ...after, fixed: result.fixed, skipped: result.skipped, backupPath: result.backupPath })
+      setReport(result)
       await queryClient.invalidateQueries({ queryKey: qk.instance(state.instanceId) })
       await queryClient.invalidateQueries({ queryKey: qk.instances })
-      toast('success', 'Repair finished', `${result.fixed} issue(s) fixed${result.skipped ? `, ${result.skipped} need attention` : ''}`)
+      const kind = result.failed > 0 ? (result.fixed > 0 ? 'info' : 'error') : 'success'
+      toast(
+        kind,
+        'Repair finished',
+        `${result.fixed} fixed${result.failed ? `, ${result.failed} failed` : ''}${
+          result.skipped ? `, ${result.skipped} need attention` : ''
+        }`
+      )
     } catch (cause) {
       setError(errorMessage(cause))
     } finally {
       setFixing(false)
+    }
+  }
+
+  const retryFailed = async (): Promise<void> => {
+    if (!state?.instanceId) return
+    setRetrying(true)
+    setError(null)
+    try {
+      await window.newbie.instances.clearRepairFailures(state.instanceId)
+      await scan()
+      toast('info', 'Automatic fixes re-enabled', 'The previously failed fixes can be retried with Fix.')
+    } catch (cause) {
+      setError(errorMessage(cause))
+    } finally {
+      setRetrying(false)
     }
   }
 
@@ -69,6 +93,14 @@ export function RepairModal() {
         <>
           <Button variant="ghost" onClick={() => closeModal('repair')} disabled={fixing}>
             Close
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => void scan()}
+            disabled={fixing || scanning}
+            icon={<ArrowClockwise size={14} />}
+          >
+            Rescan
           </Button>
           <Button
             variant="primary"
@@ -109,6 +141,40 @@ export function RepairModal() {
               <Metric label="Safe fixes" value={String(fixable)} />
               <Metric label="Manual" value={String(unresolved)} />
             </div>
+
+            {(report.fixed > 0 || report.failed > 0) && (
+              <div
+                className={cn(
+                  'rounded-xl border px-3 py-2 text-[10.5px] leading-relaxed',
+                  report.failed > 0
+                    ? 'border-gold/25 bg-gold/[0.045] text-gold'
+                    : 'border-grass/20 bg-grass/[0.04] text-grass'
+                )}
+              >
+                Last repair: {report.fixed} fixed
+                {report.failed > 0 ? ` · ${report.failed} failed` : ''}
+                {report.failed > 0 ? '. Failed fixes are marked Manual and will not repeat automatically.' : '.'}
+              </div>
+            )}
+
+            {report.blocked > 0 && (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-gold/25 bg-gold/[0.045] p-3">
+                <div className="min-w-0 text-[10.5px] leading-relaxed text-gold">
+                  {report.blocked} automatic fix{report.blocked === 1 ? '' : 'es'} failed before and{' '}
+                  {report.blocked === 1 ? 'is' : 'are'} paused to avoid repeating.
+                </div>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  loading={retrying}
+                  disabled={fixing || scanning}
+                  onClick={() => void retryFailed()}
+                  icon={<ArrowClockwise size={13} />}
+                >
+                  Retry automatic fixes
+                </Button>
+              </div>
+            )}
 
             {report.issues.length === 0 ? (
               <div className="flex flex-col items-center gap-2 rounded-xl border border-grass/20 bg-grass/[0.035] py-10 text-center">

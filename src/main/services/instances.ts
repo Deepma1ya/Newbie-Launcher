@@ -298,7 +298,8 @@ export async function duplicateInstance(id: string): Promise<Instance> {
     totalPlayTimeSec: 0,
     loadouts: source.loadouts.map((loadout) => ({ ...loadout, id: uniqueId('loadout') })),
     activeLoadoutId: '',
-    addons: source.addons.map((addon) => ({ ...addon, id: addon.id }))
+    addons: source.addons.map((addon) => ({ ...addon, id: addon.id })),
+    repairFailures: {}
   }
   copy.activeLoadoutId = copy.loadouts[0]?.id ?? ''
   await store.addInstance(copy)

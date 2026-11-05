@@ -429,6 +429,7 @@ export async function persistInstance(instance: Instance): Promise<void> {
     current.activeLoadoutId = instance.activeLoadoutId
     current.lastPlayedAt = instance.lastPlayedAt
     current.totalPlayTimeSec = instance.totalPlayTimeSec
+    if (instance.repairFailures !== undefined) current.repairFailures = instance.repairFailures
   })
 }
 

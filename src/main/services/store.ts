@@ -285,7 +285,8 @@ function normaliseInstance(instance: Instance): Instance {
             : addon
         )
       : [],
-    totalPlayTimeSec: instance.totalPlayTimeSec ?? 0
+    totalPlayTimeSec: instance.totalPlayTimeSec ?? 0,
+    repairFailures: instance.repairFailures ?? {}
   }
 }
 

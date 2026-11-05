@@ -62,7 +62,8 @@ const api: NewbieApi = {
     running: () => ipcRenderer.invoke(IPC.instancesRunning),
     logs: (id) => ipcRenderer.invoke(IPC.instancesLogs, id),
     openFolder: (id, sub) => ipcRenderer.invoke(IPC.instancesOpenFolder, id, sub),
-    repair: (id, apply) => ipcRenderer.invoke(IPC.instancesRepair, id, apply)
+    repair: (id, apply) => ipcRenderer.invoke(IPC.instancesRepair, id, apply),
+    clearRepairFailures: (id) => ipcRenderer.invoke(IPC.instancesClearRepairFailures, id)
   },
   addons: {
     search: (query) => ipcRenderer.invoke(IPC.addonsSearch, query),
