@@ -186,14 +186,14 @@ export function BrowsePage() {
 
         <div className="flex flex-wrap items-center gap-2">
           <Funnel size={14} className="text-muted/60" />
-          <Select value={gameVersion} onChange={(event) => setGameVersion(event.target.value)} className="w-[160px]">
+          <Select value={gameVersion} onChange={setGameVersion} className="w-[160px]">
             {releaseVersions.map((version) => (
               <option key={version.id} value={version.id}>{version.id}</option>
             ))}
             {releaseVersions.length === 0 && <option value="">Any version</option>}
           </Select>
           {!hideLoader && (
-            <Select value={loader} onChange={(event) => setLoader(event.target.value as LoaderType)} className="w-[140px]">
+            <Select value={loader} onChange={(value) => setLoader(value as LoaderType)} className="w-[140px]">
               <option value="vanilla">Any loader</option>
               <option value="fabric">Fabric</option>
               <option value="quilt">Quilt</option>
@@ -201,7 +201,7 @@ export function BrowsePage() {
               <option value="neoforge">NeoForge</option>
             </Select>
           )}
-          <Select value={sort} onChange={(event) => setSort(event.target.value as NonNullable<SearchQuery['sort']>)} className="w-[150px]">
+          <Select value={sort} onChange={(value) => setSort(value as NonNullable<SearchQuery['sort']>)} className="w-[150px]">
             <option value="relevance">Relevance</option>
             <option value="downloads">Downloads</option>
             <option value="follows">Followers</option>

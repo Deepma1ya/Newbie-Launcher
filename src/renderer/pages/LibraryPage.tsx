@@ -127,7 +127,7 @@ export function LibraryPage() {
             {instances.length > 1 && (
               <Select
                 value={instance!.id}
-                onChange={(event) => setParams({ instance: event.target.value })}
+                onChange={(value) => setParams({ instance: value })}
                 className="w-[190px]"
                 aria-label="Select instance"
               >

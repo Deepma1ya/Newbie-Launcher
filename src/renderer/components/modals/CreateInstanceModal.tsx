@@ -151,7 +151,7 @@ export function CreateInstanceModal() {
 
         <div className="grid grid-cols-[1fr_auto] items-end gap-3">
           <Field label="Minecraft version" hint={`${versionOptions.length} available`}>
-            <Select value={versionId} onChange={(event) => setVersionId(event.target.value)} data-autofocus>
+            <Select value={versionId} onChange={setVersionId} data-autofocus>
               {versionOptions.map((version) => (
                 <option key={version.id} value={version.id}>
                   {version.id} · {version.type === 'release' ? 'Release' : version.type === 'snapshot' ? 'Snapshot' : version.type.replace('old_', '')}
@@ -178,7 +178,7 @@ export function CreateInstanceModal() {
 
         {loader !== 'vanilla' && (
           <Field label={`${loader} version`} hint={`${loaderVersions.data?.length ?? 0} builds`}>
-            <Select value={loaderVersion} onChange={(event) => setLoaderVersion(event.target.value)}>
+            <Select value={loaderVersion} onChange={setLoaderVersion}>
               {(loaderVersions.data ?? []).slice(0, 80).map((option) => (
                 <option key={option.version} value={option.version}>
                   {option.label ? `${option.version} · ${option.label}` : option.version}

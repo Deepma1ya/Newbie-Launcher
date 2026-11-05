@@ -554,7 +554,7 @@ function InstanceSettings({
           </div>
           <Switch checked={fullscreen} onChange={setFullscreen} label="Launch in fullscreen" />
           <Field label="Java runtime" hint={java.length ? `${java.length} detected` : 'None detected'}>
-            <Select value={javaPath} onChange={(event) => setJavaPath(event.target.value)}>
+            <Select value={javaPath} onChange={setJavaPath}>
               <option value="">Automatic (recommended)</option>
               {java.map((runtime) => (
                 <option key={runtime.path} value={runtime.path}>
@@ -722,7 +722,7 @@ function ChangeVersionModal({
     >
       <div className="space-y-4">
         <Field label="Minecraft version">
-          <Select value={versionId} onChange={(event) => setVersionId(event.target.value)}>
+          <Select value={versionId} onChange={setVersionId}>
             {options.map((version) => (
               <option key={version.id} value={version.id}>{version.id}</option>
             ))}
@@ -746,7 +746,7 @@ function ChangeVersionModal({
         </div>
         {loader !== 'vanilla' && (
           <Field label={`${loader} build`}>
-            <Select value={loaderVersion} onChange={(event) => setLoaderVersion(event.target.value)}>
+            <Select value={loaderVersion} onChange={setLoaderVersion}>
               {(loaderVersions.data ?? []).slice(0, 80).map((option) => (
                 <option key={option.version} value={option.version}>{option.version}</option>
               ))}

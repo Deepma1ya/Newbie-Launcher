@@ -440,7 +440,7 @@ function BackupsSection() {
       <Field label="Frequency">
         <Select
           value={settings.backups.frequency}
-          onChange={(event) => void save({ backups: { frequency: event.target.value as 'always' | 'daily' } })}
+          onChange={(value) => void save({ backups: { frequency: value as 'always' | 'daily' } })}
         >
           <option value="daily">Once a day</option>
           <option value="always">Every launch</option>

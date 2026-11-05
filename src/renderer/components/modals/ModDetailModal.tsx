@@ -315,7 +315,7 @@ export function ModDetailModal() {
               </p>
               <div className="mt-3">
                 <Field label="Version">
-                  <Select value={selectedVersion} onChange={(event) => setSelectedVersion(event.target.value)}>
+                  <Select value={selectedVersion} onChange={setSelectedVersion}>
                     {versions.map((version) => (
                       <option key={versionId(version)} value={versionId(version)}>
                         {versionName(version)}
@@ -328,7 +328,7 @@ export function ModDetailModal() {
               {projectType === 'modpack' && (
                 <div className="mt-3">
                   <Field label="Install target">
-                    <Select value={selectedInstanceId} onChange={(event) => setSelectedInstanceId(event.target.value)}>
+                    <Select value={selectedInstanceId} onChange={setSelectedInstanceId}>
                       <option value="">New instance</option>
                       {compatibleInstances.map((instance) => (
                         <option key={instance.id} value={instance.id}>
