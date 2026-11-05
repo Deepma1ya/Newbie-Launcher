@@ -27,6 +27,14 @@ export const SERVER_TYPES: ServerTypeInfo[] = [
     datapacks: true
   },
   {
+    value: 'bedrock',
+    label: 'Bedrock',
+    description: 'Official Minecraft for Windows Dedicated Server. Runs a Bedrock world without Java.',
+    mods: false,
+    plugins: false,
+    datapacks: false
+  },
+  {
     value: 'fabric',
     label: 'Fabric',
     description: 'Lightweight modded server using Fabric mods.',

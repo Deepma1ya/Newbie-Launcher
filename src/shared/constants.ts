@@ -18,6 +18,8 @@ export const QUILT_META = 'https://meta.quiltmc.org/v3'
 export const FORGE_PROMOTIONS = 'https://files.minecraftforge.net/net/minecraftforge/forge/promotions_slim.json'
 export const NEOFORGE_MAVEN = 'https://maven.neoforged.net/releases/net/neoforged/neoforge/maven-metadata.xml'
 export const ADOPTIUM_API = 'https://api.adoptium.net/v3'
+export const BEDROCK_SERVER_LINKS_URL =
+  'https://net-secondary.web.minecraft-services.net/api/v1.0/download/links'
 
 /**
  * Java majors exposed in the launcher. Minecraft itself usually needs 8, 17

@@ -1,9 +1,13 @@
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import { spawn } from 'node:child_process'
-import type { CreateServerInput, ServerRecord, UpdateServerInput } from '@shared/types'
-import { FABRIC_META, QUILT_META } from '@shared/constants'
-import { SERVER_PROPERTY_FIELDS } from '@shared/serverProperties'
+import type { BedrockServerBuild, CreateServerInput, ServerRecord, UpdateServerInput } from '@shared/types'
+import { BEDROCK_SERVER_LINKS_URL, FABRIC_META, QUILT_META } from '@shared/constants'
+import {
+  BEDROCK_PROPERTY_DEFAULTS,
+  BEDROCK_PROPERTY_FIELDS,
+  SERVER_PROPERTY_FIELDS
+} from '@shared/serverProperties'
 import { DEFAULT_RESTART_SCHEDULE, nextRestartAt, normalizeRestartSchedule } from '@shared/serverSchedule'
 import { serverTypeLabel } from '@shared/serverTypes'
 import { getVersionJson, type VersionJson } from './mojang'
@@ -22,6 +26,7 @@ import {
 } from './serverProperties'
 import { isServerRunning, stopServer } from './serverProcess'
 import { ensureDir, pathExists, sanitizeFilename } from '../util/fs'
+import { extractZip } from '../util/zip'
 import { logger } from '../util/log'
 
 interface PaperBuild {
@@ -39,9 +44,43 @@ interface PaperBuild {
 }
 
 interface InstallResult {
-  launchKind: 'jar' | 'script' | 'args'
+  launchKind: 'jar' | 'script' | 'args' | 'exe'
   launchFile: string
   paperBuild?: number
+  bedrockVersion?: string
+}
+
+export async function bedrockServerBuilds(): Promise<BedrockServerBuild[]> {
+  const response = await fetchJson<{
+    result?: { links?: { downloadType?: string; downloadUrl?: string }[] }
+  }>(
+    BEDROCK_SERVER_LINKS_URL,
+    { headers: { Accept: 'application/json' } },
+    { timeoutMs: 30_000, retries: 2 }
+  )
+  const links = response.result?.links ?? []
+  const builds: BedrockServerBuild[] = []
+  for (const [channel, downloadType] of [
+    ['release', 'serverBedrockWindows'],
+    ['preview', 'serverBedrockPreviewWindows']
+  ] as const) {
+    const link = links.find((entry) => entry.downloadType === downloadType)
+    if (!link?.downloadUrl) continue
+    try {
+      const url = new URL(link.downloadUrl)
+      if (url.protocol !== 'https:' && url.protocol !== 'http:') continue
+      if (!/(^|\.)minecraft\.net$/i.test(url.hostname)) continue
+      const match = /bedrock-server-([\d.]+)\.zip$/i.exec(url.pathname)
+      if (!match?.[1]) continue
+      builds.push({ channel, version: match[1], url: url.toString() })
+    } catch {
+      // Ignore malformed links from the upstream catalog.
+    }
+  }
+  if (builds.length === 0) {
+    throw new Error('Could not load Bedrock Dedicated Server downloads from Minecraft.net')
+  }
+  return builds
 }
 
 export async function createServer(input: CreateServerInput): Promise<ServerRecord> {
@@ -52,16 +91,81 @@ export async function createServer(input: CreateServerInput): Promise<ServerReco
     throw new Error('Choose a server port between 1 and 65535')
   }
   const versionId = input.versionId.trim()
-  if (!versionId) throw new Error('Choose a Minecraft version')
+  if (input.type !== 'bedrock' && !versionId) throw new Error('Choose a Minecraft version')
+  const isBedrock = input.type === 'bedrock'
   const memoryMb = Math.max(1024, Math.min(65536, Math.round(input.memoryMb || 4096)))
-  const levelName = sanitizeFilename(input.levelName?.trim() || 'world') || 'world'
+  const levelName =
+    sanitizeFilename(input.levelName?.trim() || (isBedrock ? 'Bedrock level' : 'world')) ||
+    (isBedrock ? 'Bedrock level' : 'world')
   if (levelName === '.' || levelName === '..') throw new Error('Choose a valid world folder name')
 
   const id = await uniqueServerId(name)
   const dir = paths.server(id)
-  const task = tasks.start('server', `Creating ${name}`, `${serverTypeLabel(input.type)} ${versionId}`)
+  const task = tasks.start(
+    'server',
+    `Creating ${name}`,
+    `${serverTypeLabel(input.type)} ${isBedrock ? 'Bedrock' : versionId}`
+  )
   try {
     await ensureDir(dir)
+    if (isBedrock) {
+      task.progress({
+        stage: 'client',
+        message: 'Downloading Bedrock Dedicated Server',
+        current: 0,
+        total: 1,
+        percent: 20
+      })
+      const installer = await installServerSoftware(dir, input, null, (message, percent) =>
+        task.progress({ stage: 'client', message, current: 0, total: 1, percent })
+      )
+
+      task.progress({
+        stage: 'finalize',
+        message: 'Writing Bedrock server settings',
+        current: 0,
+        total: 1,
+        percent: 88
+      })
+      await ensureEula(dir, true)
+      const properties = defaultProperties(
+        {
+          'server-name': name,
+          'server-port': String(input.port),
+          'online-mode': String(input.onlineMode ?? true),
+          'level-name': levelName,
+          'max-players': '10',
+          'level-seed': ''
+        },
+        BEDROCK_PROPERTY_DEFAULTS
+      )
+      await writeProperties(dir, properties)
+
+      const record: ServerRecord = {
+        id,
+        name,
+        type: 'bedrock',
+        versionId: installer.bedrockVersion ?? versionId,
+        loaderVersion: '',
+        port: input.port,
+        memoryMb,
+        javaPath: null,
+        javaMajor: 0,
+        eulaAccepted: true,
+        createdAt: new Date().toISOString(),
+        levelName,
+        launchKind: installer.launchKind,
+        launchFile: installer.launchFile,
+        bedrockChannel: input.bedrockChannel === 'preview' ? 'preview' : 'release',
+        addons: [],
+        restartSchedule: { ...DEFAULT_RESTART_SCHEDULE }
+      }
+      await saveServer(record)
+      await task.done('Bedrock server ready')
+      logger.info('server', `Created Bedrock server ${record.versionId} ${name}`)
+      return record
+    }
+
     task.progress({ stage: 'metadata', message: 'Resolving Minecraft metadata', current: 0, total: 1, percent: 5 })
     const versionJson = await getVersionJson(versionId)
     const javaMajor = versionJson.javaVersion?.majorVersion ?? 21
@@ -162,7 +266,12 @@ export async function removeServer(id: string, deleteFiles = true): Promise<void
 export async function serverProperties(id: string): Promise<Record<string, string>> {
   const server = await getServer(id)
   if (!server) throw new Error('Server not found')
-  return Object.fromEntries(await readProperties(paths.server(id)))
+  return Object.fromEntries(
+    await readProperties(
+      paths.server(id),
+      server.type === 'bedrock' ? BEDROCK_PROPERTY_DEFAULTS : undefined
+    )
+  )
 }
 
 export async function saveServerProperties(
@@ -171,9 +280,13 @@ export async function saveServerProperties(
 ): Promise<Record<string, string>> {
   const server = await getServer(id)
   if (!server) throw new Error('Server not found')
-  const current = await readProperties(paths.server(id))
+  const fields = server.type === 'bedrock' ? BEDROCK_PROPERTY_FIELDS : SERVER_PROPERTY_FIELDS
+  const current = await readProperties(
+    paths.server(id),
+    server.type === 'bedrock' ? BEDROCK_PROPERTY_DEFAULTS : undefined
+  )
   for (const [key, rawValue] of Object.entries(patch)) {
-    const field = SERVER_PROPERTY_FIELDS.find((entry) => entry.key === key)
+    const field = fields.find((entry) => entry.key === key)
     if (!field) continue
     if (field.kind === 'boolean') {
       current.set(key, String(rawValue === 'true'))
@@ -195,7 +308,10 @@ export async function saveServerProperties(
   }
   await writeProperties(paths.server(id), current)
   if (current.has('level-name')) {
-    const nextLevel = await propertyLevelName(paths.server(id))
+    const nextLevel = await propertyLevelName(
+      paths.server(id),
+      server.type === 'bedrock' ? BEDROCK_PROPERTY_DEFAULTS : undefined
+    )
     if (nextLevel !== server.levelName) {
       await saveServer({ ...server, levelName: nextLevel })
     }
@@ -206,11 +322,32 @@ export async function saveServerProperties(
 async function installServerSoftware(
   dir: string,
   input: CreateServerInput,
-  versionJson: VersionJson,
+  versionJson: VersionJson | null,
   onStage: (message: string, percent: number) => void
 ): Promise<InstallResult> {
+  if (input.type === 'bedrock') {
+    const builds = await bedrockServerBuilds()
+    const channel = input.bedrockChannel === 'preview' ? 'preview' : 'release'
+    const build =
+      builds.find(
+        (entry) => entry.channel === channel && (!input.versionId || entry.version === input.versionId)
+      ) ?? builds.find((entry) => entry.channel === channel)
+    if (!build) throw new Error('No Bedrock Dedicated Server build is available right now')
+    onStage(`Downloading Bedrock Dedicated Server ${build.version}`, 30)
+    const zip = path.join(dir, 'bedrock-server.zip')
+    await downloadFile(build.url, zip, { retries: 4 })
+    onStage('Extracting Bedrock Dedicated Server', 62)
+    await extractZip(zip, dir)
+    await fs.rm(zip, { force: true }).catch(() => undefined)
+    const executable = process.platform === 'win32' ? 'bedrock_server.exe' : 'bedrock_server'
+    if (!(await pathExists(path.join(dir, executable)))) {
+      throw new Error('The Bedrock download did not contain bedrock_server.exe')
+    }
+    return { launchKind: 'exe', launchFile: executable, bedrockVersion: build.version }
+  }
+
   if (input.type === 'vanilla') {
-    const artifact = versionJson.downloads?.server
+    const artifact = versionJson?.downloads?.server
     if (!artifact?.url) throw new Error(`Minecraft ${input.versionId} has no official server download`)
     onStage(`Downloading official server ${input.versionId}`, 30)
     await downloadFile(artifact.url, path.join(dir, 'server.jar'), {

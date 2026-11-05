@@ -48,6 +48,7 @@ const api: NewbieApi = {
   servers: {
     list: () => ipcRenderer.invoke(IPC.serversList),
     get: (id) => ipcRenderer.invoke(IPC.serversGet, id),
+    bedrockVersions: () => ipcRenderer.invoke(IPC.serversBedrockVersions),
     create: (input) => ipcRenderer.invoke(IPC.serversCreate, input),
     update: (id, patch) => ipcRenderer.invoke(IPC.serversUpdate, id, patch),
     remove: (id, deleteFiles) => ipcRenderer.invoke(IPC.serversRemove, id, deleteFiles),

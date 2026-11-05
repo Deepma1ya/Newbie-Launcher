@@ -593,7 +593,7 @@ export interface BackupRecord {
   createdAt: string
 }
 
-export type ServerType = 'vanilla' | 'paper' | 'fabric' | 'quilt' | 'forge' | 'neoforge'
+export type ServerType = 'vanilla' | 'paper' | 'fabric' | 'quilt' | 'forge' | 'neoforge' | 'bedrock'
 export type ServerRuntimeState = 'stopped' | 'starting' | 'running' | 'stopping'
 export type ServerAddonType = 'mod' | 'plugin' | 'datapack'
 export type ServerResourcePackSource = 'modrinth' | 'file' | 'url'
@@ -703,9 +703,11 @@ export interface ServerRecord {
   lastStartedAt?: string
   lastStoppedAt?: string
   levelName: string
-  launchKind: 'jar' | 'script' | 'args'
+  launchKind: 'jar' | 'script' | 'args' | 'exe'
   launchFile: string
   paperBuild?: number
+  /** Release or preview channel for a Bedrock Dedicated Server. */
+  bedrockChannel?: BedrockChannel
   addons: ServerAddonRecord[]
   resourcePack?: ServerResourcePackInfo
   restartSchedule?: ServerRestartSchedule
@@ -739,6 +741,8 @@ export interface CreateServerInput {
   type: ServerType
   versionId: string
   loaderVersion?: string
+  /** Present when type is bedrock. */
+  bedrockChannel?: BedrockChannel
   port: number
   memoryMb: number
   motd?: string
@@ -746,6 +750,12 @@ export interface CreateServerInput {
   levelName?: string
   javaPath?: string | null
   eulaAccepted: boolean
+}
+
+export interface BedrockServerBuild {
+  channel: BedrockChannel
+  version: string
+  url: string
 }
 
 export interface UpdateServerInput {

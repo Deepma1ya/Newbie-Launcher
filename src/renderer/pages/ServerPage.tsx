@@ -28,6 +28,8 @@ import type {
   ServerStats
 } from '@shared/types'
 import {
+  BEDROCK_PROPERTY_FIELDS,
+  BEDROCK_PROPERTY_GROUPS,
   SERVER_PROPERTY_FIELDS,
   SERVER_PROPERTY_GROUPS,
   type ServerPropertyField
@@ -109,6 +111,7 @@ export function ServerPage() {
   }
 
   const running = status.status === 'running' || status.status === 'starting'
+  const isBedrock = server.type === 'bedrock'
   const statusTone = status.status === 'running' ? 'green' : status.status === 'stopped' ? 'neutral' : 'gold'
 
   return (
@@ -183,13 +186,25 @@ export function ServerPage() {
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3 border-b border-line/40 pb-3">
         <Segmented
           value={tab}
-          onChange={setTab}
+          onChange={(value) => setTab(value as Tab)}
           options={[
             { value: 'console', label: 'Console', icon: <PaperPlaneTilt size={14} /> },
             { value: 'share', label: 'Share', icon: <UsersThree size={14} /> },
             { value: 'settings', label: 'Settings', icon: <HardDrives size={14} /> },
-            { value: 'resource-pack', label: 'Resource pack', icon: <Image size={14} /> },
-            { value: 'addons', label: `Add-ons ${server.addons.length}`, icon: <Package size={14} /> }
+            ...(isBedrock
+              ? []
+              : [
+                  {
+                    value: 'resource-pack',
+                    label: 'Resource pack',
+                    icon: <Image size={14} />
+                  },
+                  {
+                    value: 'addons',
+                    label: `Add-ons ${server.addons.length}`,
+                    icon: <Package size={14} />
+                  }
+                ])
           ]}
         />
         <div className="flex items-center gap-2">
@@ -249,7 +264,8 @@ function ServerConsole({
   busy: boolean
 }) {
   const logs = useServerLogs(server.id, true).data ?? []
-  const statsQuery = useServerStats(server.id, running)
+  const isBedrock = server.type === 'bedrock'
+  const statsQuery = useServerStats(server.id, running && !isBedrock)
   const [command, setCommand] = useState('')
   const [sending, setSending] = useState(false)
   const [refreshingStats, setRefreshingStats] = useState(false)
@@ -293,14 +309,22 @@ function ServerConsole({
 
   return (
     <div className="space-y-3">
-      <ServerPerformanceCard
-        server={server}
-        running={running}
-        stats={statsQuery.data}
-        refreshing={refreshingStats}
-        onRefresh={() => void refreshStats()}
-      />
-      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+      {!isBedrock && (
+        <ServerPerformanceCard
+          server={server}
+          running={running}
+          stats={statsQuery.data}
+          refreshing={refreshingStats}
+          onRefresh={() => void refreshStats()}
+        />
+      )}
+      <div
+        className={
+          isBedrock
+            ? 'space-y-3'
+            : 'grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]'
+        }
+      >
         <div className="min-w-0 space-y-3">
           <Card className="p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -313,7 +337,10 @@ function ServerConsole({
                 </p>
               </div>
               <div className="flex items-center gap-1.5">
-                {['list', 'save-all', 'whitelist list'].map((quick) => (
+                {(isBedrock
+                  ? ['list', 'save hold', 'allowlist list']
+                  : ['list', 'save-all', 'whitelist list']
+                ).map((quick) => (
                   <Button
                     key={quick}
                     variant="ghost"
@@ -388,11 +415,13 @@ function ServerConsole({
             </Card>
           )}
         </div>
-        <ServerCommandSnippets
-          serverType={server.type}
-          players={statsQuery.data?.players ?? []}
-          onInsert={insert}
-        />
+        {!isBedrock && (
+          <ServerCommandSnippets
+            serverType={server.type}
+            players={statsQuery.data?.players ?? []}
+            onInsert={insert}
+          />
+        )}
       </div>
     </div>
   )
@@ -499,6 +528,9 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
   const queryClient = useQueryClient()
   const system = useSystemInfo().data
   const propertiesQuery = useServerProperties(server.id)
+  const isBedrock = server.type === 'bedrock'
+  const propertyGroups = isBedrock ? BEDROCK_PROPERTY_GROUPS : SERVER_PROPERTY_GROUPS
+  const propertyFields = isBedrock ? BEDROCK_PROPERTY_FIELDS : SERVER_PROPERTY_FIELDS
   const [draft, setDraft] = useState<Record<string, string>>({})
   const [name, setName] = useState(server.name)
   const [memoryMb, setMemoryMb] = useState(server.memoryMb)
@@ -613,25 +645,28 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
               />
             </div>
           </div>
-          <Field
-            label="Memory"
-            hint={`${(memoryMb / 1024).toFixed(1)} GB of ${(totalMem / 1024).toFixed(0)} GB`}
-          >
-            <input
-              type="range"
-              min={1024}
-              max={maxMemory}
-              step={256}
-              value={memoryMb}
-              onChange={(event) => setMemoryMb(Number(event.target.value))}
-              className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-line accent-[rgb(var(--grass))]"
-              aria-label="Server memory"
-            />
-          </Field>
+          {!isBedrock && (
+            <Field
+              label="Memory"
+              hint={`${(memoryMb / 1024).toFixed(1)} GB of ${(totalMem / 1024).toFixed(0)} GB`}
+            >
+              <input
+                type="range"
+                min={1024}
+                max={maxMemory}
+                step={256}
+                value={memoryMb}
+                onChange={(event) => setMemoryMb(Number(event.target.value))}
+                className="h-1.5 w-full cursor-pointer appearance-none rounded-full bg-line accent-[rgb(var(--grass))]"
+                aria-label="Server memory"
+              />
+            </Field>
+          )}
         </div>
         <p className="mt-3 text-[10px] text-muted/60">
-          Java {server.javaMajor} managed automatically · server folder {server.id} · {serverTypeLabel(server.type)}{' '}
-          {server.versionId}
+          {isBedrock
+            ? `Bedrock Dedicated Server · no Java required · server folder ${server.id}`
+            : `Java ${server.javaMajor} managed automatically · server folder ${server.id} · ${serverTypeLabel(server.type)} ${server.versionId}`}
         </p>
       </Card>
       <Card className="p-4">
@@ -720,19 +755,21 @@ function ServerSettings({ server, running }: { server: ServerRecord; running: bo
         </div>
       )}
       <div className="grid gap-4 lg:grid-cols-2">
-        {SERVER_PROPERTY_GROUPS.map((group) => (
+        {propertyGroups.map((group) => (
           <Card key={group.value} className="p-4">
             <h3 className="font-display text-[13px] font-semibold text-ink">{group.label}</h3>
             <p className="mt-0.5 text-[10px] leading-relaxed text-muted/70">{group.description}</p>
             <div className="mt-3 space-y-3">
-              {SERVER_PROPERTY_FIELDS.filter((field) => field.group === group.value).map((field) => (
-                <PropertyControl
-                  key={field.key}
-                  field={field}
-                  value={draft[field.key] ?? ''}
-                  onChange={(value) => set(field.key, value)}
-                />
-              ))}
+              {propertyFields
+                .filter((field) => field.group === group.value)
+                .map((field) => (
+                  <PropertyControl
+                    key={field.key}
+                    field={field}
+                    value={draft[field.key] ?? ''}
+                    onChange={(value) => set(field.key, value)}
+                  />
+                ))}
             </div>
           </Card>
         ))}
@@ -778,6 +815,7 @@ function PropertyControl({
             type="number"
             min={field.min}
             max={field.max}
+            step={field.step}
             value={value}
             onChange={(event) => onChange(event.target.value)}
           />

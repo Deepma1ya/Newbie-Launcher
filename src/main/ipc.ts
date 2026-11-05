@@ -90,6 +90,7 @@ import { copyInstanceSettings } from './services/instanceSettings'
 import { getServer, listServers } from './services/serverStore'
 import { getServerShareInfo, testServerAddress } from './services/serverShare'
 import {
+  bedrockServerBuilds,
   createServer,
   removeServer,
   saveServerProperties,
@@ -260,13 +261,14 @@ const packCopySchema = z.object({
   replace: z.boolean().optional()
 })
 
-const serverTypeSchema = z.enum(['vanilla', 'paper', 'fabric', 'quilt', 'forge', 'neoforge'])
+const serverTypeSchema = z.enum(['vanilla', 'paper', 'fabric', 'quilt', 'forge', 'neoforge', 'bedrock'])
 const serverAddonTypeSchema = z.enum(['mod', 'plugin', 'datapack'])
 const createServerSchema = z.object({
   name: z.string().trim().min(1).max(60),
   type: serverTypeSchema,
-  versionId: z.string().min(1).max(120),
+  versionId: z.string().min(0).max(120),
   loaderVersion: z.string().max(120).optional(),
+  bedrockChannel: z.enum(['release', 'preview']).optional(),
   port: z.number().int().min(1).max(65535),
   memoryMb: z.number().int().min(1024).max(65536),
   motd: z.string().max(256).optional(),
@@ -428,6 +430,7 @@ export function registerIpc(): void {
 
   ipcMain.handle(IPC.serversList, () => listServers())
   ipcMain.handle(IPC.serversGet, (_event, id: string) => getServer(z.string().parse(id)))
+  ipcMain.handle(IPC.serversBedrockVersions, () => bedrockServerBuilds())
   ipcMain.handle(IPC.serversCreate, async (_event, input: unknown) => {
     const value = createServerSchema.parse(input) as CreateServerInput
     return createServer(value)

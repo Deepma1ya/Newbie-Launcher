@@ -31,7 +31,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Game versions** | Every Mojang release, snapshot, beta and alpha, installed from official metadata and verified files |
 | **Bedrock** | Minecraft for Windows versions: download official signed GDK packages, install through Windows/Gaming Services, launch the installed package, and switch versions without touching Java |
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
-| **Servers** | One-click local Vanilla, Paper, Fabric, Quilt, Forge and NeoForge servers with a live console, GUI settings, Modrinth add-ons, server resource packs and scheduled restarts |
+| **Servers** | One-click local Java servers plus official Bedrock Dedicated Server, with a live console, GUI settings, Modrinth add-ons, server resource packs and scheduled restarts |
 | **Sharing** | Play with friends through playit.gg, port forwarding, Radmin VPN, ngrok or Cloudflare. Detects LAN/Radmin/public addresses, shows difficulty levels, and lets you copy and test the address. |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/11/17/21/25 from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, and generic authlib/Yggdrasil servers |
@@ -99,12 +99,13 @@ If Windows Tamper Protection or a managed security policy blocks the exclusion, 
 
 The **Servers** page creates and runs Minecraft servers on this PC. It is a launcher-managed alternative to downloading a server jar and editing text files by hand.
 
-- **Six server types:** Vanilla, Paper, Fabric, Quilt, Forge and NeoForge.
+- **Server editions:** Java Edition and Bedrock. Java supports Vanilla, Paper, Fabric, Quilt, Forge and NeoForge; Bedrock uses the official Mojang Bedrock Dedicated Server for Windows.
 - **Create & start** downloads the server software, prepares the Java runtime named in the Minecraft version metadata, writes a starter configuration, writes `eula=true` only after you tick the EULA checkbox, and starts the server.
 - **Start, stop and restart** from the server list or the server page. Status is live, and servers are stopped gracefully when you quit or relaunch Newbie.
 - **Settings** are switches, selectors and number fields: MOTD, port, player limit, game mode, difficulty, hardcore, PvP, flight, command blocks, the Nether, spawn protection, world name/seed/type, structures, mob spawning, view/simulation distance, compression, idle timeout, chunk writes, native transport, watchdog, entity range, online mode, whitelist, proxy/secure-profile checks, RCON and permission levels.
 - **Runtime settings** let you rename the server and change its memory allocation without recreating it.
 - **Live console** with launcher-captured logs, server command input and quick commands.
+- **Bedrock specifics:** the official BDS runs without Java, uses UDP port 19132 by default, and does not load Java mods, plugins or datapacks. Use the Bedrock page for the Minecraft for Windows client.
 - **Add-ons from Modrinth:** plugins for Paper, mods for modded servers, datapacks for every type. Required dependencies are installed automatically, add-ons can be enabled/disabled without deleting them, and **Check updates → Update** replaces every outdated file in one click while preserving disabled state.
 - **Resource packs:** pick a pack from Modrinth or add your own `.zip`, then Newbie writes the public URL, SHA-1, required-pack flag and prompt into `server.properties`. Modrinth packs use their public CDN link; custom files are copied into `resourcepacks/` and you paste the public link where the file is hosted.
 - **Scheduled restarts:** restart every few hours or daily at a local time. Newbie warns players in chat 10 seconds before the restart and shows the next run in Server Settings. The launcher must stay open and the server must be online when the timer is due.

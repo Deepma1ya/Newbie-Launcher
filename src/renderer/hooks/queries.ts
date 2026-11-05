@@ -3,6 +3,7 @@ import type {
   AccountSummary,
   AddonType,
   BackupRecord,
+  BedrockServerBuild,
   Instance,
   JavaRuntime,
   LauncherSettings,
@@ -48,6 +49,7 @@ export const qk = {
   disk: ['disk'] as const,
   servers: ['servers'] as const,
   server: (id: string) => ['servers', id] as const,
+  bedrockServerVersions: ['servers', 'bedrock-versions'] as const,
   serverStatuses: ['servers', 'statuses'] as const,
   serverStatus: (id: string) => ['servers', id, 'status'] as const,
   serverStats: (id: string) => ['servers', id, 'stats'] as const,
@@ -89,6 +91,15 @@ export function useActiveInstance(): Instance | null {
 
 export function useServers(): UseQueryResult<ServerRecord[]> {
   return useQuery({ queryKey: qk.servers, queryFn: () => api.servers.list() })
+}
+
+export function useBedrockServerBuilds(enabled = true): UseQueryResult<BedrockServerBuild[]> {
+  return useQuery({
+    queryKey: qk.bedrockServerVersions,
+    queryFn: () => api.servers.bedrockVersions(),
+    enabled,
+    staleTime: 10 * 60_000
+  })
 }
 
 export function useServer(id?: string | null): UseQueryResult<ServerRecord | null> {

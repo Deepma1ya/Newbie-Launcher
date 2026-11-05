@@ -7,6 +7,7 @@ import type {
   BackupRecord,
   BedrockChannel,
   BedrockExclusionResult,
+  BedrockServerBuild,
   BedrockState,
   CreateInstanceInput,
   GpuApplyResult,
@@ -111,6 +112,7 @@ export const IPC = {
   instancesSharePackStatus: 'instances:share-pack-status',
   serversList: 'servers:list',
   serversGet: 'servers:get',
+  serversBedrockVersions: 'servers:bedrock-versions',
   serversCreate: 'servers:create',
   serversUpdate: 'servers:update',
   serversRemove: 'servers:remove',
@@ -239,6 +241,7 @@ export interface NewbieApi {
   servers: {
     list(): Promise<ServerRecord[]>
     get(id: string): Promise<ServerRecord | null>
+    bedrockVersions(): Promise<BedrockServerBuild[]>
     create(input: CreateServerInput): Promise<ServerRecord>
     update(id: string, patch: UpdateServerInput): Promise<ServerRecord>
     remove(id: string, deleteFiles: boolean): Promise<void>

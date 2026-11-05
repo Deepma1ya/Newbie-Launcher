@@ -125,6 +125,12 @@ export function ServerSharePanel({
 
   return (
     <div className="space-y-4">
+      {server.type === 'bedrock' && (
+        <div className="rounded-xl border border-gold/25 bg-gold/[0.055] px-3.5 py-3 text-[10.5px] leading-relaxed text-gold">
+          Bedrock uses <strong>UDP</strong>, not TCP. Port-forward UDP {server.port}, or use a tunnel that supports UDP
+          such as playit.gg. TCP-only tunnels and the local reachability test below do not apply.
+        </div>
+      )}
       {!running && (
         <Card className="flex flex-wrap items-center gap-3 border-gold/25 bg-gold/[0.045] p-4">
           <ShieldWarning size={18} className="text-gold" />
@@ -182,8 +188,9 @@ export function ServerSharePanel({
             variant="primary"
             size="sm"
             loading={testing}
-            disabled={!displayAddress}
+            disabled={!displayAddress || server.type === 'bedrock'}
             onClick={() => void runTest()}
+            title={server.type === 'bedrock' ? 'Bedrock uses UDP; the local test is TCP-only' : undefined}
           >
             Test
           </Button>

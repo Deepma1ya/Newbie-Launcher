@@ -1,6 +1,6 @@
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
-import { SERVER_PROPERTY_DEFAULTS } from '@shared/serverProperties'
+import { BEDROCK_PROPERTY_DEFAULTS, SERVER_PROPERTY_DEFAULTS } from '@shared/serverProperties'
 import { ensureDir } from '../util/fs'
 
 export function unescapeProperty(value: string): string {
@@ -83,17 +83,23 @@ export function formatProperties(properties: Map<string, string>): string {
   return `${lines.join('\n')}\n`
 }
 
-export function defaultProperties(overrides: Record<string, string> = {}): Map<string, string> {
-  return new Map(Object.entries({ ...SERVER_PROPERTY_DEFAULTS, ...overrides }))
+export function defaultProperties(
+  overrides: Record<string, string> = {},
+  base: Record<string, string> = SERVER_PROPERTY_DEFAULTS
+): Map<string, string> {
+  return new Map(Object.entries({ ...base, ...overrides }))
 }
 
-export async function readProperties(serverDir: string): Promise<Map<string, string>> {
+export async function readProperties(
+  serverDir: string,
+  defaults: Record<string, string> = SERVER_PROPERTY_DEFAULTS
+): Promise<Map<string, string>> {
   const file = path.join(serverDir, 'server.properties')
   try {
     const text = await fs.readFile(file, 'utf8')
-    return new Map([...defaultProperties(), ...parseProperties(text)])
+    return new Map([...defaultProperties({}, defaults), ...parseProperties(text)])
   } catch {
-    return defaultProperties()
+    return defaultProperties({}, defaults)
   }
 }
 
@@ -118,8 +124,11 @@ export async function patchProperties(
   return current
 }
 
-export async function levelName(serverDir: string): Promise<string> {
-  const properties = await readProperties(serverDir)
+export async function levelName(
+  serverDir: string,
+  defaults: Record<string, string> = SERVER_PROPERTY_DEFAULTS
+): Promise<string> {
+  const properties = await readProperties(serverDir, defaults)
   const name = properties.get('level-name')?.trim()
   return name && !name.includes('..') && !/[\\/:*?"<>|]/.test(name) ? name : 'world'
 }

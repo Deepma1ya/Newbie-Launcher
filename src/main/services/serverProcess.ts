@@ -61,10 +61,13 @@ export async function startServer(server: ServerRecord): Promise<ServerRuntimeSt
   await ensureEula(paths.server(server.id), server.eulaAccepted)
   if (!server.eulaAccepted) throw new Error('Accept the Minecraft EULA before starting the server')
 
-  const runtime = server.javaPath
-    ? { path: server.javaPath }
-    : await ensureJava(server.javaMajor || 21, true)
-  const javaExe = runtime.path.replace(/javaw\.exe$/i, 'java.exe')
+  const isBedrock = server.type === 'bedrock'
+  const runtime = isBedrock
+    ? null
+    : server.javaPath
+      ? { path: server.javaPath }
+      : await ensureJava(server.javaMajor || 21, true)
+  const javaExe = runtime ? runtime.path.replace(/javaw\.exe$/i, 'java.exe') : ''
   const logsDir = paths.serverLogs(server.id)
   // Minecraft writes logs/latest.log itself. Keep the launcher's captured console
   // in a separate file so the two writers never corrupt each other.
@@ -75,7 +78,10 @@ export async function startServer(server: ServerRecord): Promise<ServerRuntimeSt
 
   let command = javaExe
   let args: string[]
-  if (server.launchKind === 'script') {
+  if (isBedrock) {
+    command = path.join(paths.server(server.id), server.launchFile)
+    args = []
+  } else if (server.launchKind === 'script') {
     command = process.platform === 'win32' ? 'cmd.exe' : 'bash'
     args =
       process.platform === 'win32'
@@ -100,12 +106,14 @@ export async function startServer(server: ServerRecord): Promise<ServerRuntimeSt
     ]
   }
 
-  const javaDir = path.dirname(javaExe)
-  const env = {
-    ...process.env,
-    JAVA_HOME: path.dirname(javaDir),
-    PATH: `${javaDir}${path.delimiter}${process.env.PATH ?? ''}`
-  }
+  const javaDir = javaExe ? path.dirname(javaExe) : ''
+  const env = isBedrock
+    ? process.env
+    : {
+        ...process.env,
+        JAVA_HOME: path.dirname(javaDir),
+        PATH: `${javaDir}${path.delimiter}${process.env.PATH ?? ''}`
+      }
 
   const child = spawn(command, args, {
     cwd: paths.server(server.id),
@@ -253,7 +261,10 @@ function append(entry: RunningServer, source: string, line: string): void {
   entry.stream.write(`${output}\n`)
   if (
     entry.status === 'starting' &&
-    (/Done \([\d.]+s\)!/.test(line) || /For help, type "help"/.test(line))
+    (/Done \([\d.]+s\)!/.test(line) ||
+      /For help, type "help"/.test(line) ||
+      /Server started\.?/i.test(line) ||
+      /IPv4 supported, port:/i.test(line))
   ) {
     entry.status = 'running'
     if (entry.runTimer) clearTimeout(entry.runTimer)
