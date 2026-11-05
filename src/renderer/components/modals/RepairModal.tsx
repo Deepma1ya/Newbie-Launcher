@@ -12,6 +12,7 @@ import { Progress, Skeleton } from '../ui/primitives'
 export function RepairModal() {
   const state = useUi((store) => store.modal.repair)
   const closeModal = useUi((store) => store.closeModal)
+  const askConfirm = useUi((store) => store.askConfirm)
   const instanceQuery = useInstance(state?.instanceId)
   const instance = instanceQuery.data
   const queryClient = useQueryClient()
@@ -40,15 +41,95 @@ export function RepairModal() {
     void scan()
   }, [scan])
 
-  const fix = async (): Promise<void> => {
+  const refresh = useCallback(async (): Promise<void> => {
     if (!state?.instanceId) return
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: qk.instance(state.instanceId) }),
+      queryClient.invalidateQueries({ queryKey: qk.instances })
+    ])
+  }, [queryClient, state?.instanceId])
+
+  const confirmDisables = (current: RepairReport): void => {
+    if (!state?.instanceId) return
+    const instanceId = state.instanceId
+    const disables = current.issues.filter((issue) => issue.autoFixable && issue.requiresDisable)
+    if (disables.length === 0) return
+    const noun = disables.length === 1 ? 'mod' : 'mods'
+    const list = disables
+      .map((issue) => `• ${issue.title}${issue.files.length ? ` — ${issue.files.slice(0, 2).join(', ')}` : ''}`)
+      .join('\n')
+    const backupPath = current.backupPath
+
+    askConfirm({
+      title: `Disable ${disables.length} ${noun}?`,
+      description:
+        'Newbie tried installing missing dependencies and enabling disabled ones first. These files still cannot stay active.',
+      body: `${list}\n\nDisabling renames the file to .disabled. Nothing is deleted, and a copy of the mods folder is kept as a backup.`,
+      confirmLabel: `Disable ${disables.length} ${noun}`,
+      danger: true,
+      onCancel: () =>
+        toast('info', 'No mods were disabled', 'The conflicts stay listed so you can review them later.'),
+      action: async () => {
+        setFixing(true)
+        setError(null)
+        try {
+          const result = await window.newbie.instances.repair(
+            instanceId,
+            true,
+            true,
+            backupPath
+          )
+          setReport(result)
+          await refresh()
+          const kind = result.failed > 0 ? (result.fixed > 0 ? 'info' : 'error') : 'success'
+          toast(
+            kind,
+            'Repair finished',
+            `${result.fixed} fixed${result.failed ? `, ${result.failed} failed` : ''}${
+              result.skipped ? `, ${result.skipped} need attention` : ''
+            }`
+          )
+        } catch (cause) {
+          const message = errorMessage(cause)
+          setError(message)
+          throw cause
+        } finally {
+          setFixing(false)
+        }
+      }
+    })
+  }
+
+  const fix = async (): Promise<void> => {
+    if (!state?.instanceId || !report) return
+    const safeFixes = report.issues.filter((issue) => issue.autoFixable && !issue.requiresDisable)
+    const disables = report.issues.filter((issue) => issue.autoFixable && issue.requiresDisable)
+    if (safeFixes.length === 0 && disables.length > 0) {
+      confirmDisables(report)
+      return
+    }
+
     setFixing(true)
     setError(null)
     try {
-      const result = await window.newbie.instances.repair(state.instanceId, true)
+      // Phase one never disables a mod: install dependencies, enable disabled providers, restore files.
+      const result = await window.newbie.instances.repair(state.instanceId, true, false)
       setReport(result)
-      await queryClient.invalidateQueries({ queryKey: qk.instance(state.instanceId) })
-      await queryClient.invalidateQueries({ queryKey: qk.instances })
+      await refresh()
+
+      if (result.fixed > 0) {
+        toast(
+          'success',
+          'Dependencies fixed',
+          `${result.fixed} safe fix${result.fixed === 1 ? '' : 'es'} applied. No mods were disabled.`
+        )
+      }
+
+      if (result.pendingDisables > 0) {
+        confirmDisables(result)
+        return
+      }
+
       const kind = result.failed > 0 ? (result.fixed > 0 ? 'info' : 'error') : 'success'
       toast(
         kind,
@@ -79,15 +160,17 @@ export function RepairModal() {
     }
   }
 
-  const fixable = report?.issues.filter((issue) => issue.autoFixable).length ?? 0
+  const safeFixable = report?.issues.filter((issue) => issue.autoFixable && !issue.requiresDisable).length ?? 0
+  const disableCount = report?.issues.filter((issue) => issue.autoFixable && issue.requiresDisable).length ?? 0
   const unresolved = report?.issues.filter((issue) => !issue.autoFixable).length ?? 0
+  const fixable = safeFixable + disableCount
 
   return (
     <Modal
       open={Boolean(state)}
       onClose={() => closeModal('repair')}
       title="Repair instance"
-      description="Find duplicate mods, wrong-loader files, missing dependencies and broken records."
+      description="Newbie fixes dependencies first. Mods are only disabled after you confirm."
       size="lg"
       footer={
         <>
@@ -109,7 +192,11 @@ export function RepairModal() {
             onClick={() => void fix()}
             icon={<Wrench size={15} />}
           >
-            {fixable > 0 ? `Fix ${fixable} safe issue${fixable === 1 ? '' : 's'}` : 'Nothing to fix'}
+            {fixable === 0
+              ? 'Nothing to fix'
+              : safeFixable > 0
+                ? `Fix ${fixable} issue${fixable === 1 ? '' : 's'}`
+                : `Review ${disableCount} conflict${disableCount === 1 ? '' : 's'}`}
           </Button>
         </>
       }
@@ -122,7 +209,7 @@ export function RepairModal() {
           <div className="min-w-0 flex-1">
             <div className="text-[12.5px] font-medium text-ink">{instance?.name ?? 'Instance'}</div>
             <div className="text-[10.5px] text-muted">
-              {instance?.versionId} · {instance?.addons.length ?? 0} tracked add-ons · a copy of the mods folder is made before changes
+              {instance?.versionId} · {instance?.addons.length ?? 0} tracked add-ons · a copy of the mods folder is made before files are changed
             </div>
           </div>
         </div>
@@ -136,9 +223,10 @@ export function RepairModal() {
 
         {report && (
           <>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
               <Metric label="Issues" value={String(report.issues.length)} />
-              <Metric label="Safe fixes" value={String(fixable)} />
+              <Metric label="Safe fixes" value={String(safeFixable)} tone={safeFixable > 0 ? 'grass' : undefined} />
+              <Metric label="Needs disable" value={String(disableCount)} tone={disableCount > 0 ? 'gold' : undefined} />
               <Metric label="Manual" value={String(unresolved)} />
             </div>
 
@@ -148,12 +236,25 @@ export function RepairModal() {
                   'rounded-xl border px-3 py-2 text-[10.5px] leading-relaxed',
                   report.failed > 0
                     ? 'border-gold/25 bg-gold/[0.045] text-gold'
-                    : 'border-grass/20 bg-grass/[0.04] text-grass'
+                    : report.pendingDisables > 0
+                      ? 'border-gold/20 bg-gold/[0.035] text-gold'
+                      : 'border-grass/20 bg-grass/[0.04] text-grass'
                 )}
               >
                 Last repair: {report.fixed} fixed
                 {report.failed > 0 ? ` · ${report.failed} failed` : ''}
+                {report.pendingDisables > 0
+                  ? ` · ${report.pendingDisables} waiting for your confirmation`
+                  : ''}
                 {report.failed > 0 ? '. Failed fixes are marked Manual and will not repeat automatically.' : '.'}
+              </div>
+            )}
+
+            {disableCount > 0 && (
+              <div className="rounded-xl border border-gold/20 bg-gold/[0.035] px-3 py-2 text-[10.5px] leading-relaxed text-gold/90">
+                {disableCount} issue{disableCount === 1 ? '' : 's'} can only be resolved by disabling a mod.
+                Dependencies are installed and disabled mods are re-enabled first; a confirmation popup appears
+                before anything is disabled.
               </div>
             )}
 
@@ -184,42 +285,49 @@ export function RepairModal() {
               </div>
             ) : (
               <div className="max-h-[340px] space-y-2 overflow-y-auto pr-1">
-                {report.issues.map((issue) => (
-                  <div
-                    key={issue.id}
-                    className={cn(
-                      'rounded-xl border p-3',
-                      issue.severity === 'error'
-                        ? 'border-danger/20 bg-danger/[0.035]'
-                        : 'border-gold/20 bg-gold/[0.025]'
-                    )}
-                  >
-                    <div className="flex items-start gap-2.5">
-                      {issue.severity === 'error' ? (
-                        <WarningCircle size={16} className="mt-0.5 shrink-0 text-danger" />
-                      ) : (
-                        <Warning size={16} className="mt-0.5 shrink-0 text-gold" />
+                {report.issues.map((issue) => {
+                  const badge = issue.autoFixable
+                    ? issue.requiresDisable
+                      ? { label: 'Needs disable', className: 'bg-gold/10 text-gold' }
+                      : { label: 'Safe fix', className: 'bg-grass/10 text-grass' }
+                    : { label: 'Manual', className: 'bg-white/[0.05] text-muted' }
+                  return (
+                    <div
+                      key={issue.id}
+                      className={cn(
+                        'rounded-xl border p-3',
+                        issue.severity === 'error'
+                          ? 'border-danger/20 bg-danger/[0.035]'
+                          : 'border-gold/20 bg-gold/[0.025]'
                       )}
-                      <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[12.5px] font-medium text-ink">{issue.title}</span>
-                          <span
-                            className={cn(
-                              'rounded px-1.5 py-0.5 text-[8.5px] font-semibold uppercase tracking-[0.08em]',
-                              issue.autoFixable ? 'bg-grass/10 text-grass' : 'bg-white/[0.05] text-muted'
-                            )}
-                          >
-                            {issue.autoFixable ? 'Auto-fix' : 'Manual'}
-                          </span>
-                        </div>
-                        <p className="mt-0.5 text-[11px] leading-relaxed text-muted">{issue.detail}</p>
-                        {issue.files.length > 0 && (
-                          <div className="mt-1 font-mono text-[9.5px] text-muted/60">{issue.files.slice(0, 3).join(', ')}</div>
+                    >
+                      <div className="flex items-start gap-2.5">
+                        {issue.severity === 'error' ? (
+                          <WarningCircle size={16} className="mt-0.5 shrink-0 text-danger" />
+                        ) : (
+                          <Warning size={16} className="mt-0.5 shrink-0 text-gold" />
                         )}
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-[12.5px] font-medium text-ink">{issue.title}</span>
+                            <span
+                              className={cn(
+                                'rounded px-1.5 py-0.5 text-[8.5px] font-semibold uppercase tracking-[0.08em]',
+                                badge.className
+                              )}
+                            >
+                              {badge.label}
+                            </span>
+                          </div>
+                          <p className="mt-0.5 text-[11px] leading-relaxed text-muted">{issue.detail}</p>
+                          {issue.files.length > 0 && (
+                            <div className="mt-1 font-mono text-[9.5px] text-muted/60">{issue.files.slice(0, 3).join(', ')}</div>
+                          )}
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
 
@@ -243,10 +351,25 @@ export function RepairModal() {
   )
 }
 
-function Metric({ label, value }: { label: string; value: string }) {
+function Metric({
+  label,
+  value,
+  tone
+}: {
+  label: string
+  value: string
+  tone?: 'grass' | 'gold'
+}) {
   return (
     <div className="rounded-xl border border-line/45 bg-canvas/30 p-2.5 text-center">
-      <div className="font-display text-[18px] font-semibold text-ink">{value}</div>
+      <div
+        className={cn(
+          'font-display text-[18px] font-semibold',
+          tone === 'grass' ? 'text-grass' : tone === 'gold' ? 'text-gold' : 'text-ink'
+        )}
+      >
+        {value}
+      </div>
       <div className="text-[9.5px] uppercase tracking-[0.08em] text-muted/70">{label}</div>
     </div>
   )

@@ -51,7 +51,7 @@ export function ConfirmDialog() {
         </>
       }
     >
-      <p className="text-[13px] leading-relaxed text-muted">
+      <p className="whitespace-pre-line text-[13px] leading-relaxed text-muted">
         {request?.body ??
           'This action is applied immediately. You can reinstall or restore from a backup afterwards.'}
       </p>

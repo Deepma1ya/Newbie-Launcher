@@ -9,8 +9,10 @@ vi.mock('@main/services/store', () => ({
   store: { instance: vi.fn() }
 }))
 
+const repairPaths = vi.hoisted(() => ({ repairBackups: 'repair-backups' }))
+
 vi.mock('@main/services/paths', () => ({
-  paths: { repairBackups: 'repair-backups' }
+  paths: repairPaths
 }))
 
 vi.mock('@main/util/archive', () => ({
@@ -44,6 +46,7 @@ let modsDir = ''
 beforeEach(async () => {
   vi.clearAllMocks()
   root = await fs.mkdtemp(path.join(os.tmpdir(), 'newbie-repair-'))
+  repairPaths.repairBackups = path.join(root, 'repair-backups')
   gameDir = path.join(root, 'minecraft')
   modsDir = path.join(gameDir, 'mods')
   await fs.mkdir(modsDir, { recursive: true })
@@ -223,16 +226,17 @@ describe('repair application', () => {
     expect(after.issues.filter((issue) => issue.autoFixable)).toHaveLength(0)
   })
 
-  it('turns a failed dependency install into a manual issue', async () => {
-    writeFabricJar('needs-lib.jar', { id: 'needslib', depends: { missinglib: '*' } })
-    const instance = makeInstance()
+  it('turns a failed restore into a manual issue that is not retried automatically', async () => {
+    const record = addonRecord('restore-me.jar', true, 'modrinth')
+    const instance = makeInstance([record], [record.id])
     vi.mocked(store.instance).mockReturnValue(instance)
+    vi.mocked(ensureAddonFile).mockRejectedValue(new Error('download failed'))
 
     const report = await repairInstance('inst_test', true)
     expect(report.fixed).toBe(0)
     expect(report.failed).toBe(1)
     expect(report.issues).toHaveLength(1)
-    expect(report.issues[0]?.kind).toBe('missing-dependency')
+    expect(report.issues[0]?.kind).toBe('corrupt')
     expect(report.issues[0]?.autoFixable).toBe(false)
     expect(report.issues[0]?.detail).toContain('failed')
 
@@ -252,6 +256,35 @@ describe('repair application', () => {
     await clearRepairFailures('inst_test')
     const retried = await repairInstance('inst_test', true)
     expect(retried.failed).toBe(1)
+  })
+
+  it('offers to disable the dependent mod when its dependency cannot be installed', async () => {
+    writeFabricJar('needs-lib.jar', { id: 'needslib', depends: { missinglib: '*' } })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const safe = await repairInstance('inst_test', true, false)
+    expect(safe.fixed).toBe(0)
+    expect(safe.failed).toBe(0)
+    expect(safe.pendingDisables).toBe(1)
+    expect(safe.issues).toHaveLength(1)
+    expect(safe.issues[0]?.kind).toBe('missing-dependency')
+    expect(safe.issues[0]?.autoFixable).toBe(true)
+    expect(safe.issues[0]?.requiresDisable).toBe(true)
+    expect(await exists(path.join(modsDir, 'needs-lib.jar'))).toBe(true)
+
+    // A fresh scan tries the dependency install again instead of jumping to a disable.
+    const scan = await repairInstance('inst_test', false)
+    expect(scan.issues[0]?.requiresDisable).toBeUndefined()
+
+    const final = await repairInstance('inst_test', true, true)
+    expect(final.fixed).toBe(1)
+    expect(final.pendingDisables).toBe(0)
+    expect(await exists(path.join(modsDir, 'needs-lib.jar'))).toBe(false)
+    expect(await exists(path.join(modsDir, 'needs-lib.jar.disabled'))).toBe(true)
+
+    const after = await repairInstance('inst_test', false)
+    expect(after.issues).toHaveLength(0)
   })
 
   it('installs a matching dependency and verifies it on the next scan', async () => {
@@ -329,5 +362,165 @@ describe('repair application', () => {
 
     const after = await repairInstance('inst_test', false)
     expect(after.issues).toHaveLength(0)
+  })
+
+  it('does not disable anything during the safe pass and reports pending disables', async () => {
+    writeFabricJar('a.jar', { id: 'duplicate', version: '2.0.0' })
+    writeFabricJar('b.jar', { id: 'duplicate', version: '1.0.0' })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const scan = await repairInstance('inst_test', false)
+    expect(scan.pendingDisables).toBe(1)
+    expect(scan.issues.filter((issue) => issue.requiresDisable)).toHaveLength(1)
+
+    const safe = await repairInstance('inst_test', true, false)
+    expect(safe.fixed).toBe(0)
+    expect(safe.pendingDisables).toBe(1)
+    expect(await exists(path.join(modsDir, 'a.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'b.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'b.jar.disabled'))).toBe(false)
+
+    const final = await repairInstance('inst_test', true, true)
+    expect(final.fixed).toBe(1)
+    expect(final.pendingDisables).toBe(0)
+    const active = (await fs.readdir(modsDir)).filter((entry) => entry.endsWith('.jar'))
+    expect(active).toHaveLength(1)
+  })
+
+  it('installs missing dependencies before applying a confirmed disable', async () => {
+    writeFabricJar('a.jar', { id: 'duplicate', version: '2.0.0' })
+    writeFabricJar('b.jar', { id: 'duplicate', version: '1.0.0' })
+    writeFabricJar('needs-lib.jar', { id: 'needslib', depends: { missinglib: '*' } })
+    const inactiveAtInstall: string[][] = []
+    vi.mocked(searchModrinth).mockResolvedValue({
+      provider: 'modrinth',
+      hits: [
+        {
+          project_id: 'missinglib_project',
+          slug: 'missinglib',
+          title: 'Missing Lib',
+          description: '',
+          categories: [],
+          client_side: 'required',
+          server_side: 'required',
+          project_type: 'mod',
+          downloads: 1,
+          follows: 0,
+          icon_url: null,
+          date_created: '',
+          date_modified: '',
+          latest_version: '',
+          license: '',
+          gallery: [],
+          versions: []
+        }
+      ],
+      total: 1,
+      offset: 0,
+      limit: 12
+    } as never)
+    vi.mocked(installAddon).mockImplementation(async () => {
+      inactiveAtInstall.push((await fs.readdir(modsDir)).filter((entry) => entry.endsWith('.jar')))
+      writeFabricJar('missinglib.jar', { id: 'missinglib' })
+      return { records: [], installed: 1 }
+    })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const report = await repairInstance('inst_test', true, true)
+    expect(report.fixed).toBe(2)
+    expect(report.failed).toBe(0)
+    expect(inactiveAtInstall[0]).toEqual(expect.arrayContaining(['a.jar', 'b.jar']))
+    expect(await exists(path.join(modsDir, 'missinglib.jar'))).toBe(true)
+  })
+
+  it('enables a disabled dependency instead of disabling the mod that needs it', async () => {
+    writeFabricJar('lib.jar.disabled', { id: 'missinglib' })
+    writeFabricJar('needs-lib.jar', { id: 'needslib', depends: { missinglib: '*' } })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const scan = await repairInstance('inst_test', false)
+    expect(scan.issues).toHaveLength(1)
+    expect(scan.issues[0]?.kind).toBe('disabled-dependency')
+    expect(scan.issues[0]?.autoFixable).toBe(true)
+    expect(scan.issues[0]?.requiresDisable).toBeUndefined()
+
+    const safe = await repairInstance('inst_test', true, false)
+    expect(safe.fixed).toBe(1)
+    expect(safe.pendingDisables).toBe(0)
+    expect(await exists(path.join(modsDir, 'lib.jar'))).toBe(true)
+    expect(await exists(path.join(modsDir, 'needs-lib.jar'))).toBe(true)
+
+    const after = await repairInstance('inst_test', false)
+    expect(after.issues).toHaveLength(0)
+  })
+
+  it('reuses the safe-pass backup for the confirmed disable pass', async () => {
+    writeFabricJar('a.jar', { id: 'duplicate', version: '2.0.0' })
+    writeFabricJar('b.jar', { id: 'duplicate', version: '1.0.0' })
+    writeFabricJar('needs-lib.jar', { id: 'needslib', depends: { missinglib: '*' } })
+    vi.mocked(searchModrinth).mockResolvedValue({
+      provider: 'modrinth',
+      hits: [
+        {
+          project_id: 'missinglib_project',
+          slug: 'missinglib',
+          title: 'Missing Lib',
+          description: '',
+          categories: [],
+          client_side: 'required',
+          server_side: 'required',
+          project_type: 'mod',
+          downloads: 1,
+          follows: 0,
+          icon_url: null,
+          date_created: '',
+          date_modified: '',
+          latest_version: '',
+          license: '',
+          gallery: [],
+          versions: []
+        }
+      ],
+      total: 1,
+      offset: 0,
+      limit: 12
+    } as never)
+    vi.mocked(installAddon).mockImplementation(async () => {
+      writeFabricJar('missinglib.jar', { id: 'missinglib' })
+      return { records: [], installed: 1 }
+    })
+    vi.mocked(zipPaths).mockImplementation(async (_root, _entries, destination) => {
+      await fs.mkdir(path.dirname(destination), { recursive: true })
+      await fs.writeFile(destination, 'zip')
+    })
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const safe = await repairInstance('inst_test', true, false)
+    expect(safe.fixed).toBe(1)
+    expect(safe.pendingDisables).toBe(1)
+    expect(safe.backupPath).toBeTruthy()
+    expect(zipPaths).toHaveBeenCalledTimes(1)
+
+    const final = await repairInstance('inst_test', true, true, safe.backupPath)
+    expect(final.fixed).toBe(1)
+    expect(final.pendingDisables).toBe(0)
+    expect(final.backupPath).toBe(safe.backupPath)
+    expect(zipPaths).toHaveBeenCalledTimes(1)
+  })
+
+  it('ignores a backup path outside the repair backup folder', async () => {
+    writeForgeJar('forge-only.jar', 'forgeonly')
+    const instance = makeInstance()
+    vi.mocked(store.instance).mockReturnValue(instance)
+
+    const report = await repairInstance('inst_test', true, true, path.join(root, 'evil.zip'))
+    expect(report.fixed).toBe(1)
+    expect(report.backupPath).toContain('repair-backups')
+    expect(report.backupPath).not.toBe(path.join(root, 'evil.zip'))
+    expect(zipPaths).toHaveBeenCalledTimes(1)
   })
 })

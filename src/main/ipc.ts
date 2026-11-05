@@ -325,21 +325,37 @@ export function registerIpc(): void {
     const target = await openInstanceFolder(z.string().parse(id), sub ? z.string().parse(sub) : undefined)
     await shell.openPath(target)
   })
-  ipcMain.handle(IPC.instancesRepair, async (_event, id: string, apply: boolean) => {
-    const instanceId = z.string().parse(id)
-    if (!apply) return repair(instanceId, false)
-    const handle = tasks.start('repair', 'Repairing instance', 'Scanning for conflicts', instanceId)
-    try {
-      const report = await repair(instanceId, true)
-      await handle.done(
-        `${report.fixed} issue(s) fixed${report.failed ? `, ${report.failed} failed` : ''}`
+  ipcMain.handle(
+    IPC.instancesRepair,
+    async (_event, id: string, apply: boolean, allowDisable?: boolean, reuseBackup?: string) => {
+      const instanceId = z.string().parse(id)
+      const mayDisable = allowDisable !== false
+      if (!apply) return repair(instanceId, false)
+      const handle = tasks.start(
+        'repair',
+        'Repairing instance',
+        mayDisable ? 'Installing dependencies and resolving conflicts' : 'Installing dependencies',
+        instanceId
       )
-      return report
-    } catch (error) {
-      await handle.fail(error)
-      throw error
+      try {
+        const report = await repair(
+          instanceId,
+          true,
+          mayDisable,
+          reuseBackup ? z.string().parse(reuseBackup) : undefined
+        )
+        await handle.done(
+          `${report.fixed} issue(s) fixed${report.failed ? `, ${report.failed} failed` : ''}${
+            report.pendingDisables ? `, ${report.pendingDisables} need confirmation` : ''
+          }`
+        )
+        return report
+      } catch (error) {
+        await handle.fail(error)
+        throw error
+      }
     }
-  })
+  )
   ipcMain.handle(IPC.instancesClearRepairFailures, async (_event, id: string) => {
     await clearRepairFailures(z.string().parse(id))
   })

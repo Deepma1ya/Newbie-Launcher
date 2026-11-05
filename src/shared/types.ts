@@ -378,6 +378,8 @@ export interface RepairIssue {
   detail: string
   files: string[]
   autoFixable: boolean
+  /** The fix requires disabling an installed mod. */
+  requiresDisable?: boolean
   fixLabel?: string
 }
 
@@ -388,6 +390,7 @@ export interface RepairReport {
   fixed: number
   failed: number
   blocked: number
+  pendingDisables: number
   skipped: number
   backupPath?: string
 }

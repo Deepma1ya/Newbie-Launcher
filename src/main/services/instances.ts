@@ -274,8 +274,13 @@ export async function openInstanceFolder(id: string, sub?: string): Promise<stri
   return target
 }
 
-export async function repair(id: string, apply: boolean): Promise<RepairReport> {
-  return repairInstance(id, apply)
+export async function repair(
+  id: string,
+  apply: boolean,
+  allowDisable = true,
+  reuseBackup?: string
+): Promise<RepairReport> {
+  return repairInstance(id, apply, allowDisable, reuseBackup)
 }
 
 export async function instanceExists(id: string): Promise<boolean> {

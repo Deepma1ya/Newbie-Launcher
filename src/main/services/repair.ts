@@ -26,6 +26,7 @@ interface ScannedMod {
 type RepairAction =
   | { type: 'disable'; relative: string; recordId?: string }
   | { type: 'enable'; recordId: string }
+  | { type: 'enable-file'; relative: string }
   | { type: 'install-dependency'; dependencyId: string }
   | { type: 'restore'; recordId: string }
   | { type: 'clean-state'; recordId: string; keepActive: boolean }
@@ -33,6 +34,8 @@ type RepairAction =
 interface RepairPlan {
   issues: RepairIssue[]
   actions: Map<string, RepairAction[]>
+  /** Last-resort actions used only when the primary (non-destructive) fix fails. */
+  fallbacks: Map<string, RepairAction[]>
   blocked: number
 }
 
@@ -40,35 +43,49 @@ interface ApplyResult {
   fixed: number
   failed: number
   failedFingerprints: Set<string>
+  fallbackFingerprints: Set<string>
 }
 
-export async function repairInstance(instanceId: string, apply: boolean): Promise<RepairReport> {
+export async function repairInstance(
+  instanceId: string,
+  apply: boolean,
+  allowDisable = true,
+  reuseBackup?: string
+): Promise<RepairReport> {
   const instance = store.instance(instanceId)
   if (!instance) throw new Error('Instance not found')
 
   const plan = await buildRepairPlan(instance, new Set())
   if (!apply) return makeReport(instanceId, plan, 0, 0, undefined)
 
-  const actionCount = [...plan.actions.values()].reduce((total, actions) => total + actions.length, 0)
+  const actionCount = plan.issues
+    .filter((issue) => issue.autoFixable && (allowDisable || !issue.requiresDisable))
+    .reduce((total, issue) => total + (plan.actions.get(issue.id)?.length ?? 0), 0)
   if (actionCount === 0) {
     await pruneRepairFailures(instance, plan.issues)
     return makeReport(instanceId, plan, 0, 0, undefined)
   }
 
   let backupPath: string | undefined
-  backupPath = path.join(
-    paths.repairBackups,
-    `${instance.id}-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`
-  )
-  try {
-    await zipPaths(instance.gameDir, ['mods', 'resourcepacks', 'shaderpacks'], backupPath)
-  } catch (error) {
-    logger.warn('repair', 'Could not create repair backup', error)
-    backupPath = undefined
+  if (reuseBackup && isRepairBackup(reuseBackup) && (await pathExists(reuseBackup))) {
+    // The safe pass already archived this instance; reuse it for the confirmed disable pass.
+    backupPath = reuseBackup
+  } else {
+    backupPath = path.join(
+      paths.repairBackups,
+      `${instance.id}-${new Date().toISOString().replace(/[:.]/g, '-')}.zip`
+    )
+    try {
+      await zipPaths(instance.gameDir, ['mods', 'resourcepacks', 'shaderpacks'], backupPath)
+    } catch (error) {
+      logger.warn('repair', 'Could not create repair backup', error)
+      backupPath = undefined
+    }
   }
 
-  const applied = await applyPlan(instance, plan)
+  const applied = await applyPlan(instance, plan, allowDisable)
   const after = await buildRepairPlan(instance, applied.failedFingerprints)
+  markPendingFallbacks(after, applied.fallbackFingerprints)
   await pruneRepairFailures(instance, after.issues)
   const skipped = after.issues.filter((issue) => !issue.autoFixable).length
   logger.info(
@@ -99,6 +116,7 @@ function makeReport(
     fixed,
     failed,
     blocked: plan.blocked,
+    pendingDisables: plan.issues.filter((issue) => issue.autoFixable && issue.requiresDisable).length,
     skipped: plan.issues.filter((issue) => !issue.autoFixable).length,
     backupPath
   }
@@ -116,10 +134,13 @@ async function pruneRepairFailures(instance: Instance, issues: RepairIssue[]): P
 }
 
 async function buildRepairPlan(instance: Instance, failedFingerprints: Set<string>): Promise<RepairPlan> {
-  const plan: RepairPlan = { issues: [], actions: new Map(), blocked: 0 }
+  const plan: RepairPlan = { issues: [], actions: new Map(), fallbacks: new Map(), blocked: 0 }
   const persistedFailures = instance.repairFailures ?? {}
-  const push = (issue: Omit<RepairIssue, 'id'>, actions: RepairAction[]): void =>
-    addIssue(plan, failedFingerprints, persistedFailures, issue, actions)
+  const push = (
+    issue: Omit<RepairIssue, 'id'>,
+    actions: RepairAction[],
+    fallbacks: RepairAction[] = []
+  ): void => addIssue(plan, failedFingerprints, persistedFailures, issue, actions, fallbacks)
   const scanned = await scanMods(instance)
   const active = scanned.filter((mod) => !mod.disabled && !mod.corrupt)
   const disabled = scanned.filter((mod) => mod.disabled && !mod.corrupt)
@@ -139,6 +160,7 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
         detail: 'The file could not be opened as a mod archive. It will be disabled so the loader cannot crash on it.',
         files: [mod.relative],
         autoFixable: true,
+        requiresDisable: true,
         fixLabel: 'Disable unreadable file'
       },
       [{ type: 'disable', relative: mod.relative, recordId: recordIdForRelative(instance, mod.relative) }]
@@ -177,6 +199,7 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
           .join(', ')} will be disabled.`,
         files: remove.map((mod) => mod.relative),
         autoFixable: true,
+        requiresDisable: true,
         fixLabel: 'Keep newest and disable duplicates'
       },
       remove.map((mod) => ({
@@ -199,6 +222,7 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
         detail: `This ${instance.loader} instance cannot load a ${mod.meta.loader} mod. It will be disabled.`,
         files: [mod.relative],
         autoFixable: true,
+        requiresDisable: true,
         fixLabel: 'Disable incompatible mod'
       },
       [{ type: 'disable', relative: mod.relative, recordId: recordIdForRelative(instance, mod.relative) }]
@@ -242,6 +266,7 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
           }Disabling ${loser.meta.name}.`,
           files: [loser.relative],
           autoFixable: true,
+          requiresDisable: true,
           fixLabel: 'Disable conflicting mod'
         },
         [{ type: 'disable', relative: loser.relative, recordId: recordIdForRelative(instance, loser.relative) }]
@@ -255,14 +280,17 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
   const disabledIds = idsOf(unavailable)
 
   const missing = new Map<string, { dependents: ScannedMod[]; ranges: Set<string> }>()
-  const disabledDependencies = new Map<string, { dependents: ScannedMod[]; provider?: ScannedMod }>()
+  const disabledDependencies = new Map<
+    string,
+    { dependents: ScannedMod[]; provider?: ScannedMod; safeToEnable: boolean }
+  >()
   for (const mod of remainingActive) {
     for (const dependency of mod.meta.dependencies) {
       if (!dependency.required || isIgnoredDependency(dependency.id)) continue
       const id = dependency.id.toLowerCase()
       if (activeIds.has(id)) continue
       if (disabledIds.has(id)) {
-        const entry = disabledDependencies.get(id) ?? { dependents: [] }
+        const entry = disabledDependencies.get(id) ?? { dependents: [], safeToEnable: false }
         entry.dependents.push(mod)
         entry.provider =
           entry.provider ??
@@ -270,6 +298,16 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
             (candidate) =>
               candidate.meta.modId.toLowerCase() === id ||
               candidate.meta.provided.some((provided) => provided.toLowerCase() === id)
+          )
+        const provider = entry.provider
+        entry.safeToEnable =
+          Boolean(provider) &&
+          Boolean(provider?.disabled) &&
+          !plannedDisabled.has(provider!.relative) &&
+          metadataLoaderMatches(provider!.meta, instance.loader) &&
+          !remainingActive.some(
+            (activeMod) =>
+              declaresIncompatibility(activeMod, provider!) || declaresIncompatibility(provider!, activeMod)
           )
         disabledDependencies.set(id, entry)
       } else {
@@ -294,23 +332,39 @@ async function buildRepairPlan(instance: Instance, failedFingerprints: Set<strin
         autoFixable: true,
         fixLabel: 'Install missing dependency'
       },
-      [{ type: 'install-dependency', dependencyId: id }]
+      [{ type: 'install-dependency', dependencyId: id }],
+      entry.dependents.map((mod) => ({
+        type: 'disable' as const,
+        relative: mod.relative,
+        recordId: recordIdForRelative(instance, mod.relative)
+      }))
     )
   }
 
   for (const [id, entry] of disabledDependencies) {
+    const providerName = entry.provider?.meta.name ?? id
+    const recordId = entry.provider ? recordIdForRelative(instance, entry.provider.relative) : undefined
     push(
       {
         kind: 'disabled-dependency',
         severity: 'warning',
         title: `Dependency ${id} is disabled`,
-        detail: `${entry.provider?.meta.name ?? id} is present but disabled, and ${dependentNames(
-          entry.dependents
-        )} requires it. Enable it manually if it is compatible, or remove the dependent mod.`,
+        detail: entry.safeToEnable
+          ? `${providerName} is present but disabled. Newbie can enable it to satisfy ${dependentNames(
+              entry.dependents
+            )}.`
+          : `${providerName} is disabled and conflicts with an active mod. Enable it manually only if you know it is compatible, or remove the dependent mod.`,
         files: entry.dependents.map((mod) => mod.relative),
-        autoFixable: false
+        autoFixable: entry.safeToEnable,
+        fixLabel: entry.safeToEnable ? 'Enable dependency' : undefined
       },
-      []
+      entry.safeToEnable && entry.provider
+        ? [
+            recordId
+              ? { type: 'enable' as const, recordId }
+              : { type: 'enable-file' as const, relative: entry.provider.relative }
+          ]
+        : []
     )
   }
 
@@ -398,6 +452,7 @@ async function addRecordStateIssues(
           detail: 'The add-on is marked disabled, so the active file will be disabled to match the add-on state.',
           files: [record.filename],
           autoFixable: true,
+          requiresDisable: true,
           fixLabel: 'Disable add-on'
         },
         [
@@ -412,48 +467,87 @@ async function addRecordStateIssues(
   }
 }
 
-async function applyPlan(instance: Instance, plan: RepairPlan): Promise<ApplyResult> {
+async function applyPlan(instance: Instance, plan: RepairPlan, allowDisable: boolean): Promise<ApplyResult> {
   let fixed = 0
   let failed = 0
   const failedFingerprints = new Set<string>()
+  const fallbackFingerprints = new Set<string>()
   const disabledRecordIds = new Set<string>()
 
-  for (const issue of plan.issues) {
+  // Dependencies, enables and restores must run before the user-confirmed disables.
+  const orderedIssues = [...plan.issues].sort(
+    (a, b) => Number(Boolean(a.requiresDisable)) - Number(Boolean(b.requiresDisable))
+  )
+
+  for (const issue of orderedIssues) {
     if (!issue.autoFixable) continue
+    if (issue.requiresDisable && !allowDisable) continue
     const actions = plan.actions.get(issue.id) ?? []
     if (actions.length === 0) continue
-    let resolved = false
-    let actionFailed = false
-    for (const action of actions) {
-      try {
-        const ok = await applyAction(instance, action)
-        if (ok) {
-          resolved = true
-          if (action.type === 'disable' && action.recordId) disabledRecordIds.add(action.recordId)
-        } else {
-          actionFailed = true
-        }
-      } catch (error) {
-        actionFailed = true
-        logger.warn('repair', `Could not apply repair: ${issue.title}`, error)
-      }
-    }
-    if (resolved && !actionFailed) {
+
+    const primary = await runActions(instance, actions, disabledRecordIds, issue.title)
+    if (primary.resolved && !primary.failed) {
       fixed += 1
       delete instance.repairFailures?.[issueFingerprint(issue)]
-    } else {
-      failed += 1
-      const fingerprint = issueFingerprint(issue)
-      failedFingerprints.add(fingerprint)
-      instance.repairFailures = {
-        ...(instance.repairFailures ?? {}),
-        [fingerprint]: { at: new Date().toISOString(), message: issue.title }
+      continue
+    }
+
+    const fallbacks = plan.fallbacks.get(issue.id) ?? []
+    if (fallbacks.length > 0) {
+      if (!allowDisable) {
+        // Do not persist this as a failure. The UI offers a confirmed disable instead.
+        fallbackFingerprints.add(issueFingerprint(issue))
+        continue
       }
+      const fallback = await runActions(
+        instance,
+        fallbacks,
+        disabledRecordIds,
+        `${issue.title} (disable dependent mods)`
+      )
+      if (fallback.resolved && !fallback.failed) {
+        fixed += 1
+        delete instance.repairFailures?.[issueFingerprint(issue)]
+        continue
+      }
+    }
+
+    failed += 1
+    const fingerprint = issueFingerprint(issue)
+    failedFingerprints.add(fingerprint)
+    instance.repairFailures = {
+      ...(instance.repairFailures ?? {}),
+      [fingerprint]: { at: new Date().toISOString(), message: issue.title }
     }
   }
 
   await syncRecordState(instance, disabledRecordIds)
-  return { fixed, failed, failedFingerprints }
+  return { fixed, failed, failedFingerprints, fallbackFingerprints }
+}
+
+async function runActions(
+  instance: Instance,
+  actions: RepairAction[],
+  disabledRecordIds: Set<string>,
+  label: string
+): Promise<{ resolved: boolean; failed: boolean }> {
+  let resolved = false
+  let actionFailed = false
+  for (const action of actions) {
+    try {
+      const ok = await applyAction(instance, action)
+      if (ok) {
+        resolved = true
+        if (action.type === 'disable' && action.recordId) disabledRecordIds.add(action.recordId)
+      } else {
+        actionFailed = true
+      }
+    } catch (error) {
+      actionFailed = true
+      logger.warn('repair', `Could not apply repair: ${label}`, error)
+    }
+  }
+  return { resolved, failed: actionFailed }
 }
 
 async function applyAction(instance: Instance, action: RepairAction): Promise<boolean> {
@@ -462,6 +556,8 @@ async function applyAction(instance: Instance, action: RepairAction): Promise<bo
       return disableFile(instance, action.relative)
     case 'enable':
       return enableRecord(instance, action.recordId)
+    case 'enable-file':
+      return enableFile(instance, action.relative)
     case 'install-dependency':
       return tryInstallDependency(instance, action.dependencyId)
     case 'restore':
@@ -491,6 +587,18 @@ async function enableRecord(instance: Instance, recordId: string): Promise<boole
   if (!record) return false
   const active = path.join(instance.gameDir, 'mods', record.filename)
   const disabled = `${active}.disabled`
+  if (!(await pathExists(disabled))) return pathExists(active)
+  if (await pathExists(active)) {
+    await moveAside(disabled)
+    return true
+  }
+  await fs.rename(disabled, active)
+  return true
+}
+
+async function enableFile(instance: Instance, relative: string): Promise<boolean> {
+  const disabled = safeJoin(instance.gameDir, relative)
+  const active = disabled.replace(/\.disabled$/i, '')
   if (!(await pathExists(disabled))) return pathExists(active)
   if (await pathExists(active)) {
     await moveAside(disabled)
@@ -649,7 +757,7 @@ function lowerPriority(a: ScannedMod, b: ScannedMod, managed: Set<string>): Scan
 }
 
 function recordIdForRelative(instance: Instance, relative: string): string | undefined {
-  const filename = path.basename(relative).toLowerCase()
+  const filename = path.basename(relative).replace(/\.disabled$/i, '').toLowerCase()
   return instance.addons.find(
     (record) => record.type === 'mod' && record.filename.toLowerCase() === filename
   )?.id
@@ -684,9 +792,33 @@ function issueFingerprint(issue: RepairIssue): string {
   return `${issue.kind}|${issue.title}|${[...issue.files].sort().join(',')}`
 }
 
+function isRepairBackup(candidate: string): boolean {
+  const resolved = path.resolve(candidate)
+  const backupDir = path.resolve(paths.repairBackups)
+  return path.dirname(resolved) === backupDir && path.basename(resolved).endsWith('.zip')
+}
+
 async function moveAside(file: string): Promise<void> {
   const target = `${file}.newbie-backup-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`
   await fs.rename(file, target)
+}
+
+function markPendingFallbacks(plan: RepairPlan, fingerprints: Set<string>): void {
+  if (fingerprints.size === 0) return
+  for (const issue of plan.issues) {
+    if (!fingerprints.has(issueFingerprint(issue))) continue
+    const prefix = 'Missing dependency: '
+    const dependencyId = issue.title.startsWith(prefix) ? issue.title.slice(prefix.length) : undefined
+    issue.requiresDisable = true
+    issue.autoFixable = true
+    issue.fixLabel = 'Disable dependent mods'
+    if (dependencyId) {
+      issue.title = `Dependency ${dependencyId} could not be installed`
+      issue.detail = `Newbie could not download ${dependencyId} from Modrinth. Disabling the mods that require it is the last resort.`
+    } else {
+      issue.detail = `${issue.detail} Newbie could not install the dependency automatically, so the mods that require it can be disabled instead.`
+    }
+  }
 }
 
 function addIssue(
@@ -694,7 +826,8 @@ function addIssue(
   failedFingerprints: Set<string>,
   persistedFailures: Record<string, { at: string; message?: string }>,
   issue: Omit<RepairIssue, 'id'>,
-  actions: RepairAction[]
+  actions: RepairAction[],
+  fallbacks: RepairAction[] = []
 ): void {
   const withId: RepairIssue = { ...issue, id: uniqueId('issue') }
   const fingerprint = issueFingerprint(withId)
@@ -716,4 +849,5 @@ function addIssue(
   }
   plan.issues.push(withId)
   if (withId.autoFixable && actions.length > 0) plan.actions.set(withId.id, actions)
+  if (withId.autoFixable && fallbacks.length > 0) plan.fallbacks.set(withId.id, fallbacks)
 }

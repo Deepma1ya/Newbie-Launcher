@@ -183,7 +183,7 @@ export interface NewbieApi {
     running(): Promise<LaunchState[]>
     logs(id: string): Promise<string[]>
     openFolder(id: string, sub?: string): Promise<void>
-    repair(id: string, apply: boolean): Promise<RepairReport>
+    repair(id: string, apply: boolean, allowDisable?: boolean, reuseBackup?: string): Promise<RepairReport>
     clearRepairFailures(id: string): Promise<void>
   }
   addons: {
