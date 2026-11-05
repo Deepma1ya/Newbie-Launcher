@@ -21,7 +21,7 @@
     "build": "npm run typecheck && electron-vite build",
     "test": "vitest run",
     "test:watch": "vitest",
-    "dist": "npm run build && electron-builder --win nsis --x64",
+    "dist": "npm run build && electron-builder --win nsis --x64 --publish never",
     "dist:publish": "npm run build && electron-builder --win nsis --x64 --publish always",
     "icon": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/make-icon.ps1"
   },

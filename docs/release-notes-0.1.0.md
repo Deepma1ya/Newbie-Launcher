@@ -1,4 +1,4 @@
-# Newbie Launcher 0.1.0
+# Newbie Launcher 0.1.0 — Java Edition
 
 First public Java Edition release.
 
