@@ -41,7 +41,9 @@ const api: NewbieApi = {
     cancelMicrosoft: () => ipcRenderer.invoke(IPC.accountsCancelMicrosoft),
     remove: (id) => ipcRenderer.invoke(IPC.accountsRemove, id),
     setActive: (id) => ipcRenderer.invoke(IPC.accountsSetActive, id),
-    refresh: (id) => ipcRenderer.invoke(IPC.accountsRefresh, id)
+    refresh: (id) => ipcRenderer.invoke(IPC.accountsRefresh, id),
+    setSkin: (id, filePath) => ipcRenderer.invoke(IPC.accountsSetSkin, id, filePath),
+    removeSkin: (id) => ipcRenderer.invoke(IPC.accountsRemoveSkin, id)
   },
   versions: {
     minecraft: (force) => ipcRenderer.invoke(IPC.versionsMinecraft, force),

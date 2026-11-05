@@ -54,6 +54,8 @@ export const IPC = {
   accountsRemove: 'accounts:remove',
   accountsSetActive: 'accounts:set-active',
   accountsRefresh: 'accounts:refresh',
+  accountsSetSkin: 'accounts:set-skin',
+  accountsRemoveSkin: 'accounts:remove-skin',
 
   versionsMinecraft: 'versions:minecraft',
   versionsLoaders: 'versions:loaders',
@@ -149,6 +151,8 @@ export interface NewbieApi {
     remove(id: string): Promise<void>
     setActive(id: string): Promise<void>
     refresh(id: string): Promise<AccountSummary>
+    setSkin(id: string, filePath: string): Promise<AccountSummary>
+    removeSkin(id: string): Promise<AccountSummary>
   }
   versions: {
     minecraft(force?: boolean): Promise<MinecraftVersionSummary[]>

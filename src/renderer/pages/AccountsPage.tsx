@@ -1,9 +1,13 @@
+import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { CheckCircle, Leaf, Plus, ShieldCheck, UserCircle, WifiSlash, WindowsLogo } from '@phosphor-icons/react'
+import { CheckCircle, Image, Leaf, Plus, ShieldCheck, Trash, UploadSimple, UserCircle, WifiSlash, WindowsLogo } from '@phosphor-icons/react'
+import type { AccountSummary } from '@shared/types'
 import { useAccounts, qk } from '../hooks/queries'
-import { useUi } from '../store/ui'
+import { toast, useUi } from '../store/ui'
+import { errorMessage } from '../lib/utils'
 import { PageHeader } from '../components/PageHeader'
 import { AccountCard } from '../components/AccountCard'
+import { SkinFace } from '../components/ui/BlockIcon'
 import { Card, EmptyState } from '../components/ui/primitives'
 import { Button } from '../components/ui/Button'
 
@@ -60,6 +64,9 @@ export function AccountsPage() {
         <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
           <div className="space-y-4">
             {active && <AccountCard account={active} large onChanged={refresh} />}
+            {active && (active.type === 'offline' || active.type === 'tlauncher') && (
+              <CustomSkinCard account={active} onChanged={refresh} />
+            )}
 
             {others.length > 0 && (
               <div>
@@ -101,6 +108,70 @@ export function AccountsPage() {
         </div>
       )}
     </div>
+  )
+}
+
+function CustomSkinCard({ account, onChanged }: { account: AccountSummary; onChanged: () => void }) {
+  const [busy, setBusy] = useState(false)
+  const hasCustom = Boolean(account.skinUrl?.startsWith('data:image/'))
+
+  const choose = async (): Promise<void> => {
+    const file = await window.newbie.app.pickFile([
+      { name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff'] }
+    ])
+    if (!file) return
+    setBusy(true)
+    try {
+      await window.newbie.accounts.setSkin(account.id, file)
+      onChanged()
+      toast('success', 'Custom skin applied', `It will be used when ${account.username} launches.`)
+    } catch (error) {
+      toast('error', 'Could not apply that image', errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const remove = async (): Promise<void> => {
+    setBusy(true)
+    try {
+      await window.newbie.accounts.removeSkin(account.id)
+      onChanged()
+      toast('success', 'Custom skin removed')
+    } catch (error) {
+      toast('error', 'Could not remove the skin', errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  return (
+    <Card className="p-4">
+      <div className="flex items-start gap-4">
+        <SkinFace skinUrl={account.skinUrl} name={account.username} size={64} />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <Image size={16} className="text-grass" />
+            <h2 className="font-display text-[14px] font-semibold text-ink">Custom skin</h2>
+            {hasCustom && <span className="rounded bg-grass/10 px-1.5 py-0.5 text-[8.5px] font-semibold uppercase tracking-[0.08em] text-grass">Custom</span>}
+          </div>
+          <p className="mt-1 text-[11px] leading-relaxed text-muted">
+            Use a Minecraft skin PNG or any image. Newbie converts it and applies it to the offline player model with a
+            local resource pack. Other players on servers will not see it.
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button size="sm" variant={hasCustom ? 'secondary' : 'primary'} loading={busy} onClick={() => void choose()} icon={<UploadSimple size={14} />}>
+              {hasCustom ? 'Replace image' : 'Choose image'}
+            </Button>
+            {hasCustom && (
+              <Button size="sm" variant="ghost" loading={busy} onClick={() => void remove()} icon={<Trash size={14} />}>
+                Remove
+              </Button>
+            )}
+          </div>
+        </div>
+      </div>
+    </Card>
   )
 }
 

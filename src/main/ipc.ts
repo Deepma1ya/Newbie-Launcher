@@ -68,6 +68,7 @@ import { checkForUpdates, installUpdate, updaterState } from './services/updater
 import { addOfflineAccount } from './auth/offline'
 import { addTLauncherAccount, refreshTLauncherAccount } from './auth/tlauncher'
 import { addAuthlibAccount, refreshAuthlibAccount } from './auth/authlib'
+import { removeAccountSkin, setAccountSkin } from './services/skins'
 import { cancelMicrosoftFlow, refreshMicrosoftAccount, startMicrosoftFlow } from './auth/microsoft'
 import {
   getMainWindow,
@@ -232,6 +233,12 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.accountsCancelMicrosoft, () => cancelMicrosoftFlow())
   ipcMain.handle(IPC.accountsRemove, async (_event, id: string) => store.removeAccount(z.string().parse(id)))
   ipcMain.handle(IPC.accountsSetActive, async (_event, id: string) => store.setActiveAccount(z.string().parse(id)))
+  ipcMain.handle(IPC.accountsSetSkin, async (_event, id: string, filePath: string) =>
+    setAccountSkin(z.string().parse(id), pathSchema.parse(filePath))
+  )
+  ipcMain.handle(IPC.accountsRemoveSkin, async (_event, id: string) =>
+    removeAccountSkin(z.string().parse(id))
+  )
   ipcMain.handle(IPC.accountsRefresh, async (_event, id: string): Promise<AccountSummary> => {
     const account = store.account(z.string().parse(id))
     if (!account) throw new Error('Account not found')

@@ -1,7 +1,7 @@
 {
   "name": "newbie-launcher",
-  "version": "0.1.5",
-  "description": "Newbie Launcher — a calm, fast Minecraft: Java Edition launcher with Modrinth, quick installs, automatic updates, loadouts and one-click repair.",
+  "version": "0.1.6",
+  "description": "Newbie Launcher — a calm, fast Minecraft: Java Edition launcher with Modrinth, quick installs, offline skins, loadouts and one-click repair.",
   "main": "./out/main/index.js",
   "author": {
     "name": "Deepma1ya",
@@ -35,6 +35,7 @@
     "archiver": "8.0.0",
     "electron-updater": "6.8.11",
     "framer-motion": "14.9.1",
+    "jimp": "^0.22.12",
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "react-router-dom": "7.18.5",

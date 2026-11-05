@@ -1,7 +1,11 @@
+import path from 'node:path'
+import { promises as fs } from 'node:fs'
 import type { AccountSummary, AuthAccount } from '@shared/types'
 import { offlineUuid } from '../util/hash'
 import { store } from '../services/store'
 import { fetchJson } from '../services/http'
+import { paths } from '../services/paths'
+import { sanitizeFilename } from '../util/fs'
 import { logger } from '../util/log'
 import { validateUsername } from './offline'
 
@@ -38,7 +42,15 @@ export async function refreshTLauncherAccount(id: string): Promise<AccountSummar
   const textures = store.settings().tlauncherSkins
     ? await fetchTLauncherTextures(account.username)
     : { skinUrl: undefined, capeUrl: undefined }
-  const updated: AuthAccount = { ...account, skinUrl: textures.skinUrl, capeUrl: textures.capeUrl }
+  const hasCustomSkin = Boolean(account.skinUrl?.startsWith('data:image/'))
+  const updated: AuthAccount = {
+    ...account,
+    skinUrl: hasCustomSkin ? account.skinUrl : textures.skinUrl,
+    capeUrl: textures.capeUrl
+  }
+  await fs
+    .rm(path.join(paths.cache, 'skins', `${sanitizeFilename(account.id)}.png`), { force: true })
+    .catch(() => undefined)
   return store.upsertAccount(updated)
 }
 

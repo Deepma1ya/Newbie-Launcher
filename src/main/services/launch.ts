@@ -16,6 +16,7 @@ import { tasks } from './tasks'
 import { prepareInstancePerformance } from './perf'
 import { maybeBackupWorlds } from './backups'
 import { ensureActiveLoadout } from './loadouts'
+import { applyOfflineSkin } from './skins'
 import { ensureDir, pathExists } from '../util/fs'
 import { logger } from '../util/log'
 import { extractZip } from '../util/zip'
@@ -143,6 +144,9 @@ export async function launchInstance(instanceId: string): Promise<void> {
       : undefined
 
     const session = await sessionForLaunch(account.id)
+    await applyOfflineSkin(instance, session.account).catch((error) => {
+      logger.warn('launch', 'Unable to apply the offline skin resource pack', error)
+    })
     const args = buildArguments({
       version,
       profile: session.profile,

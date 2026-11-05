@@ -41,7 +41,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 
 - **Microsoft** — opens Microsoft's real sign-in page in an embedded window. The resulting Minecraft token is used for licensed servers. Tokens are encrypted with Windows DPAPI via Electron `safeStorage` and never reach the UI process.
 - **TLauncher** — stores your public TLauncher nickname and syncs your public skin/cape from `auth.tlauncher.org`. TLauncher does not issue Mojang/Microsoft game licences, so these profiles play in offline mode. In-game TLauncher skin rendering is on the roadmap; the launcher avatar sync is implemented.
-- **Offline** — a local username for single-player, LAN and offline-mode servers.
+- **Offline** — a local username for single-player, LAN and offline-mode servers. You can upload a custom skin from the Accounts page; the launcher converts PNG, JPEG, WebP, BMP, GIF or TIFF images and applies it to the default player model through a local resource pack. Other players on servers will see the normal offline skin.
 - **Authlib** — third-party Yggdrasil servers (Ely.by, LittleSkin, private servers). The API root is resolved with the standard ALI header.
 
 Online-mode servers require Microsoft. This is a Minecraft platform rule, not a launcher restriction.
