@@ -40,6 +40,10 @@ export function isInstanceBusy(instanceId: string): boolean {
   return running.has(instanceId) || launching.has(instanceId)
 }
 
+export function hasActiveInstances(): boolean {
+  return running.size > 0 || launching.size > 0
+}
+
 export function runningStates(): LaunchState[] {
   return [...running.values()].map((entry) => ({
     instanceId: entry.instanceId,

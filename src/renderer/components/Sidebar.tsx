@@ -33,7 +33,11 @@ export function Sidebar() {
   const accounts = useAccounts().data ?? []
   const active = accounts.find((account) => account.active) ?? accounts[0]
   const update = useUi((state) => state.update)
-  const updateReady = update.status === 'available' || update.status === 'downloading' || update.status === 'downloaded'
+  const updateReady =
+    update.status === 'available' ||
+    update.status === 'downloading' ||
+    update.status === 'downloaded' ||
+    update.status === 'installing'
 
   return (
     <aside className="relative z-30 flex w-[218px] shrink-0 flex-col border-r border-line/40 bg-surface/45 px-3 pb-3 pt-5">
@@ -119,11 +123,13 @@ export function Sidebar() {
           </Tooltip>
           <Tooltip
             label={
-              update.status === 'downloaded'
-                ? 'Update ready to install'
-                : updateReady
-                  ? 'Update available'
-                  : 'Launcher version'
+              update.status === 'installing'
+                ? 'Installing update'
+                : update.status === 'downloaded'
+                  ? 'Update ready — installing automatically'
+                  : updateReady
+                    ? 'Update available'
+                    : 'Launcher version'
             }
           >
             <NavLink
@@ -135,7 +141,9 @@ export function Sidebar() {
                 <span
                   className={cn(
                     'absolute right-0 top-0 h-1.5 w-1.5 rounded-full',
-                    update.status === 'downloaded' ? 'bg-grass' : 'bg-gold'
+                    update.status === 'downloaded' || update.status === 'installing'
+                      ? 'bg-grass'
+                      : 'bg-gold'
                   )}
                 />
               )}

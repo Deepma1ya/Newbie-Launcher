@@ -220,7 +220,22 @@ export function HomePage() {
         <StatCard icon={<Cube size={16} />} label="Instances" value={String(instances.length)} detail={`${instances.filter((instance) => instance.loader !== 'vanilla').length} modded`} />
         <StatCard icon={<Package size={16} />} label="Add-ons" value={String(addonCount)} detail="tracked for updates" />
         <StatCard icon={<Stack size={16} />} label="Loadouts" value={String(loadoutCount)} detail="across your instances" />
-        <StatCard icon={<Sparkle size={16} />} label="Version" value={update.version ?? APP_VERSION} detail={update.status === 'available' ? 'Update available' : 'Newbie Launcher'} />
+        <StatCard
+          icon={<Sparkle size={16} />}
+          label="Version"
+          value={update.version ?? APP_VERSION}
+          detail={
+            update.status === 'installing'
+              ? 'Installing update'
+              : update.status === 'downloaded'
+                ? 'Update ready'
+                : update.status === 'downloading'
+                  ? 'Downloading update'
+                  : update.status === 'available'
+                    ? 'Update available'
+                    : 'Newbie Launcher'
+          }
+        />
       </div>
 
       {instances.length > 1 && (

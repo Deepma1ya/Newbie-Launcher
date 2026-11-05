@@ -18,7 +18,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 
 - Windows 10/11, x64
 - Per-user install; the installer lets you choose the install folder
-- Built-in auto-updates over the public GitHub Releases feed — no update server, account or paid service. Checks at startup and every 30 minutes, downloads in the background with live progress, shows release notes, and installs when you quit or when you choose **Restart and install**.
+- Built-in auto-updates over the public GitHub Releases feed — no update server, account or paid service. Checks at startup and every 30 minutes, downloads in the background with live progress, shows release notes, and installs silently and automatically once it is safe to restart.
 
 <p align="center">
   <img src="docs/images/updates.png" alt="Built-in update center with download progress and release notes" width="900" />
@@ -57,7 +57,9 @@ Newbie updates itself through the public GitHub Releases feed. There is no updat
 - **Settings → About → Launcher updates** shows the installed version, update status, live download progress and speed, and release notes.
 - Automatic checks run shortly after launch and every 30 minutes. You can turn them off or enable the beta channel in the same panel.
 - Downloads happen in the background from GitHub. The installer is verifiable against the SHA-512 in `latest.yml`.
-- Choose **Restart and install** when ready, or let the update install when you close the launcher. Worlds, instances, accounts and settings are untouched.
+- **Silent, automatic installation.** When a download finishes, Newbie restarts itself and runs the installer with no Next/Next pages. If Minecraft, a local server or a launcher task is still running, installation waits until that finishes. The updated launcher opens again by itself.
+- **Install now** is available if you do not want to wait for an active game, server or task to finish. Fresh installs still let you choose the installation folder; updates never show the installer wizard.
+- Worlds, instances, accounts, servers and settings are untouched.
 - The sidebar version chip and the in-app banner show when an update is available or ready to install.
 
 ## Bedrock
@@ -188,6 +190,7 @@ docs/                architecture notes and the TLauncher investigation
 - Minecraft stdout is Log4j XML on modern versions; Newbie parses it back into readable console lines.
 - Temporary game process access tokens are redacted from log files.
 - Forge/NeoForge installer output is captured and surfaced if the installer fails.
+- Launcher updates run the NSIS installer with `/S`, so updates never show installer pages. The restart is deferred while Minecraft, a local server or a launcher task is active.
 - Server installers run with a relative install directory so data folders containing spaces work; Quilt installs are checked for a real launch jar instead of silently doing nothing.
 - Server add-on updates replace only the add-on files, preserve disabled state and resolve required Modrinth dependencies.
 - World and repair backups use streaming ZIP and are pruned by age/size.

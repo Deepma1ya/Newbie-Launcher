@@ -6,13 +6,21 @@ import { releaseNotesText } from '@shared/update'
 import { emit } from './events'
 import { logger } from '../util/log'
 import { store } from './store'
+import { hasActiveInstances } from './launch'
+import { runningServerIds, stopAllServers } from './serverProcess'
+import { tasks } from './tasks'
+import { updateBlockerLabel, updateInstallBlocker } from './updatePolicy'
 
 const INITIAL_CHECK_DELAY_MS = 8_000
 const CHECK_INTERVAL_MS = 30 * 60 * 1000
+const AUTO_INSTALL_DELAY_MS = 6_000
+const AUTO_INSTALL_RETRY_MS = 15_000
 
 let state: UpdateState = { status: 'idle', currentVersion: app.getVersion() }
 let initialised = false
 let checkTimer: NodeJS.Timeout | null = null
+let autoInstallTimer: NodeJS.Timeout | null = null
+let installTriggered = false
 const releaseNotesCache = new Map<string, Partial<UpdateState>>()
 const releaseNotesRequests = new Map<string, Promise<void>>()
 
@@ -32,6 +40,7 @@ export function initUpdater(): void {
   autoUpdater.autoDownload = true
   autoUpdater.autoInstallOnAppQuit = true
   autoUpdater.autoRunAppAfterInstall = true
+  autoUpdater.disableWebInstaller = true
   autoUpdater.allowPrerelease = store.settings().allowPrerelease
   autoUpdater.logger = {
     info: (message?: unknown) => logger.info('updater', String(message)),
@@ -81,26 +90,34 @@ export function initUpdater(): void {
   )
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
+    const blocker = installBlocker()
     setState({
       ...state,
       status: 'downloaded',
       version: info.version,
       percent: 100,
       lastCheckedAt: new Date().toISOString(),
-      message: 'Restart to install the update.'
+      message: blocker
+        ? `Update downloaded. It installs automatically when ${updateBlockerLabel(blocker)} finishes.`
+        : 'Update downloaded. Restarting automatically to install it…'
     })
     emit({
       type: 'toast',
       payload: {
         kind: 'success',
-        title: `Update ${info.version} ready`,
-        message: 'Restart Newbie Launcher to finish installing it.'
+        title: `Update ${info.version} downloaded`,
+        message: blocker
+          ? 'It will install automatically once Minecraft and servers are closed.'
+          : 'Newbie restarts itself to install it silently — no installer prompts.'
       }
     })
     logger.info('updater', `Update downloaded: ${info.version}`)
+    scheduleAutoInstall()
   })
 
   autoUpdater.on('error', (error: Error) => {
+    clearAutoInstallTimer()
+    installTriggered = false
     logger.warn('updater', 'Update check/download failed', error)
     setState({
       ...state,
@@ -137,7 +154,8 @@ export async function checkForUpdates(): Promise<UpdateState> {
     state.status === 'checking' ||
     state.status === 'available' ||
     state.status === 'downloading' ||
-    state.status === 'downloaded'
+    state.status === 'downloaded' ||
+    state.status === 'installing'
   ) {
     return state
   }
@@ -158,11 +176,72 @@ export async function checkForUpdates(): Promise<UpdateState> {
 }
 
 export async function installUpdate(): Promise<void> {
-  if (state.status !== 'downloaded') {
+  if (installTriggered) return
+  if (state.status !== 'downloaded' && state.status !== 'installing') {
     throw new Error('The update is still downloading. Try again when it is ready.')
   }
+  installTriggered = true
+  clearAutoInstallTimer()
+  setState({
+    ...state,
+    status: 'installing',
+    percent: 100,
+    message: 'Restarting Newbie Launcher to install the update…'
+  })
   logger.info('updater', `Restarting to install ${state.version ?? 'the update'}`)
-  autoUpdater.quitAndInstall(false, true)
+  try {
+    // The installer runs after this process exits. Stop local servers first so
+    // the installer never has to prompt about a running application.
+    await stopAllServers()
+    autoUpdater.quitAndInstall(true, true)
+  } catch (error) {
+    installTriggered = false
+    setState({
+      ...state,
+      status: 'downloaded',
+      message: describeUpdateError(error)
+    })
+    throw error
+  }
+}
+
+function installBlocker(): ReturnType<typeof updateInstallBlocker> {
+  return updateInstallBlocker({
+    runningServers: runningServerIds().length,
+    activeInstances: hasActiveInstances(),
+    activeTasks: tasks.hasActive()
+  })
+}
+
+function clearAutoInstallTimer(): void {
+  if (autoInstallTimer) {
+    clearTimeout(autoInstallTimer)
+    autoInstallTimer = null
+  }
+}
+
+function scheduleAutoInstall(delay = AUTO_INSTALL_DELAY_MS): void {
+  if (!app.isPackaged || installTriggered) return
+  clearAutoInstallTimer()
+  autoInstallTimer = setTimeout(() => {
+    autoInstallTimer = null
+    attemptAutoInstall()
+  }, delay)
+  autoInstallTimer.unref?.()
+}
+
+function attemptAutoInstall(): void {
+  if (state.status !== 'downloaded' || installTriggered) return
+  const blocker = installBlocker()
+  if (blocker) {
+    setState({
+      ...state,
+      message: `Update downloaded. It installs automatically when ${updateBlockerLabel(blocker)} finishes.`
+    })
+    scheduleAutoInstall(AUTO_INSTALL_RETRY_MS)
+    return
+  }
+  void installUpdate().catch((error) => logger.warn('updater', 'Automatic install failed', error))
 }
 
 /**
@@ -219,7 +298,14 @@ async function enrichReleaseNotes(version: string): Promise<void> {
 
 function applyReleaseNotes(version: string, notes: Partial<UpdateState>): void {
   if (state.version !== version) return
-  if (state.status !== 'available' && state.status !== 'downloading' && state.status !== 'downloaded') return
+  if (
+    state.status !== 'available' &&
+    state.status !== 'downloading' &&
+    state.status !== 'downloaded' &&
+    state.status !== 'installing'
+  ) {
+    return
+  }
   setState({ ...state, ...notes })
 }
 

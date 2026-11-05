@@ -71,8 +71,16 @@ export function UpdatePanel({ autoCheckUpdates, allowPrerelease, onSave }: Updat
     }
   }
 
-  const busy = update.status === 'checking' || update.status === 'available' || update.status === 'downloading'
-  const hasUpdate = update.status === 'available' || update.status === 'downloading' || update.status === 'downloaded'
+  const busy =
+    update.status === 'checking' ||
+    update.status === 'available' ||
+    update.status === 'downloading' ||
+    update.status === 'installing'
+  const hasUpdate =
+    update.status === 'available' ||
+    update.status === 'downloading' ||
+    update.status === 'downloaded' ||
+    update.status === 'installing'
   const currentVersion = update.currentVersion ?? APP_VERSION
   const releaseUrl = update.version
     ? `${GITHUB_URL}/releases/tag/v${update.version.replace(/^v/i, '')}`
@@ -92,9 +100,10 @@ export function UpdatePanel({ autoCheckUpdates, allowPrerelease, onSave }: Updat
                 v{currentVersion}
               </Badge>
               {update.status === 'downloaded' && <Badge tone="green" className="h-5 text-[9px]">Ready</Badge>}
+              {update.status === 'installing' && <Badge tone="green" className="h-5 text-[9px]">Installing</Badge>}
             </div>
             <p className="mt-0.5 text-[11px] leading-relaxed text-muted">
-              Built in and free. Newbie downloads updates from GitHub Releases in the background.
+              Built in and free. Newbie downloads updates from GitHub Releases and installs them silently.
             </p>
           </div>
         </div>
@@ -195,7 +204,7 @@ function UpdateStatus({
   const tone =
     status === 'error'
       ? 'border-danger/20 bg-danger/10 text-danger'
-      : status === 'downloaded' || status === 'none'
+      : status === 'downloaded' || status === 'installing' || status === 'none'
         ? 'border-grass/20 bg-grass/10 text-grass'
         : status === 'idle'
           ? 'border-line/60 bg-elevated text-muted'
@@ -206,6 +215,8 @@ function UpdateStatus({
       <WarningCircle size={18} />
     ) : status === 'downloaded' || status === 'none' ? (
       <CheckCircle size={18} weight="fill" />
+    ) : status === 'installing' ? (
+      <ArrowClockwise size={18} className="animate-spin" />
     ) : status === 'idle' ? (
       <DownloadSimple size={18} />
     ) : (
@@ -224,10 +235,12 @@ function UpdateStatus({
             : status === 'downloading'
               ? `Downloading version ${update.version ?? ''}`
               : status === 'downloaded'
-                ? `Version ${update.version ?? ''} is ready to install`
-                : status === 'error'
-                  ? 'Could not check for updates'
-                  : 'Updates are ready when you are'
+                ? `Version ${update.version ?? ''} downloaded`
+                : status === 'installing'
+                  ? `Installing version ${update.version ?? ''}`
+                  : status === 'error'
+                    ? 'Could not check for updates'
+                    : 'Updates are ready when you are'
 
   const description =
     status === 'checking'
@@ -237,16 +250,19 @@ function UpdateStatus({
         : status === 'none'
           ? update.message ?? `Newbie Launcher ${APP_VERSION} is the latest version.`
           : status === 'available'
-            ? 'The download starts automatically. You can keep using the launcher.'
+            ? 'The download starts automatically. When it finishes, Newbie installs it silently and restarts.'
             : status === 'downloading'
               ? `${update.percent ?? 0}% · ${formatBytes(update.transferred)} of ${formatBytes(update.total)}${
                   formatSpeed(update.bytesPerSecond) ? ` · ${formatSpeed(update.bytesPerSecond)}` : ''
                 }`
               : status === 'downloaded'
-                ? 'Restart to finish installing. Worlds, instances, accounts and settings stay exactly as they are.'
-                : status === 'error'
-                  ? update.message ?? 'The update feed could not be reached.'
-                  : 'Newbie checks GitHub Releases and installs only after you agree to restart.'
+                ? update.message ??
+                  'Newbie restarts automatically to install it. No installer prompts. Worlds, instances, accounts and settings stay exactly as they are.'
+                : status === 'installing'
+                  ? 'Restarting Newbie Launcher now. The installer runs silently, then the new version opens by itself.'
+                  : status === 'error'
+                    ? update.message ?? 'The update feed could not be reached.'
+                    : 'Newbie checks GitHub Releases and installs updates silently.'
 
   return (
     <div className="flex items-start gap-3.5">
@@ -268,7 +284,7 @@ function UpdateStatus({
               onClick={() => void onInstall()}
               icon={<ArrowClockwise size={14} />}
             >
-              Restart and install
+              Install now
             </Button>
           )}
           {status === 'error' && (
