@@ -61,7 +61,7 @@ export function InstancesPage() {
               onClick={() => void importPack()}
               icon={<DownloadSimple size={15} />}
             >
-              Import pack
+              Import .mrpack
             </Button>
             <Button variant="primary" onClick={() => openModal('createInstance', true)} icon={<Plus size={15} />}>
               New instance

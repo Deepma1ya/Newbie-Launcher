@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle,
   Copy,
   DownloadSimple,
   FolderOpen,
+  UploadSimple,
   UsersThree,
   WarningCircle
 } from '@phosphor-icons/react'
@@ -40,6 +42,7 @@ export function PackTransferModal({
 }) {
   const instances = useInstances().data ?? []
   const queryClient = useQueryClient()
+  const navigate = useNavigate()
   const targets = useMemo(
     () => instances.filter((instance) => instance.id !== source.id),
     [instances, source.id]
@@ -49,7 +52,7 @@ export function PackTransferModal({
   const [types, setTypes] = useState<Set<BulkAddonType>>(new Set(BULK_ADDON_TYPES))
   const [includeDisabled, setIncludeDisabled] = useState(false)
   const [replace, setReplace] = useState(false)
-  const [busy, setBusy] = useState<'export' | 'share' | 'copy' | null>(null)
+  const [busy, setBusy] = useState<'export' | 'share' | 'copy' | 'import' | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [share, setShare] = useState<PackShareInfo | null>(null)
   const [copyResult, setCopyResult] = useState<PackCopyResult | null>(null)
@@ -131,6 +134,27 @@ export function PackTransferModal({
       if (!result) return
       setExportNote(`${result.filename} · ${formatBytes(result.bytes)} · ${result.addons} add-on${result.addons === 1 ? '' : 's'}${result.skipped.length ? ` · ${result.skipped.length} skipped` : ''}`)
       toast('success', 'Modpack exported', result.filename)
+    } catch (failure) {
+      setError(errorMessage(failure))
+    } finally {
+      setBusy(null)
+    }
+  }
+
+  const importPack = async (): Promise<void> => {
+    setError(null)
+    try {
+      const file = await window.newbie.app.pickFile([
+        { name: 'Modrinth modpack', extensions: ['mrpack', 'zip'] }
+      ])
+      if (!file) return
+      setBusy('import')
+      const instance = await window.newbie.instances.importPack(file)
+      await queryClient.invalidateQueries({ queryKey: qk.instances })
+      await queryClient.invalidateQueries({ queryKey: qk.disk })
+      toast('success', 'Modpack imported', instance.name)
+      close()
+      navigate(`/instances/${instance.id}`)
     } catch (failure) {
       setError(errorMessage(failure))
     } finally {
@@ -361,7 +385,7 @@ export function PackTransferModal({
                 )}
                 <p className="mt-2 text-[10px] leading-relaxed text-muted/65">
                   Friends download the `.mrpack` in a browser, then use <strong className="text-ink/80">Import pack</strong> on
-                  the Instances page. The link is random and only serves this file. It is reachable on your LAN; internet
+                  the Instances page or in this dialog. The link is random and only serves this file. It is reachable on your LAN; internet
                   friends need port forwarding or a tunnel.
                 </p>
               </Card>
@@ -386,6 +410,30 @@ export function PackTransferModal({
                 )}
               </Card>
             )}
+            <Card className="p-4">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex items-start gap-2.5">
+                  <UploadSimple size={17} className="mt-0.5 shrink-0 text-grass" />
+                  <div>
+                    <h3 className="font-display text-[13px] font-semibold text-ink">Import a .mrpack</h3>
+                    <p className="mt-1 max-w-xl text-[10.5px] leading-relaxed text-muted">
+                      Open a pack someone shared. Newbie reads its Minecraft version and loader, creates a matching
+                      instance, then downloads the pack files. Your current instance is not changed.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  loading={busy === 'import'}
+                  disabled={booleanBusy(busy)}
+                  onClick={() => void importPack()}
+                  icon={<UploadSimple size={14} />}
+                >
+                  Choose .mrpack
+                </Button>
+              </div>
+            </Card>
           </>
         ) : (
           <>
@@ -484,6 +532,6 @@ export function PackTransferModal({
   )
 }
 
-function booleanBusy(value: 'export' | 'share' | 'copy' | null): boolean {
+function booleanBusy(value: 'export' | 'share' | 'copy' | 'import' | null): boolean {
   return value !== null
 }
