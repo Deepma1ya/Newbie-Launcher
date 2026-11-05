@@ -38,6 +38,11 @@ export default {
           '0%': { backgroundPosition: '-200% 0' },
           '100%': { backgroundPosition: '200% 0' }
         },
+        updateFill: {
+          '0%': { width: '8%' },
+          '70%': { width: '78%' },
+          '100%': { width: '92%' }
+        },
         breathe: {
           '0%, 100%': { opacity: '0.55', transform: 'scale(1)' },
           '50%': { opacity: '0.9', transform: 'scale(1.03)' }
@@ -49,6 +54,7 @@ export default {
       },
       animation: {
         shimmer: 'shimmer 2.2s linear infinite',
+        'update-fill': 'updateFill 2.8s cubic-bezier(0.2, 0.8, 0.2, 1) forwards',
         breathe: 'breathe 5s ease-in-out infinite',
         float: 'float 6s ease-in-out infinite'
       }

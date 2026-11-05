@@ -1,20 +1,20 @@
-# Newbie Launcher 0.1.27
+# Newbie Launcher 0.1.28
 
-A sectioned sidebar — plus a critical fix for the packaged app.
+Visible update progress — no more update black screen.
 
-## Sidebar sections
+## Update progress
 
-- The left sidebar is grouped into:
-  - **Minecraft Java** — Instances, Browse, Library
-  - **Minecraft Bedrock** — Bedrock
-  - **Minecraft Servers** — Servers
-  - **Launcher** — Downloads, Accounts
-- **Home** stays at the top and **Settings** stays in the footer with your account.
-- Links become slightly more compact on short windows so every section still fits; the navigation scrolls if the window is smaller than the minimum height.
+- Added a full-screen **Installing Newbie Launcher** screen with an animated progress bar.
+- The screen shows the downloaded version and the current install step.
+- Download and install progress now also appear on the Windows taskbar.
+- The launcher holds the progress screen for a few seconds before closing, then reopens automatically after the silent install.
+- The overlay explicitly says the window will close briefly, so a short pause is expected rather than mistaken for a crash.
 
-## Critical fix
+## Automatic install changes
 
-- Fixed the renderer and preload paths when Vite splits the main process into chunks. **0.1.26 could open a blank window**; 0.1.27 resolves the bundled files from the real app directory instead of the chunk directory.
-- If you are on 0.1.26, install this build manually. In-app auto-updates resume from 0.1.27 onward.
+- Automatic installation no longer waits for Minecraft, local servers or launcher tasks to finish.
+- Local servers are stopped gracefully first so their worlds save; Minecraft itself can stay open because only the launcher is replaced.
+- **Install now** shows the same progress screen and installs immediately.
+- No installer Next/Next pages are shown.
 
-Everything from 0.1.26 (bulk add-on deletion), 0.1.25 and earlier is included.
+Everything from 0.1.27 (sidebar sections and the packaged-app path fix) and earlier is included.

@@ -6,15 +6,13 @@ import { releaseNotesText } from '@shared/update'
 import { emit } from './events'
 import { logger } from '../util/log'
 import { store } from './store'
-import { hasActiveInstances } from './launch'
 import { runningServerIds, stopAllServers } from './serverProcess'
-import { tasks } from './tasks'
-import { updateBlockerLabel, updateInstallBlocker } from './updatePolicy'
+import { getMainWindow } from '../window'
 
 const INITIAL_CHECK_DELAY_MS = 8_000
 const CHECK_INTERVAL_MS = 30 * 60 * 1000
 const AUTO_INSTALL_DELAY_MS = 6_000
-const AUTO_INSTALL_RETRY_MS = 15_000
+const INSTALL_OVERLAY_MS = 3_000
 
 let state: UpdateState = { status: 'idle', currentVersion: app.getVersion() }
 let initialised = false
@@ -27,6 +25,16 @@ const releaseNotesRequests = new Map<string, Promise<void>>()
 function setState(next: UpdateState): void {
   state = { ...next, currentVersion: app.getVersion() }
   emit({ type: 'update', payload: state })
+}
+
+function taskbarProgress(value: number): void {
+  const window = getMainWindow()
+  if (!window || window.isDestroyed()) return
+  try {
+    window.setProgressBar(value)
+  } catch {
+    // Not every platform/window supports taskbar progress.
+  }
 }
 
 export function updaterState(): UpdateState {
@@ -69,15 +77,17 @@ export function initUpdater(): void {
     logger.info('updater', `Update available: ${info.version}`)
   })
 
-  autoUpdater.on('update-not-available', () =>
+  autoUpdater.on('update-not-available', () => {
+    taskbarProgress(-1)
     setState({
       status: 'none',
       lastCheckedAt: new Date().toISOString(),
       message: 'You are running the latest version.'
     })
-  )
+  })
 
-  autoUpdater.on('download-progress', (progress: ProgressInfo) =>
+  autoUpdater.on('download-progress', (progress: ProgressInfo) => {
+    taskbarProgress(Math.max(0, Math.min(1, progress.percent / 100)))
     setState({
       ...state,
       status: 'downloading',
@@ -87,28 +97,24 @@ export function initUpdater(): void {
       bytesPerSecond: progress.bytesPerSecond,
       message: `Downloading update… ${Math.round(progress.percent)}%`
     })
-  )
+  })
 
   autoUpdater.on('update-downloaded', (info: UpdateInfo) => {
-    const blocker = installBlocker()
+    taskbarProgress(1)
     setState({
       ...state,
       status: 'downloaded',
       version: info.version,
       percent: 100,
       lastCheckedAt: new Date().toISOString(),
-      message: blocker
-        ? `Update downloaded. It installs automatically when ${updateBlockerLabel(blocker)} finishes.`
-        : 'Update downloaded. Restarting automatically to install it…'
+      message: 'Update downloaded. Restarting automatically to install it…'
     })
     emit({
       type: 'toast',
       payload: {
         kind: 'success',
         title: `Update ${info.version} downloaded`,
-        message: blocker
-          ? 'It will install automatically once Minecraft and servers are closed.'
-          : 'Newbie restarts itself to install it silently — no installer prompts.'
+        message: 'Newbie restarts itself in a moment to install it silently — no installer prompts.'
       }
     })
     logger.info('updater', `Update downloaded: ${info.version}`)
@@ -118,6 +124,7 @@ export function initUpdater(): void {
   autoUpdater.on('error', (error: Error) => {
     clearAutoInstallTimer()
     installTriggered = false
+    taskbarProgress(-1)
     logger.warn('updater', 'Update check/download failed', error)
     setState({
       ...state,
@@ -182,20 +189,36 @@ export async function installUpdate(): Promise<void> {
   }
   installTriggered = true
   clearAutoInstallTimer()
+  taskbarProgress(2)
   setState({
     ...state,
     status: 'installing',
     percent: 100,
-    message: 'Restarting Newbie Launcher to install the update…'
+    message: 'Preparing the silent installer…'
   })
   logger.info('updater', `Restarting to install ${state.version ?? 'the update'}`)
   try {
-    // The installer runs after this process exits. Stop local servers first so
-    // the installer never has to prompt about a running application.
-    await stopAllServers()
+    if (runningServerIds().length > 0) {
+      setState({
+        ...state,
+        status: 'installing',
+        percent: 100,
+        message: 'Stopping local servers before installing…'
+      })
+      await stopAllServers()
+    }
+    setState({
+      ...state,
+      status: 'installing',
+      percent: 100,
+      message: 'Installing update… Newbie Launcher will reopen automatically.'
+    })
+    // Give the renderer time to paint the update screen before the window closes.
+    await new Promise<void>((resolve) => setTimeout(resolve, INSTALL_OVERLAY_MS))
     autoUpdater.quitAndInstall(true, true)
   } catch (error) {
     installTriggered = false
+    taskbarProgress(-1)
     setState({
       ...state,
       status: 'downloaded',
@@ -203,14 +226,6 @@ export async function installUpdate(): Promise<void> {
     })
     throw error
   }
-}
-
-function installBlocker(): ReturnType<typeof updateInstallBlocker> {
-  return updateInstallBlocker({
-    runningServers: runningServerIds().length,
-    activeInstances: hasActiveInstances(),
-    activeTasks: tasks.hasActive()
-  })
 }
 
 function clearAutoInstallTimer(): void {
@@ -225,23 +240,10 @@ function scheduleAutoInstall(delay = AUTO_INSTALL_DELAY_MS): void {
   clearAutoInstallTimer()
   autoInstallTimer = setTimeout(() => {
     autoInstallTimer = null
-    attemptAutoInstall()
+    if (state.status !== 'downloaded' || installTriggered) return
+    void installUpdate().catch((error) => logger.warn('updater', 'Automatic install failed', error))
   }, delay)
   autoInstallTimer.unref?.()
-}
-
-function attemptAutoInstall(): void {
-  if (state.status !== 'downloaded' || installTriggered) return
-  const blocker = installBlocker()
-  if (blocker) {
-    setState({
-      ...state,
-      message: `Update downloaded. It installs automatically when ${updateBlockerLabel(blocker)} finishes.`
-    })
-    scheduleAutoInstall(AUTO_INSTALL_RETRY_MS)
-    return
-  }
-  void installUpdate().catch((error) => logger.warn('updater', 'Automatic install failed', error))
 }
 
 /**

@@ -22,6 +22,7 @@ import { AddAccountModal } from './components/modals/AddAccountModal'
 import { ModDetailModal } from './components/modals/ModDetailModal'
 import { LoadoutModal } from './components/modals/LoadoutModal'
 import { RepairModal } from './components/modals/RepairModal'
+import { UpdateOverlay } from './components/UpdateOverlay'
 import { Onboarding } from './components/Onboarding'
 
 export default function App() {
@@ -114,6 +115,7 @@ export default function App() {
           </motion.div>
         </AnimatePresence>
       </AppShell>
+      <UpdateOverlay />
       <CreateInstanceModal />
       <AddAccountModal />
       <ModDetailModal />

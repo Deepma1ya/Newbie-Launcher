@@ -58,8 +58,8 @@ Newbie updates itself through the public GitHub Releases feed. There is no updat
 - **Settings → About → Launcher updates** shows the installed version, update status, live download progress and speed, and release notes.
 - Automatic checks run shortly after launch and every 30 minutes. You can turn them off or enable the beta channel in the same panel.
 - Downloads happen in the background from GitHub. The installer is verifiable against the SHA-512 in `latest.yml`.
-- **Silent, automatic installation.** When a download finishes, Newbie restarts itself and runs the installer with no Next/Next pages. If Minecraft, a local server or a launcher task is still running, installation waits until that finishes. The updated launcher opens again by itself.
-- **Install now** is available if you do not want to wait for an active game, server or task to finish. Fresh installs still let you choose the installation folder; updates never show the installer wizard.
+- **Silent, automatic installation.** When a download finishes, Newbie shows a full-screen update progress screen, stops any local servers gracefully, restarts itself and runs the installer with no Next/Next pages. Minecraft can stay open; the installer only replaces the launcher. The updated launcher opens again by itself.
+- **Install now** starts that progress screen and silent install immediately. Fresh installs still let you choose the installation folder; updates never show the installer wizard.
 - Worlds, instances, accounts, servers and settings are untouched.
 - The sidebar version chip and the in-app banner show when an update is available or ready to install.
 
@@ -191,7 +191,7 @@ docs/                architecture notes and the TLauncher investigation
 - Minecraft stdout is Log4j XML on modern versions; Newbie parses it back into readable console lines.
 - Temporary game process access tokens are redacted from log files.
 - Forge/NeoForge installer output is captured and surfaced if the installer fails.
-- Launcher updates run the NSIS installer with `/S`, so updates never show installer pages. The restart is deferred while Minecraft, a local server or a launcher task is active.
+- Launcher updates run the NSIS installer with `/S`, so updates never show installer pages. Download and install progress appear in the taskbar, and a full-screen progress screen is shown before the launcher restarts.
 - Server installers run with a relative install directory so data folders containing spaces work; Quilt installs are checked for a real launch jar instead of silently doing nothing.
 - Server add-on updates replace only the add-on files, preserve disabled state and resolve required Modrinth dependencies.
 - World and repair backups use streaming ZIP and are pruned by age/size.

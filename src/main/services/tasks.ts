@@ -97,10 +97,6 @@ class TaskManager {
     return [...live, ...persisted].slice(0, 60)
   }
 
-  hasActive(): boolean {
-    return [...this.tasks.values()].some((task) => task.status === 'running')
-  }
-
   private emitTask(task: TaskRecord): void {
     emit({ type: 'task', payload: { ...task } })
   }
