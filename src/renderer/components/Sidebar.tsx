@@ -8,7 +8,9 @@ import {
   SquaresFour,
   UserCircle
 } from '@phosphor-icons/react'
+import { APP_VERSION } from '@shared/constants'
 import { useAccounts } from '../hooks/queries'
+import { useUi } from '../store/ui'
 import { cn } from '../lib/utils'
 import { SkinFace } from './ui/BlockIcon'
 import { Tooltip } from './ui/primitives'
@@ -25,6 +27,8 @@ const nav = [
 export function Sidebar() {
   const accounts = useAccounts().data ?? []
   const active = accounts.find((account) => account.active) ?? accounts[0]
+  const update = useUi((state) => state.update)
+  const updateReady = update.status === 'available' || update.status === 'downloading' || update.status === 'downloaded'
 
   return (
     <aside className="relative z-30 flex w-[218px] shrink-0 flex-col border-r border-line/40 bg-surface/45 px-3 pb-3 pt-5">
@@ -108,7 +112,30 @@ export function Sidebar() {
               Settings
             </NavLink>
           </Tooltip>
-          <span className="px-2 font-mono text-[9px] text-muted/40">v0.1</span>
+          <Tooltip
+            label={
+              update.status === 'downloaded'
+                ? 'Update ready to install'
+                : updateReady
+                  ? 'Update available'
+                  : 'Launcher version'
+            }
+          >
+            <NavLink
+              to="/settings?section=about"
+              className="relative rounded-md px-2 py-1 font-mono text-[9px] text-muted/40 transition-colors hover:bg-white/[0.035] hover:text-muted"
+            >
+              v{update.currentVersion ?? APP_VERSION}
+              {updateReady && (
+                <span
+                  className={cn(
+                    'absolute right-0 top-0 h-1.5 w-1.5 rounded-full',
+                    update.status === 'downloaded' ? 'bg-grass' : 'bg-gold'
+                  )}
+                />
+              )}
+            </NavLink>
+          </Tooltip>
         </div>
       </div>
     </aside>

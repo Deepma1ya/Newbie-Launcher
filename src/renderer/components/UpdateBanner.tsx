@@ -1,5 +1,7 @@
 import { useState } from 'react'
-import { ArrowClockwise, CheckCircle, DownloadSimple } from '@phosphor-icons/react'
+import { useNavigate } from 'react-router-dom'
+import { ArrowClockwise, ArrowRight, CheckCircle, DownloadSimple } from '@phosphor-icons/react'
+import { formatBytes, formatSpeed } from '@shared/update'
 import { useUi } from '../store/ui'
 import { Button } from './ui/Button'
 import { Progress } from './ui/primitives'
@@ -7,6 +9,7 @@ import { Progress } from './ui/primitives'
 export function UpdateBanner() {
   const update = useUi((state) => state.update)
   const [installing, setInstalling] = useState(false)
+  const navigate = useNavigate()
 
   if (update.status !== 'available' && update.status !== 'downloading' && update.status !== 'downloaded') {
     return null
@@ -19,6 +22,10 @@ export function UpdateBanner() {
     } catch {
       setInstalling(false)
     }
+  }
+
+  const details = (): void => {
+    navigate('/settings?section=about')
   }
 
   return (
@@ -36,20 +43,25 @@ export function UpdateBanner() {
         </div>
         <div className="mt-0.5 text-[10.5px] text-muted">
           {update.status === 'downloaded'
-            ? 'It will install when you close the launcher, or restart now.'
+            ? 'It will install when you close the launcher, or restart now. Your worlds and settings stay as they are.'
             : update.status === 'downloading'
-              ? `${update.percent ?? 0}% downloaded in the background.`
+              ? `${update.percent ?? 0}% · ${formatBytes(update.transferred)} of ${formatBytes(update.total)}${
+                  formatSpeed(update.bytesPerSecond) ? ` · ${formatSpeed(update.bytesPerSecond)}` : ''
+                }`
               : 'The update is being prepared in the background.'}
         </div>
-        {update.status === 'downloading' && (
-          <Progress value={update.percent ?? 0} className="mt-2 h-1" />
+        {update.status === 'downloading' && <Progress value={update.percent ?? 0} className="mt-2 h-1" />}
+      </div>
+      <div className="flex items-center gap-1.5">
+        <Button variant="ghost" size="sm" onClick={details} iconRight={<ArrowRight size={13} />}>
+          Details
+        </Button>
+        {update.status === 'downloaded' && (
+          <Button variant="primary" size="sm" loading={installing} onClick={() => void install()} icon={<ArrowClockwise size={14} />}>
+            Restart and update
+          </Button>
         )}
       </div>
-      {update.status === 'downloaded' && (
-        <Button variant="primary" size="sm" loading={installing} onClick={() => void install()} icon={<ArrowClockwise size={14} />}>
-          Restart and update
-        </Button>
-      )}
     </div>
   )
 }

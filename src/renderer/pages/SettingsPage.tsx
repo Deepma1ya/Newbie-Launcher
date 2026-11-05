@@ -19,9 +19,10 @@ import {
 import type { PerformanceProfile } from '@shared/types'
 import { APP_VERSION, GITHUB_URL } from '@shared/constants'
 import { useDiskUsage, useJavaRuntimes, useSettings, useSystemInfo, qk } from '../hooks/queries'
-import { useUi, toast } from '../store/ui'
+import { toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
 import { PageHeader } from '../components/PageHeader'
+import { UpdatePanel } from '../components/UpdatePanel'
 import { Badge, Card, Field, Input, Progress, Segmented, Select, Switch } from '../components/ui/primitives'
 import { Button } from '../components/ui/Button'
 
@@ -138,18 +139,6 @@ export function SettingsPage() {
                   onChange={(checked) => void save({ minimizeOnLaunch: checked })}
                   label="Minimize when Minecraft starts"
                   description="Get out of the way after the game process is launched."
-                />
-                <Switch
-                  checked={settings.autoCheckUpdates}
-                  onChange={(checked) => void save({ autoCheckUpdates: checked })}
-                  label="Automatically check for launcher updates"
-                  description="Checks GitHub releases a few seconds after startup."
-                />
-                <Switch
-                  checked={settings.allowPrerelease}
-                  onChange={(checked) => void save({ allowPrerelease: checked })}
-                  label="Allow prerelease builds"
-                  description="Receive beta launcher builds from GitHub. Not recommended for daily use."
                 />
                 <div className="flex items-center justify-between gap-3 border-t border-line/40 pt-4">
                   <div>
@@ -487,27 +476,14 @@ function BackupsSection() {
 function AboutSection() {
   const settings = useSettings().data!
   const system = useSystemInfo().data
-  const update = useUi((state) => state.update)
-  const [checking, setChecking] = useState(false)
-  const [installing, setInstalling] = useState(false)
+  const queryClient = useQueryClient()
 
-  const check = async (): Promise<void> => {
-    setChecking(true)
+  const save = async (patch: Parameters<typeof window.newbie.settings.update>[0]): Promise<void> => {
     try {
-      const result = await window.newbie.updater.check()
-      toast(result.status === 'available' ? 'info' : result.status === 'error' ? 'error' : 'success', 'Launcher update', result.message)
-    } finally {
-      setChecking(false)
-    }
-  }
-
-  const install = async (): Promise<void> => {
-    setInstalling(true)
-    try {
-      await window.newbie.updater.install()
+      await window.newbie.settings.update(patch)
+      await queryClient.invalidateQueries({ queryKey: qk.settings })
     } catch (error) {
-      toast('error', 'Update failed', errorMessage(error))
-      setInstalling(false)
+      toast('error', 'Could not save settings', errorMessage(error))
     }
   }
 
@@ -524,28 +500,22 @@ function AboutSection() {
               <Badge tone="neutral">Modrinth</Badge>
             </div>
           </div>
-          <div className="text-right">
-            <div className="text-[10px] uppercase tracking-[0.1em] text-muted/60">Updates</div>
-            <div className="mt-1 text-[12px] font-medium text-ink">
-              {update.status === 'available' ? `v${update.version} available` : update.status === 'downloaded' ? 'Ready to restart' : 'Up to date'}
-            </div>
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="secondary" size="sm" onClick={() => void window.newbie.app.openExternal(GITHUB_URL)} icon={<ArrowSquareOut size={14} />}>
+              GitHub
+            </Button>
+            <Button variant="ghost" size="sm" onClick={() => void window.newbie.app.openExternal(`${GITHUB_URL}/issues`)}>
+              Report an issue
+            </Button>
           </div>
         </div>
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Button variant="primary" size="sm" loading={checking} onClick={() => void check()} icon={<Sparkle size={14} />}>
-            Check for updates
-          </Button>
-          {update.status === 'downloaded' && (
-            <Button variant="secondary" size="sm" loading={installing} onClick={() => void install()}>Restart and install</Button>
-          )}
-          <Button variant="secondary" size="sm" onClick={() => void window.newbie.app.openExternal(GITHUB_URL)} icon={<ArrowSquareOut size={14} />}>
-            GitHub
-          </Button>
-          <Button variant="ghost" size="sm" onClick={() => void window.newbie.app.openExternal(`${GITHUB_URL}/issues`)}>
-            Report an issue
-          </Button>
-        </div>
       </Card>
+
+      <UpdatePanel
+        autoCheckUpdates={settings.autoCheckUpdates}
+        allowPrerelease={settings.allowPrerelease}
+        onSave={save}
+      />
 
       <Card className="p-5">
         <h2 className="font-display text-[14px] font-semibold text-ink">System</h2>

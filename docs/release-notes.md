@@ -1,13 +1,28 @@
-# Newbie Launcher 0.1.8
+# Newbie Launcher 0.1.9
 
-Account page organization.
+A complete built-in update center.
 
-## Changed
+## Added
 
-- The four large account-type cards are now one compact **Add another account** panel.
-- Each account type is a single clickable row with an icon, short description and badge.
-- Removed the repeated “Add account →” links.
-- Moved the account-switching explanation into the panel footer.
-- The no-accounts screen now uses one primary CTA plus the same organized type list instead of duplicating actions.
+- **Settings → About → Launcher updates** now shows the installed version, update status, live download progress, transfer speed, and release notes.
+- **What's new** displays the matching GitHub release notes before you restart.
+- The sidebar version chip shows an update dot and links directly to the update panel.
+- The update banner now shows downloaded size and speed, plus a **Details** button.
+- **Restart and install** is available from both the banner and the update panel.
 
-Everything from 0.1.7 (unclipped card menus) and 0.1.6 (custom offline skins) is included.
+## Improved
+
+- Update checks now follow the saved automatic-update setting at runtime instead of only when the launcher starts.
+- Release notes are fetched from the public GitHub Releases API and cached per version.
+- Clear messages for offline and missing-feed errors.
+- Update-available notifications are emitted once instead of repeating.
+- Stable/beta channel and automatic update checks are organized in the update panel.
+
+## Free
+
+Updates use GitHub Releases and `electron-updater`. There is no update server, subscription, or account involved.
+
+## Notes
+
+- Builds older than 0.1.5 only notify about updates; 0.1.5 and newer download in the background.
+- Everything from 0.1.8 (organized account panel), 0.1.7 (unclipped menus) and 0.1.6 (custom offline skins) is included.

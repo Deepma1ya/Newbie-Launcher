@@ -431,8 +431,18 @@ export interface MicrosoftAuthState {
 
 export interface UpdateState {
   status: 'idle' | 'checking' | 'available' | 'none' | 'downloading' | 'downloaded' | 'error'
+  /** Installed launcher version. */
+  currentVersion?: string
+  /** Version offered by GitHub, when there is one. */
   version?: string
   percent?: number
+  transferred?: number
+  total?: number
+  bytesPerSecond?: number
+  releaseName?: string
+  releaseNotes?: string
+  releaseDate?: string
+  lastCheckedAt?: string
   message?: string
 }
 

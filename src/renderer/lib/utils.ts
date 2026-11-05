@@ -1,13 +1,7 @@
+export { formatBytes } from '@shared/update'
+
 export function cn(...values: (string | false | null | undefined)[]): string {
   return values.filter(Boolean).join(' ')
-}
-
-export function formatBytes(bytes: number): string {
-  if (!Number.isFinite(bytes) || bytes <= 0) return '0 B'
-  const units = ['B', 'KB', 'MB', 'GB', 'TB']
-  const index = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)))
-  const value = bytes / 1024 ** index
-  return `${value.toFixed(value >= 100 ? 0 : value >= 10 ? 1 : 2)} ${units[index]}`
 }
 
 export function formatNumber(value: number): string {

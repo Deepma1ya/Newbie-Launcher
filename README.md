@@ -14,7 +14,11 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 
 - Windows 10/11, x64
 - Per-user install; the installer lets you choose the install folder
-- In-app auto-updates: checks at startup and every 30 minutes, downloads in the background, installs when you quit, and offers a restart banner when ready
+- Built-in auto-updates over the public GitHub Releases feed — no update server, account or paid service. Checks at startup and every 30 minutes, downloads in the background with live progress, shows release notes, and installs when you quit or when you choose **Restart and install**.
+
+<p align="center">
+  <img src="docs/images/updates.png" alt="Built-in update center with download progress and release notes" width="900" />
+</p>
 
 ## What it does
 
@@ -28,6 +32,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
 | **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
 | **Repair** | Duplicate mods, wrong-loader jars, incompatible mods, missing dependencies and missing files — one-click safe fixes with a backup first |
+| **Launcher updates** | Built-in updater over free GitHub Releases: background download, live progress and speed, release notes, restart-and-install, stable or beta channel |
 | **Backups** | World ZIPs before launch, with retention and size limits |
 | **Performance** | Balanced/FPS/Quality profiles written to `options.txt`, plus the Windows high-performance GPU preference for Java |
 | **Comfort** | Custom install location, close-to-tray, live console, crash hints, auto-updater |
@@ -36,6 +41,16 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
   <img src="docs/images/browse.png" alt="Modrinth browsing" width="450" />
   <img src="docs/images/mod-detail.png" alt="Mod detail and dependency-aware install" width="450" />
 </p>
+
+## Updates
+
+Newbie updates itself through the public GitHub Releases feed. There is no update server to run and no account or paid service involved.
+
+- **Settings → About → Launcher updates** shows the installed version, update status, live download progress and speed, and release notes.
+- Automatic checks run shortly after launch and every 30 minutes. You can turn them off or enable the beta channel in the same panel.
+- Downloads happen in the background from GitHub. The installer is verifiable against the SHA-512 in `latest.yml`.
+- Choose **Restart and install** when ready, or let the update install when you close the launcher. Worlds, instances, accounts and settings are untouched.
+- The sidebar version chip and the in-app banner show when an update is available or ready to install.
 
 ## Accounts, honestly
 

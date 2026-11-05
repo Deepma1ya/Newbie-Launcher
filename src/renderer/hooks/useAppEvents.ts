@@ -43,15 +43,14 @@ export function useAppEvents(): void {
             toast('error', 'Microsoft sign-in failed', event.payload.message)
           }
           break
-        case 'update':
+        case 'update': {
+          const previous = useUi.getState().update.status
           ui.setUpdate(event.payload)
-          if (event.payload.status === 'available') {
+          if (event.payload.status === 'available' && previous !== 'available' && previous !== 'downloading') {
             toast('info', 'Update available', event.payload.message)
           }
-          if (event.payload.status === 'downloaded') {
-            toast('success', 'Update ready', event.payload.message)
-          }
           break
+        }
         case 'toast':
           toast(event.payload.kind, event.payload.title, event.payload.message)
           break
