@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   ShieldWarning,
   Trash,
+  FolderOpen,
   WarningCircle,
   WindowsLogo,
   X
@@ -31,6 +32,7 @@ export function BedrockPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [busyId, setBusyId] = useState<string | null>(null)
+  const [uninstalling, setUninstalling] = useState<BedrockChannel | null>(null)
   const [launching, setLaunching] = useState<BedrockChannel | null>(null)
   const [excluding, setExcluding] = useState(false)
   const [channel, setChannel] = useState<BedrockChannel>('release')
@@ -239,6 +241,35 @@ export function BedrockPage() {
     })
   }
 
+  const uninstall = (installation: BedrockState['installations'][number], displayVersion: string): void => {
+    const label = installation.channel === 'preview' ? 'Minecraft Preview' : 'Minecraft for Windows'
+    askConfirm({
+      title: `Uninstall ${label}?`,
+      description: `${label} ${displayVersion} will be removed from Windows. Your worlds, Marketplace content and settings are preserved.`,
+      body: 'You can install it again from this page at any time. Close Minecraft before uninstalling.',
+      confirmLabel: 'Uninstall',
+      danger: true,
+      action: async () => {
+        setUninstalling(installation.channel)
+        try {
+          const next = await window.newbie.bedrock.uninstall(installation.channel)
+          setState(next)
+          toast('success', `${label} uninstalled`, 'Your worlds and settings were preserved.')
+        } finally {
+          setUninstalling(null)
+        }
+      }
+    })
+  }
+
+  const openFolder = async (installation: BedrockState['installations'][number]): Promise<void> => {
+    try {
+      await window.newbie.bedrock.openFolder(installation.channel)
+    } catch (failure) {
+      toast('error', 'Could not open the Bedrock folder', errorMessage(failure))
+    }
+  }
+
   const refreshCatalog = async (): Promise<void> => {
     setRefreshing(true)
     try {
@@ -343,22 +374,27 @@ export function BedrockPage() {
       <div className="space-y-4">
         {installations.length > 0 ? (
           <div className={installations.length > 1 ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3'}>
-            {installations.map((installation) => (
-              <InstalledCard
-                key={installation.packageFullName}
-                installation={installation}
-                displayVersion={
-                  versions.find(
-                    (entry) =>
-                      entry.channel === installation.channel &&
-                      entry.packageVersion.toLowerCase() === installation.packageVersion.toLowerCase()
-                  )?.version ?? installation.version
-                }
-                launching={launching === installation.channel}
-                disabled={Boolean(busyId)}
-                onLaunch={() => void launch(installation.channel)}
-              />
-            ))}
+            {installations.map((installation) => {
+              const displayVersion =
+                versions.find(
+                  (entry) =>
+                    entry.channel === installation.channel &&
+                    entry.packageVersion.toLowerCase() === installation.packageVersion.toLowerCase()
+                )?.version ?? installation.version
+              return (
+                <InstalledCard
+                  key={installation.packageFullName}
+                  installation={installation}
+                  displayVersion={displayVersion}
+                  launching={launching === installation.channel}
+                  uninstalling={uninstalling === installation.channel}
+                  disabled={Boolean(busyId) || Boolean(uninstalling)}
+                  onLaunch={() => void launch(installation.channel)}
+                  onFolder={() => void openFolder(installation)}
+                  onUninstall={() => uninstall(installation, displayVersion)}
+                />
+              )
+            })}
           </div>
         ) : (
           <Card className="flex flex-wrap items-center gap-4 p-5">
@@ -491,14 +527,20 @@ function InstalledCard({
   installation,
   displayVersion,
   launching,
+  uninstalling,
   disabled,
-  onLaunch
+  onLaunch,
+  onFolder,
+  onUninstall
 }: {
   installation: BedrockState['installations'][number]
   displayVersion: string
   launching: boolean
+  uninstalling: boolean
   disabled: boolean
   onLaunch: () => void
+  onFolder: () => void
+  onUninstall: () => void
 }) {
   return (
     <Card className="p-4">
@@ -521,6 +563,12 @@ function InstalledCard({
           <p className="mt-0.5 text-[10.5px] text-muted">
             Version {displayVersion} · {installation.channel === 'preview' ? 'Preview' : 'Release'} channel
           </p>
+          <p
+            className="mt-1 truncate font-mono text-[9px] text-muted/45"
+            title={installation.installLocation || undefined}
+          >
+            {installation.installLocation || 'Install location unavailable'}
+          </p>
           <div className="mt-3 flex flex-wrap gap-2">
             <Button
               size="sm"
@@ -535,10 +583,31 @@ function InstalledCard({
             <Button
               size="sm"
               variant="ghost"
+              disabled={disabled}
+              onClick={onFolder}
+              icon={<FolderOpen size={13} />}
+            >
+              Folder
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
               onClick={() => void window.newbie.app.openExternal(BEDROCK_STORE_WEB_URL)}
               icon={<ArrowSquareOut size={13} />}
             >
               Store
+            </Button>
+            <Button
+              size="sm"
+              variant="ghost"
+              loading={uninstalling}
+              disabled={installation.running || disabled}
+              onClick={onUninstall}
+              icon={<Trash size={13} />}
+              className="text-danger/80 hover:bg-danger/10 hover:text-danger"
+              title={installation.running ? 'Close Minecraft before uninstalling' : undefined}
+            >
+              {uninstalling ? 'Uninstalling…' : 'Uninstall'}
             </Button>
           </div>
         </div>

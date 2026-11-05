@@ -71,6 +71,7 @@ The **Bedrock** page downloads and launches Minecraft for Windows separately fro
 - Downloads the full Microsoft-signed GDK package with progress, resume and cancel.
 - Installs through Windows/Gaming Services with `Add-AppxPackage`. A different version replaces the installed package; Windows preserves worlds and settings.
 - Launches the installed package through its real Windows app identity.
+- Manage installed release/preview packages directly: **Folder** opens the package install location (falling back to the game data folder when Windows protects `WindowsApps`), and **Uninstall** removes only the selected channel while preserving worlds, Marketplace content and settings.
 - Requires a Microsoft account with **Minecraft for Windows** or **Game Pass**. The full package is listed; the in-game 90-minute trial still applies if the account does not own the game. Newbie does not bypass licensing.
 - Bedrock is not moddable. Modrinth, loadouts, shaders and repair are Java-only.
 

@@ -153,8 +153,10 @@ export const IPC = {
   bedrockDownload: 'bedrock:download',
   bedrockCancel: 'bedrock:cancel',
   bedrockInstall: 'bedrock:install',
+  bedrockUninstall: 'bedrock:uninstall',
   bedrockLaunch: 'bedrock:launch',
   bedrockDelete: 'bedrock:delete',
+  bedrockOpenFolder: 'bedrock:open-folder',
   bedrockAddExclusion: 'bedrock:add-exclusion'
 } as const
 
@@ -310,8 +312,10 @@ export interface NewbieApi {
     download(id: string): Promise<void>
     cancel(id: string): Promise<boolean>
     install(id: string, replaceInstalled?: boolean): Promise<BedrockState>
+    uninstall(channel: BedrockChannel): Promise<BedrockState>
     launch(channel: BedrockChannel): Promise<void>
     delete(id: string): Promise<void>
+    openFolder(channel: BedrockChannel): Promise<void>
     addExclusion(): Promise<BedrockExclusionResult>
   }
 }

@@ -142,8 +142,10 @@ const api: NewbieApi = {
     download: (id) => ipcRenderer.invoke(IPC.bedrockDownload, id),
     cancel: (id) => ipcRenderer.invoke(IPC.bedrockCancel, id),
     install: (id, replaceInstalled) => ipcRenderer.invoke(IPC.bedrockInstall, id, replaceInstalled),
+    uninstall: (channel) => ipcRenderer.invoke(IPC.bedrockUninstall, channel),
     launch: (channel) => ipcRenderer.invoke(IPC.bedrockLaunch, channel),
     delete: (id) => ipcRenderer.invoke(IPC.bedrockDelete, id),
+    openFolder: (channel) => ipcRenderer.invoke(IPC.bedrockOpenFolder, channel),
     addExclusion: () => ipcRenderer.invoke(IPC.bedrockAddExclusion)
   }
 }

@@ -107,7 +107,9 @@ import {
   downloadBedrockVersion,
   getBedrockState,
   installBedrockVersion,
-  launchBedrock
+  launchBedrock,
+  openBedrockInstallFolder,
+  uninstallBedrockVersion
 } from './services/bedrock'
 import { addOfflineAccount } from './auth/offline'
 import { addTLauncherAccount, refreshTLauncherAccount } from './auth/tlauncher'
@@ -789,10 +791,16 @@ export function registerIpc(): void {
       z.boolean().optional().parse(replaceInstalled) ?? false
     )
   )
+  ipcMain.handle(IPC.bedrockUninstall, (_event, channel: unknown) =>
+    uninstallBedrockVersion(bedrockChannelSchema.parse(channel))
+  )
   ipcMain.handle(IPC.bedrockLaunch, (_event, channel: unknown) =>
     launchBedrock(bedrockChannelSchema.parse(channel))
   )
   ipcMain.handle(IPC.bedrockDelete, (_event, id: unknown) => deleteBedrockDownload(bedrockIdSchema.parse(id)))
+  ipcMain.handle(IPC.bedrockOpenFolder, (_event, channel: unknown) =>
+    openBedrockInstallFolder(bedrockChannelSchema.parse(channel))
+  )
   ipcMain.handle(IPC.bedrockAddExclusion, () => addBedrockExclusion())
 
   nativeTheme.themeSource = 'dark'

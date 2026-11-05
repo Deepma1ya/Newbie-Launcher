@@ -1,5 +1,6 @@
 import path from 'node:path'
 import os from 'node:os'
+import { shell } from 'electron'
 import { execFile } from 'node:child_process'
 import { promises as fs } from 'node:fs'
 import { promisify } from 'node:util'
@@ -519,11 +520,65 @@ async function addBedrockPackage(file: string): Promise<void> {
   throw new Error(`Windows could not install that Bedrock package. ${message}`)
 }
 
-async function removeBedrockPackage(packageFullName: string): Promise<void> {
+async function removeBedrockPackage(
+  packageFullName: string,
+  action: 'replace' | 'uninstall' = 'replace'
+): Promise<void> {
   const script = `Remove-AppxPackage -Package '${escapePowerShell(packageFullName)}' -PreserveApplicationData -ErrorAction Stop`
   const result = await runPowerShell(script, 5 * 60 * 1000)
   if (result.code === 0) return
-  throw new Error(`Windows could not replace the installed Bedrock package. ${cleanPowerShellError(result)}`)
+  throw new Error(
+    `Windows could not ${
+      action === 'uninstall' ? 'uninstall' : 'replace'
+    } the installed Bedrock package. ${cleanPowerShellError(result)}`
+  )
+}
+
+export async function uninstallBedrockVersion(channel: BedrockChannel): Promise<BedrockState> {
+  const installations = await detectBedrockInstallations()
+  const target = installations.find((entry) => entry.channel === channel)
+  if (!target) {
+    throw new Error(
+      `${channel === 'preview' ? 'Minecraft Preview' : 'Minecraft'} is not installed.`
+    )
+  }
+  if (target.running) {
+    throw new Error('Minecraft is running. Close it before uninstalling.')
+  }
+  await removeBedrockPackage(target.packageFullName, 'uninstall')
+  await waitForUninstall(channel)
+  logger.info('bedrock', `Uninstalled ${target.packageFullName}`)
+  return getBedrockState()
+}
+
+async function waitForUninstall(channel: BedrockChannel): Promise<void> {
+  for (let attempt = 0; attempt < 8; attempt += 1) {
+    const installations = await detectBedrockInstallations()
+    if (!installations.some((entry) => entry.channel === channel)) return
+    await new Promise((resolve) => setTimeout(resolve, 500))
+  }
+}
+
+export async function openBedrockInstallFolder(channel: BedrockChannel): Promise<void> {
+  const installations = await detectBedrockInstallations()
+  const target = installations.find((entry) => entry.channel === channel)
+  const dataDirs = gameDataDirs()
+  const candidates = [
+    target?.installLocation,
+    channel === 'preview' ? dataDirs[1] : dataDirs[0],
+    bedrockRoot()
+  ].filter((entry): entry is string => Boolean(entry))
+
+  for (const candidate of candidates) {
+    if (!(await pathExists(candidate))) continue
+    const error = await shell.openPath(candidate)
+    if (!error) {
+      logger.info('bedrock', `Opened ${candidate}`)
+      return
+    }
+    logger.warn('bedrock', `Could not open ${candidate}: ${error}`)
+  }
+  throw new Error('Could not open the Minecraft Bedrock folder.')
 }
 
 async function waitForInstallation(id: string, channel: BedrockChannel): Promise<BedrockInstallation | null> {
