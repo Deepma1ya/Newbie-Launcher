@@ -82,15 +82,15 @@ The **Bedrock** page downloads and launches Minecraft for Windows separately fro
 
 ### Windows Security exclusion
 
-Defender can slow down or block a 1–2 GB package. Before the first Bedrock download, Newbie asks for consent in the app, then opens a Windows UAC prompt.
+Defender can slow down or block a 1–2 GB package. Newbie asks for consent in the app, then opens a Windows UAC prompt before the first Bedrock download. Because every Bedrock version installs into a new Windows package folder, Newbie checks the exclusion again after every install and asks before the first **Play** if that new folder is not covered yet.
 
 Only these are excluded:
 
 - Newbie's own Bedrock download folder
 - The official `Microsoft.MinecraftUWP` / `Microsoft.MinecraftWindowsBeta` data folders
-- The installed Microsoft package folders
+- The currently installed Microsoft package folders
 
-Third-party DLLs, online fixes or cracks are never excluded. Newbie does not support them.
+Nothing is excluded without consent. Third-party DLLs, online fixes or cracks are never excluded. Newbie does not support them.
 
 ## Local servers
 

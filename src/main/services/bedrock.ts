@@ -21,7 +21,10 @@ import {
   BEDROCK_PREVIEW_IDENTITY,
   BEDROCK_PUBLISHER_ID,
   BEDROCK_RELEASE_IDENTITY,
-  parseBedrockCatalog
+  isDefenderUnreadableExclusion,
+  normalizeExclusionPath,
+  parseBedrockCatalog,
+  summarizeExclusion
 } from '@shared/bedrock'
 import { emit } from './events'
 import { fetchJson } from './http'
@@ -94,6 +97,24 @@ function gameDataDirs(): string[] {
     path.join(roamingAppData(), 'Minecraft Bedrock'),
     path.join(roamingAppData(), 'Minecraft Bedrock Preview')
   ]
+}
+
+/**
+ * Every Bedrock install has its own WindowsApps package folder, so the
+ * exclusion list has to be checked again after each version install.
+ */
+function requiredExclusionPaths(installations: BedrockInstallation[]): string[] {
+  const candidates = [
+    bedrockRoot(),
+    ...gameDataDirs(),
+    ...installations.map((entry) => entry.installLocation)
+  ].filter(Boolean)
+  const unique = new Map<string, string>()
+  for (const entry of candidates) {
+    const resolved = path.resolve(entry)
+    unique.set(normalizeExclusionPath(resolved), resolved)
+  }
+  return [...unique.values()]
 }
 
 function emitProgress(payload: BedrockProgress): void {
@@ -199,7 +220,15 @@ ConvertTo-Json -InputObject @($items) -Compress -Depth 4
     .filter((entry) => entry.packageFullName && entry.familyName)
 }
 
-async function detectSetup(): Promise<Omit<BedrockSetup, 'dataDir' | 'gameDataDirs'>> {
+interface SetupBase {
+  developerMode: boolean
+  gamingServices: boolean
+  windowsBuild: string
+  defenderAvailable: boolean
+  exclusionPaths: string[]
+}
+
+async function detectSetup(): Promise<SetupBase> {
   const script = `
 $dev = $false
 try {
@@ -207,22 +236,47 @@ try {
 } catch {}
 $gaming = [bool](Get-AppxPackage -Name Microsoft.GamingServices -ErrorAction SilentlyContinue)
 $build = [System.Environment]::OSVersion.Version.ToString()
-[pscustomobject]@{ developerMode = $dev; gamingServices = $gaming; windowsBuild = $build } | ConvertTo-Json -Compress
+$defenderAvailable = $false
+$exclusionPaths = @()
+try {
+  $null = Get-Command Get-MpPreference -ErrorAction Stop
+  $preference = Get-MpPreference -ErrorAction Stop
+  $defenderAvailable = $true
+  $exclusionPaths = @($preference.ExclusionPath | Where-Object { $_ })
+} catch {}
+[pscustomobject]@{ developerMode = $dev; gamingServices = $gaming; windowsBuild = $build; defenderAvailable = $defenderAvailable; exclusionPaths = $exclusionPaths } | ConvertTo-Json -Compress -Depth 4
 `
   const result = await runPowerShell(script, 60_000)
   if (result.code !== 0) {
-    return { developerMode: false, gamingServices: false, windowsBuild: '', defenderExclusion: 'unknown' }
+    return {
+      developerMode: false,
+      gamingServices: false,
+      windowsBuild: '',
+      defenderAvailable: false,
+      exclusionPaths: []
+    }
   }
   try {
     const parsed = JSON.parse(result.stdout.trim() || '{}') as Record<string, unknown>
+    const detected = Array.isArray(parsed.exclusionPaths)
+      ? parsed.exclusionPaths.filter((entry): entry is string => typeof entry === 'string')
+      : []
+    const unreadable = detected.some(isDefenderUnreadableExclusion)
     return {
       developerMode: Boolean(parsed.developerMode),
       gamingServices: Boolean(parsed.gamingServices),
       windowsBuild: String(parsed.windowsBuild ?? ''),
-      defenderExclusion: 'unknown'
+      defenderAvailable: Boolean(parsed.defenderAvailable) && !unreadable,
+      exclusionPaths: unreadable ? [] : detected
     }
   } catch {
-    return { developerMode: false, gamingServices: false, windowsBuild: '', defenderExclusion: 'unknown' }
+    return {
+      developerMode: false,
+      gamingServices: false,
+      windowsBuild: '',
+      defenderAvailable: false,
+      exclusionPaths: []
+    }
   }
 }
 
@@ -230,12 +284,19 @@ async function loadExclusionMarker(): Promise<ExclusionMarker | null> {
   return readJson<ExclusionMarker | null>(exclusionMarkerFile(), null)
 }
 
-async function getSetup(): Promise<BedrockSetup> {
+async function getSetup(installations: BedrockInstallation[]): Promise<BedrockSetup> {
   const [base, marker] = await Promise.all([detectSetup(), loadExclusionMarker()])
+  const required = requiredExclusionPaths(installations)
+  const knownExclusions = base.defenderAvailable ? base.exclusionPaths : (marker?.paths ?? [])
+  const summary = summarizeExclusion(required, knownExclusions)
   return {
-    ...base,
-    defenderExclusion: marker ? 'added' : 'unknown',
-    defenderCheckedAt: marker?.addedAt,
+    developerMode: base.developerMode,
+    gamingServices: base.gamingServices,
+    windowsBuild: base.windowsBuild,
+    defenderExclusion: (base.defenderAvailable || marker) ? summary.state : 'unknown',
+    defenderCheckedAt: base.defenderAvailable ? new Date().toISOString() : marker?.addedAt,
+    defenderExcludedPaths: summary.excluded,
+    defenderMissingPaths: summary.missing,
     dataDir: bedrockRoot(),
     gameDataDirs: gameDataDirs()
   }
@@ -308,8 +369,11 @@ async function enrichVersions(
 }
 
 export async function getBedrockState(forceRefresh = false): Promise<BedrockState> {
-  const catalog = await loadCatalog(forceRefresh)
-  const [installations, setup] = await Promise.all([detectBedrockInstallations(), getSetup()])
+  const [catalog, installations] = await Promise.all([
+    loadCatalog(forceRefresh),
+    detectBedrockInstallations()
+  ])
+  const setup = await getSetup(installations)
   return {
     setup,
     installations,
@@ -601,7 +665,7 @@ export async function installBedrockVersion(id: string, replaceInstalled = false
     throw new Error('Download this Bedrock version before installing it.')
   }
 
-  const setup = await getSetup()
+  const setup = await detectSetup()
   if (!setup.gamingServices) {
     throw new Error('Gaming Services is required to install Bedrock versions. Open the Microsoft Store and install Gaming Services.')
   }
@@ -693,13 +757,8 @@ export async function addBedrockExclusion(): Promise<BedrockExclusionResult> {
   const installations = await detectBedrockInstallations().catch(() => [])
   const dataDirs = gameDataDirs()
   await Promise.all(dataDirs.map((entry) => ensureDir(entry).catch(() => undefined)))
-  const candidates = [root, ...dataDirs, ...installations.map((entry) => entry.installLocation)]
-  const unique = [...new Set(candidates.map((entry) => path.resolve(entry)))]
-  const existing: string[] = []
-  for (const entry of unique) {
-    if (await pathExists(entry)) existing.push(entry)
-  }
-  if (existing.length === 0) existing.push(root)
+  const candidates = requiredExclusionPaths(installations)
+  const existing = candidates.length > 0 ? candidates : [root]
 
   const scriptPath = path.join(root, 'defender-exclusion.ps1')
   const resultPath = path.join(root, 'defender-exclusion-result.json')
@@ -710,21 +769,31 @@ $paths = @(${pathList})
 $kept = @()
 $failed = @()
 $current = @()
-try { $current = @((Get-MpPreference).ExclusionPath) } catch {}
+try { $current = @((Get-MpPreference).ExclusionPath | Where-Object { $_ }) } catch {}
 foreach ($item in $paths) {
-  if ($current -contains $item) {
+  $covered = $false
+  $itemNorm = $item.TrimEnd([char]92)
+  foreach ($existingPath in $current) {
+    if ([string]::IsNullOrWhiteSpace($existingPath)) { continue }
+    $existingNorm = $existingPath.TrimEnd([char]92)
+    if ($itemNorm -eq $existingNorm -or $item.StartsWith($existingNorm + [char]92, [System.StringComparison]::OrdinalIgnoreCase)) {
+      $covered = $true
+      break
+    }
+  }
+  if ($covered) {
     $kept += $item
     continue
   }
   try {
-    Add-MpPreference -ExclusionPath $item
+    Add-MpPreference -ExclusionPath $item -ErrorAction Stop
     $current += $item
     $kept += $item
   } catch {
     $failed += [pscustomobject]@{ path = $item; error = $_.Exception.Message }
   }
 }
-[pscustomobject]@{ ok = ($kept.Count -gt 0); paths = $kept; failed = $failed } | ConvertTo-Json -Compress -Depth 4 |
+[pscustomobject]@{ ok = ($failed.Count -eq 0 -and $kept.Count -gt 0); paths = $kept; failed = $failed } | ConvertTo-Json -Compress -Depth 4 |
   ForEach-Object { [System.IO.File]::WriteAllText('${escapePowerShell(resultPath)}', $_, (New-Object System.Text.UTF8Encoding($false))) }
 `
   await fs.writeFile(scriptPath, script, 'utf8')
@@ -742,7 +811,7 @@ exit $process.ExitCode
     failed?: { path?: string; error?: string }[]
     error?: string
   } | null>(resultPath, null)
-  if (!result?.ok) {
+  if (!result) {
     const output = `${run.stdout}\n${run.stderr}`
     const cancelled = run.code !== 0 && /cancel|1223/i.test(output)
     logger.warn('bedrock', 'Windows Security exclusion was not added', output)
@@ -750,23 +819,46 @@ exit $process.ExitCode
       ok: false,
       cancelled,
       paths: existing,
-      error: result?.error ?? (cancelled ? undefined : cleanPowerShellError(run))
+      error: cancelled ? undefined : cleanPowerShellError(run)
     }
   }
 
-  if (Array.isArray(result.failed) && result.failed.length > 0) {
-    logger.warn(
-      'bedrock',
-      `Some Windows Security exclusions were skipped: ${result.failed
-        .map((entry) => `${entry.path ?? 'unknown'}: ${entry.error ?? 'unknown error'}`)
-        .join('; ')}`
-    )
+  const addedPaths =
+    Array.isArray(result.paths) && result.paths.length > 0
+      ? result.paths.filter((entry): entry is string => typeof entry === 'string')
+      : []
+  if (addedPaths.length > 0) {
+    await writeJsonAtomic(exclusionMarkerFile(), {
+      addedAt: new Date().toISOString(),
+      paths: addedPaths
+    } satisfies ExclusionMarker)
+    logger.info('bedrock', `Windows Security exclusions added: ${addedPaths.join(', ')}`)
   }
-  const addedPaths = Array.isArray(result.paths) && result.paths.length > 0 ? result.paths : existing
-  await writeJsonAtomic(exclusionMarkerFile(), {
-    addedAt: new Date().toISOString(),
-    paths: addedPaths
-  } satisfies ExclusionMarker)
-  logger.info('bedrock', `Windows Security exclusions added: ${addedPaths.join(', ')}`)
+
+  const failed = Array.isArray(result.failed)
+    ? result.failed.filter((entry) => entry && entry.path)
+    : []
+  if (failed.length > 0) {
+    const detail = failed
+      .map((entry) => `${entry.path ?? 'unknown'}: ${entry.error ?? 'unknown error'}`)
+      .join('; ')
+    logger.warn('bedrock', `Some Windows Security exclusions were skipped: ${detail}`)
+    return {
+      ok: false,
+      paths: addedPaths.length > 0 ? addedPaths : existing,
+      error: `Windows Security rejected ${failed.length} Bedrock folder${
+        failed.length === 1 ? '' : 's'
+      }. ${failed[0]?.error ?? 'Enable Developer Mode or Windows Security access and try again.'}`
+    }
+  }
+
+  if (!result.ok || addedPaths.length === 0) {
+    return {
+      ok: false,
+      paths: existing,
+      error: result.error ?? 'Windows Security did not confirm the exclusion. Try again as administrator.'
+    }
+  }
+
   return { ok: true, paths: addedPaths }
 }

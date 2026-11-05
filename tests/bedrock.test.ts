@@ -2,8 +2,12 @@ import { describe, expect, it } from 'vitest'
 import {
   bedrockPackageVersion,
   isAllowedBedrockUrl,
+  isDefenderUnreadableExclusion,
+  isExcludedPath,
   isTrialPackageIdentity,
-  parseBedrockCatalog
+  normalizeExclusionPath,
+  parseBedrockCatalog,
+  summarizeExclusion
 } from '@shared/bedrock'
 
 const URL_RELEASE_1_26_62 =
@@ -25,6 +29,40 @@ describe('Bedrock package versions', () => {
     expect(isTrialPackageIdentity('MICROSOFT.MINECRAFTUWP_TRIAL_1.0')).toBe(true)
     expect(isTrialPackageIdentity('MICROSOFT.MINECRAFTUWP_DEMO')).toBe(true)
     expect(isTrialPackageIdentity('MICROSOFT.MINECRAFTUWP_1.26.6201.0_x64__8wekyb3d8bbwe')).toBe(false)
+  })
+})
+
+describe('Windows Security exclusion matching', () => {
+  const install =
+    'C:\\Program Files\\WindowsApps\\Microsoft.MinecraftUWP_1.26.6201.0_x64__8wekyb3d8bbwe'
+
+  it('normalises case, slashes and trailing separators', () => {
+    expect(normalizeExclusionPath('  C:/Games/Bedrock/  ')).toBe('c:\\games\\bedrock')
+    expect(normalizeExclusionPath('"C:\\Games\\Bedrock"')).toBe('c:\\games\\bedrock')
+  })
+
+  it('treats an excluded parent folder as covering its subfolders', () => {
+    expect(isExcludedPath(install, ['C:\\Program Files\\WindowsApps'])).toBe(true)
+    expect(isExcludedPath(install, [install.toUpperCase()])).toBe(true)
+    expect(isExcludedPath(install, ['C:\\Program Files\\WindowsAppsOther'])).toBe(false)
+  })
+
+  it('reports missing, partial and complete exclusion states', () => {
+    const dataDir = 'C:\\Users\\Player\\AppData\\Local\\Packages\\Microsoft.MinecraftUWP_8wekyb3d8bbwe'
+    expect(summarizeExclusion([install, dataDir], []).state).toBe('missing')
+    const partial = summarizeExclusion([install, dataDir], [install])
+    expect(partial.state).toBe('partial')
+    expect(partial.missing).toEqual([dataDir])
+    expect(summarizeExclusion([install, dataDir], [install, dataDir]).state).toBe('added')
+  })
+
+  it('never treats a sibling path with the same prefix as excluded', () => {
+    expect(isExcludedPath('C:\\Bedrock Preview\\game', ['C:\\Bedrock'])).toBe(false)
+  })
+
+  it('recognises the non-admin Windows Security sentinel', () => {
+    expect(isDefenderUnreadableExclusion('N/A: Must be an administrator to view exclusions')).toBe(true)
+    expect(isDefenderUnreadableExclusion('C:\\Games\\Bedrock')).toBe(false)
   })
 })
 

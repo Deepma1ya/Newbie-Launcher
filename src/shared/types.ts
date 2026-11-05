@@ -502,12 +502,18 @@ export interface BedrockInstallation {
   running: boolean
 }
 
+export type DefenderExclusionState = 'unknown' | 'missing' | 'partial' | 'added'
+
 export interface BedrockSetup {
   developerMode: boolean
   gamingServices: boolean
   windowsBuild: string
-  defenderExclusion: 'unknown' | 'added'
+  defenderExclusion: DefenderExclusionState
   defenderCheckedAt?: string
+  /** Bedrock paths Windows Security already excludes. */
+  defenderExcludedPaths: string[]
+  /** Bedrock paths that still need an exclusion, including the current install location. */
+  defenderMissingPaths: string[]
   dataDir: string
   gameDataDirs: string[]
 }

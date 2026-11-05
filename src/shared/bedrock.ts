@@ -1,8 +1,55 @@
-import type { BedrockChannel, BedrockVersion } from './types'
+import type { BedrockChannel, BedrockVersion, DefenderExclusionState } from './types'
 
 export const BEDROCK_RELEASE_IDENTITY = 'Microsoft.MinecraftUWP'
 export const BEDROCK_PREVIEW_IDENTITY = 'Microsoft.MinecraftWindowsBeta'
 export const BEDROCK_PUBLISHER_ID = '8wekyb3d8bbwe'
+
+/**
+ * Windows Security exclusion paths are case-insensitive and may be stored with
+ * either slash style or a trailing separator. Normalise before comparing.
+ */
+export function normalizeExclusionPath(value: string): string {
+  return value
+    .trim()
+    .replace(/^"|"$/g, '')
+    .replace(/\//g, '\\')
+    .replace(/\\+$/, '')
+    .toLowerCase()
+}
+
+/** Windows Security returns this sentinel when exclusions need admin rights. */
+export function isDefenderUnreadableExclusion(value: string): boolean {
+  return /must be an administrator to view exclusions/i.test(value)
+}
+
+/** Defender excludes subfolders too, so a parent folder covers nested paths. */
+export function isExcludedPath(target: string, exclusions: string[]): boolean {
+  const normalized = normalizeExclusionPath(target)
+  if (!normalized) return false
+  return exclusions.some((entry) => {
+    const candidate = normalizeExclusionPath(entry)
+    if (!candidate) return false
+    return normalized === candidate || normalized.startsWith(`${candidate}\\`)
+  })
+}
+
+export interface ExclusionSummary {
+  state: Exclude<DefenderExclusionState, 'unknown'>
+  excluded: string[]
+  missing: string[]
+}
+
+export function summarizeExclusion(required: string[], exclusions: string[]): ExclusionSummary {
+  const excluded: string[] = []
+  const missing: string[] = []
+  for (const entry of required) {
+    if (isExcludedPath(entry, exclusions)) excluded.push(entry)
+    else missing.push(entry)
+  }
+  const state: ExclusionSummary['state'] =
+    required.length > 0 && missing.length === 0 ? 'added' : excluded.length === 0 ? 'missing' : 'partial'
+  return { state, excluded, missing }
+}
 
 const PACKAGE_FILE =
   /^(Microsoft\.MinecraftUWP|Microsoft\.MinecraftWindowsBeta)_(\d+\.\d+\.\d+\.\d+)_(x64)__8wekyb3d8bbwe\.msixvc$/i

@@ -18,6 +18,7 @@ import {
   X
 } from '@phosphor-icons/react'
 import type { BedrockChannel, BedrockProgress, BedrockSetup, BedrockState, BedrockVersion } from '@shared/types'
+import { normalizeExclusionPath } from '@shared/bedrock'
 import { BEDROCK_STORE_WEB_URL, GAMING_SERVICES_STORE_WEB_URL } from '@shared/constants'
 import { PageHeader } from '../components/PageHeader'
 import { Button, IconButton } from '../components/ui/Button'
@@ -39,6 +40,7 @@ export function BedrockPage() {
   const [query, setQuery] = useState('')
   const [progress, setProgress] = useState<Record<string, BedrockProgress>>({})
   const exclusionAttempted = useRef(false)
+  const declinedExclusionFor = useRef<string | null>(null)
 
   const refresh = useCallback(async (force = false): Promise<BedrockState | null> => {
     try {
@@ -80,24 +82,37 @@ export function BedrockPage() {
     }
   }, [refresh])
 
-  const addExclusion = useCallback(async (): Promise<void> => {
+  const addExclusion = useCallback(async (): Promise<boolean> => {
     setExcluding(true)
     try {
       const result = await window.newbie.bedrock.addExclusion()
-      if (result.ok) {
+      if (result.cancelled) {
+        toast('info', 'Exclusion skipped', 'You can add it any time from the Bedrock page.')
+        return false
+      }
+      const next = await refresh(false)
+      if (result.ok && next?.setup.defenderExclusion === 'added') {
+        declinedExclusionFor.current = null
         toast(
           'success',
           'Windows Security exclusion added',
           `${result.paths.length} Bedrock folder${result.paths.length === 1 ? '' : 's'} excluded.`
         )
-        await refresh(false)
-      } else if (result.cancelled) {
-        toast('info', 'Exclusion skipped', 'You can add it any time from the Bedrock page.')
-      } else {
-        toast('error', 'Could not add the exclusion', result.error)
+        return true
       }
+      if (result.ok) {
+        toast(
+          'info',
+          'Exclusion partly added',
+          'Some Bedrock folders still need approval. Use Add on the setup card to finish.'
+        )
+        return false
+      }
+      toast('error', 'Could not add the exclusion', result.error)
+      return false
     } catch (failure) {
       toast('error', 'Could not add the exclusion', errorMessage(failure))
+      return false
     } finally {
       setExcluding(false)
     }
@@ -115,7 +130,7 @@ export function BedrockPage() {
     askConfirm({
       title: 'Add Windows Security exclusion?',
       description: 'Windows Defender can slow down or block the 1–2 GB Bedrock package download.',
-      body: 'Newbie will ask Windows to exclude only its own Bedrock download folder and Microsoft’s Minecraft data folders. This opens a UAC prompt; nothing is excluded unless you approve it. Third-party files such as OnlineFix are never excluded.',
+      body: 'Newbie will ask Windows to exclude only its own Bedrock download folder, Microsoft’s Minecraft data folders and the installed Microsoft package folder. This opens a UAC prompt; nothing is excluded unless you approve it. Third-party files such as OnlineFix are never excluded.',
       confirmLabel,
       cancelLabel,
       onCancel: () => {
@@ -135,7 +150,7 @@ export function BedrockPage() {
     askConfirm({
       title: alreadyAdded ? 'Update Windows Security exclusion?' : 'Add Windows Security exclusion?',
       description: 'Windows Defender can slow down or block large Bedrock packages.',
-      body: 'This opens a Windows administrator (UAC) prompt. Newbie excludes only its own Bedrock download folder and the official Minecraft data folders. It never excludes third-party DLLs or cracks.',
+      body: 'This opens a Windows administrator (UAC) prompt. Newbie excludes only its own Bedrock download folder, the official Minecraft data folders and the installed Microsoft package folder. It never excludes third-party DLLs or cracks.',
       confirmLabel: alreadyAdded ? 'Update exclusion' : 'Add exclusion',
       action: async () => {
         await addExclusion()
@@ -174,12 +189,35 @@ export function BedrockPage() {
     }
   }
 
+  const offerInstallExclusion = (version: BedrockVersion, installLocation?: string): void => {
+    askConfirm({
+      title: `Exclude Minecraft ${version.version} from Windows Security?`,
+      description: `Minecraft ${version.version} is installed. Each Bedrock version gets a new Windows package folder, so add it to the Windows Security exclusion list before you play.`,
+      body: 'Windows Defender scans the newly installed package while the game starts. This opens a UAC prompt. Newbie excludes only its Bedrock download folder, Microsoft’s Minecraft data folders and the installed Microsoft package folder. Third-party files such as OnlineFix are never excluded.',
+      confirmLabel: 'Exclude folder',
+      cancelLabel: 'Not now',
+      onCancel: () => {
+        declinedExclusionFor.current = installLocation ?? null
+      },
+      action: async () => {
+        const added = await addExclusion()
+        if (!added) declinedExclusionFor.current = installLocation ?? null
+      }
+    })
+  }
+
   const runInstall = async (version: BedrockVersion, replace: boolean): Promise<void> => {
     setBusyId(version.id)
     try {
       const next = await window.newbie.bedrock.install(version.id, replace)
       setState(next)
       toast('success', `Minecraft ${version.version} installed`)
+      if (next.setup.defenderExclusion !== 'added') {
+        const installed = next.installations.find(
+          (entry) => entry.packageFullName.toLowerCase() === version.id.toLowerCase()
+        )
+        offerInstallExclusion(version, installed?.installLocation)
+      }
     } catch (failure) {
       toast('error', 'Bedrock installation failed', errorMessage(failure))
     } finally {
@@ -215,7 +253,7 @@ export function BedrockPage() {
     )
   }
 
-  const launch = async (target: BedrockChannel): Promise<void> => {
+  const launchNow = async (target: BedrockChannel): Promise<void> => {
     setLaunching(target)
     try {
       await window.newbie.bedrock.launch(target)
@@ -225,6 +263,40 @@ export function BedrockPage() {
     } finally {
       setTimeout(() => setLaunching(null), 1200)
     }
+  }
+
+  const launch = async (target: BedrockChannel): Promise<void> => {
+    const installation = state?.installations.find((entry) => entry.channel === target)
+    const setup = state?.setup
+    const needsExclusion =
+      setup &&
+      installation &&
+      setup.defenderExclusion !== 'added' &&
+      setup.defenderMissingPaths.some(
+        (entry) =>
+          normalizeExclusionPath(entry) === normalizeExclusionPath(installation.installLocation)
+      )
+
+    if (installation && needsExclusion && declinedExclusionFor.current !== installation.installLocation) {
+      askConfirm({
+        title: 'Exclude Minecraft from Windows Security before playing?',
+        description: 'The installed Bedrock package folder is not in the Windows Security exclusion list yet.',
+        body: 'Windows Defender can scan or block the package while the game starts. This opens a UAC prompt. Newbie excludes only its Bedrock download folder, Microsoft’s Minecraft data folders and the installed Microsoft package folder. Third-party files are never excluded.',
+        confirmLabel: 'Exclude and play',
+        cancelLabel: 'Play anyway',
+        onCancel: () => {
+          declinedExclusionFor.current = installation.installLocation
+          void launchNow(target)
+        },
+        action: async () => {
+          const added = await addExclusion()
+          if (!added) declinedExclusionFor.current = installation.installLocation
+          await launchNow(target)
+        }
+      })
+      return
+    }
+    await launchNow(target)
   }
 
   const removeDownload = (version: BedrockVersion): void => {
@@ -759,8 +831,14 @@ function SetupCard({
           title="Windows Security exclusion"
           detail={
             setup.defenderExclusion === 'added'
-              ? 'Bedrock downloads and Minecraft data folders are excluded.'
-              : 'Defender can slow down or block 1–2 GB downloads. Requires your approval.'
+              ? 'Minecraft, download and data folders are excluded.'
+              : setup.defenderExclusion === 'partial'
+                ? `${setup.defenderMissingPaths.length} Bedrock folder${
+                    setup.defenderMissingPaths.length === 1 ? '' : 's'
+                  } still need approval, including the installed version.`
+                : setup.defenderExclusion === 'missing'
+                  ? 'Defender can slow down or block 1–2 GB downloads and the installed package. Requires your approval.'
+                  : 'Windows needs approval to read the exclusion list. Add it once to cover Bedrock.'
           }
           action={
             <Button
