@@ -41,24 +41,18 @@ export function AccountsPage() {
       />
 
       {accounts.length === 0 ? (
-        <div className="space-y-5">
+        <div className="grid gap-5 lg:grid-cols-[1.1fr_0.9fr]">
           <EmptyState
             icon={<UserCircle size={22} />}
             title="No accounts yet"
-            description="Add a Microsoft account for online servers, or start with a local offline profile. You can switch at any time."
+            description="Choose a Microsoft account for licensed servers, or start with a local offline profile. You can switch at any time."
             action={
-              <div className="flex flex-wrap justify-center gap-2">
-                <Button variant="primary" onClick={() => openAdd('microsoft')} icon={<WindowsLogo size={15} />}>Microsoft</Button>
-                <Button variant="secondary" onClick={() => openAdd('tlauncher')} icon={<Leaf size={15} />}>TLauncher</Button>
-                <Button variant="ghost" onClick={() => openAdd('offline')} icon={<WifiSlash size={15} />}>Offline</Button>
-              </div>
+              <Button variant="primary" onClick={() => openAdd('microsoft')} icon={<Plus size={15} />}>
+                Add your first account
+              </Button>
             }
           />
-          <div className="grid gap-3 md:grid-cols-3">
-            <TypeCard icon={<WindowsLogo size={20} />} title="Microsoft" text="Official sign-in. Licensed servers, Realms and your Mojang profile." onClick={() => openAdd('microsoft')} />
-            <TypeCard icon={<Leaf size={20} />} title="TLauncher" text="Your TLauncher nickname with skin and cape sync. Offline play." onClick={() => openAdd('tlauncher')} />
-            <TypeCard icon={<WifiSlash size={20} />} title="Offline" text="A local username for single-player and LAN. No login required." onClick={() => openAdd('offline')} />
-          </div>
+          <AccountTypePanel onAdd={openAdd} />
         </div>
       ) : (
         <div className="grid gap-5 lg:grid-cols-[1.3fr_0.7fr]">
@@ -91,20 +85,7 @@ export function AccountsPage() {
             </Card>
           </div>
 
-          <div className="space-y-3">
-            <TypeCard icon={<WindowsLogo size={20} />} title="Microsoft" text="Licensed servers and Realms." onClick={() => openAdd('microsoft')} />
-            <TypeCard icon={<Leaf size={20} />} title="TLauncher" text="Nickname, skin and cape sync." onClick={() => openAdd('tlauncher')} />
-            <TypeCard icon={<WifiSlash size={20} />} title="Offline" text="Local worlds and LAN." onClick={() => openAdd('offline')} />
-            <TypeCard icon={<ShieldCheck size={20} />} title="Authlib" text="Ely.by, LittleSkin or a private server." onClick={() => openAdd('authlib')} />
-            <Card className="p-4">
-              <div className="flex items-center gap-2 text-[11.5px] font-medium text-ink">
-                <CheckCircle size={15} className="text-grass" weight="fill" /> Account switching is instant
-              </div>
-              <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
-                The selected account is used for the next launch. Licences are never shared between profiles.
-              </p>
-            </Card>
-          </div>
+          <AccountTypePanel onAdd={openAdd} />
         </div>
       )}
     </div>
@@ -175,26 +156,81 @@ function CustomSkinCard({ account, onChanged }: { account: AccountSummary; onCha
   )
 }
 
-function TypeCard({
-  icon,
-  title,
-  text,
-  onClick
+function AccountTypePanel({
+  onAdd
 }: {
-  icon: React.ReactNode
-  title: string
-  text: string
-  onClick: () => void
+  onAdd: (tab: 'microsoft' | 'tlauncher' | 'offline' | 'authlib') => void
 }) {
+  const options = [
+    {
+      tab: 'microsoft' as const,
+      title: 'Microsoft',
+      text: 'Licensed servers, Realms and your Minecraft profile.',
+      badge: 'Licensed',
+      icon: WindowsLogo,
+      tone: 'border-info/20 bg-info/10 text-info'
+    },
+    {
+      tab: 'tlauncher' as const,
+      title: 'TLauncher',
+      text: 'Your nickname, skin and cape from TLauncher.',
+      badge: 'Skins',
+      icon: Leaf,
+      tone: 'border-grass/20 bg-grass/10 text-grass'
+    },
+    {
+      tab: 'offline' as const,
+      title: 'Offline',
+      text: 'A local profile for single-player, LAN and custom skins.',
+      badge: 'Local',
+      icon: WifiSlash,
+      tone: 'border-line/60 bg-elevated text-muted'
+    },
+    {
+      tab: 'authlib' as const,
+      title: 'Authlib',
+      text: 'Ely.by, LittleSkin or a private authentication server.',
+      badge: 'Experimental',
+      icon: ShieldCheck,
+      tone: 'border-[#C4B5FD]/20 bg-[#C4B5FD]/10 text-[#C4B5FD]'
+    }
+  ]
+
   return (
-    <button
-      onClick={onClick}
-      className="card-hover rounded-2xl border border-line/55 bg-card/55 p-4 text-left"
-    >
-      <span className="flex h-9 w-9 items-center justify-center rounded-xl border border-line/60 bg-elevated text-grass">{icon}</span>
-      <span className="mt-2.5 block text-[12.5px] font-semibold text-ink">{title}</span>
-      <span className="mt-0.5 block text-[10.5px] leading-relaxed text-muted">{text}</span>
-      <span className="mt-2 block text-[10px] font-medium text-grass/80">Add account →</span>
-    </button>
+    <Card className="overflow-hidden p-0">
+      <div className="border-b border-line/45 px-4 py-3.5">
+        <h2 className="font-display text-[13.5px] font-semibold text-ink">Add another account</h2>
+        <p className="mt-0.5 text-[10.5px] leading-relaxed text-muted">Choose how you want to sign in.</p>
+      </div>
+      <div className="divide-y divide-line/35">
+        {options.map((option) => (
+          <button
+            key={option.tab}
+            type="button"
+            aria-label={`Add ${option.title} account`}
+            onClick={() => onAdd(option.tab)}
+            className="group flex w-full items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/[0.035] focus-visible:bg-white/[0.04]"
+          >
+            <span className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border ${option.tone}`}>
+              <option.icon size={17} />
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="flex flex-wrap items-center gap-2">
+                <span className="text-[12px] font-semibold text-ink">{option.title}</span>
+                <span className="rounded border border-line/60 bg-canvas/40 px-1.5 py-0.5 text-[8px] font-semibold uppercase tracking-[0.07em] text-muted/70">
+                  {option.badge}
+                </span>
+              </span>
+              <span className="mt-0.5 block text-[10px] leading-relaxed text-muted">{option.text}</span>
+            </span>
+            <Plus size={15} className="shrink-0 text-muted/35 transition-colors group-hover:text-grass" />
+          </button>
+        ))}
+      </div>
+      <div className="flex items-start gap-2 border-t border-line/35 bg-canvas/25 px-4 py-3 text-[10px] leading-relaxed text-muted/75">
+        <CheckCircle size={13} className="mt-0.5 shrink-0 text-grass/80" weight="fill" />
+        <span>Switching accounts is instant. The selected account is used for the next launch; licences are never shared.</span>
+      </div>
+    </Card>
   )
 }

@@ -1,12 +1,13 @@
-# Newbie Launcher 0.1.7
+# Newbie Launcher 0.1.8
 
-Account and instance menu fixes.
+Account page organization.
 
-## Fixed
+## Changed
 
-- The three-dot menu on account cards is no longer clipped by the card's rounded corners.
-- Remove/Refresh menu items can extend beyond the card boundary.
-- Instance card menus use the same corrected stacking and clipping behavior.
-- Menus are raised above neighboring cards and their backdrop.
+- The four large account-type cards are now one compact **Add another account** panel.
+- Each account type is a single clickable row with an icon, short description and badge.
+- Removed the repeated “Add account →” links.
+- Moved the account-switching explanation into the panel footer.
+- The no-accounts screen now uses one primary CTA plus the same organized type list instead of duplicating actions.
 
-Everything from 0.1.6 (custom offline skins) is included.
+Everything from 0.1.7 (unclipped card menus) and 0.1.6 (custom offline skins) is included.
