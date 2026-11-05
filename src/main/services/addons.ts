@@ -4,10 +4,12 @@ import type {
   AddonDependency,
   AddonRecord,
   AddonType,
+  BulkAddonType,
   Instance,
   LoaderType,
   ModrinthVersion
 } from '@shared/types'
+import { isBulkAddonType } from '@shared/addonBulk'
 import {
   getModrinthProject,
   getModrinthUpdatesByHashes,
@@ -253,6 +255,34 @@ export async function removeAddon(
     loadout.updatedAt = new Date().toISOString()
   }
   await persistInstance(instance)
+}
+
+export async function removeAllAddons(
+  instanceId: string,
+  type?: BulkAddonType
+): Promise<number> {
+  const instance = store.instance(instanceId)
+  if (!instance) throw new Error('Instance not found')
+  const { isInstanceBusy } = await import('./launch')
+  if (isInstanceBusy(instanceId)) {
+    throw new Error('Close Minecraft before deleting all add-ons')
+  }
+  const targets = instance.addons.filter(
+    (addon) => isBulkAddonType(addon.type) && (!type || addon.type === type)
+  )
+  if (targets.length === 0) return 0
+
+  for (const record of targets) await removeRecordFile(instance, record)
+  const removedIds = new Set(targets.map((record) => record.id))
+  instance.addons = instance.addons.filter((addon) => !removedIds.has(addon.id))
+  const now = new Date().toISOString()
+  for (const loadout of instance.loadouts) {
+    loadout.addonIds = loadout.addonIds.filter((addonId) => !removedIds.has(addonId))
+    loadout.updatedAt = now
+  }
+  await persistInstance(instance)
+  logger.info('addons', `Removed ${targets.length} add-on(s) from ${instance.name}`)
+  return targets.length
 }
 
 export async function toggleAddon(

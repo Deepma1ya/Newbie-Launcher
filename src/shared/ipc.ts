@@ -30,6 +30,7 @@ import type {
   UpdateState,
   WindowState,
   WorldSummary,
+  BulkAddonType,
   ServerRecord,
   ServerRuntimeStatus,
   ServerAddonRecord,
@@ -118,6 +119,7 @@ export const IPC = {
   addonsVersions: 'addons:versions',
   addonsInstall: 'addons:install',
   addonsRemove: 'addons:remove',
+  addonsRemoveAll: 'addons:remove-all',
   addonsToggle: 'addons:toggle',
   addonsCheckUpdates: 'addons:check-updates',
   addonsUpdateAll: 'addons:update-all',
@@ -260,6 +262,7 @@ export interface NewbieApi {
     versions(projectId: string, gameVersion?: string, loader?: LoaderType, type?: AddonType): Promise<ModrinthVersion[]>
     install(instanceId: string, ref: AddonVersionRef): Promise<AddonRecord[]>
     remove(instanceId: string, addonId: string, deleteFile: boolean): Promise<void>
+    removeAll(instanceId: string, type?: BulkAddonType): Promise<number>
     toggle(instanceId: string, addonId: string, enabled: boolean): Promise<AddonRecord>
     checkUpdates(instanceId: string): Promise<AddonRecord[]>
     updateAll(instanceId: string): Promise<AddonRecord[]>

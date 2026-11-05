@@ -1,11 +1,15 @@
-# Newbie Launcher 0.1.25
+# Newbie Launcher 0.1.26
 
-Instance cards are rounded again.
+Delete all installed add-ons by section.
 
-## Fixed
+## Delete all
 
-- Restored the rounded top corners on instance cards after the dropdown-menu unclipping change.
-- Card menus still open fully outside the card.
-- Unchanged from 0.1.24: launcher updates download and install silently and automatically, with no installer Next/Next pages.
+- Added **Delete all** to the Library and to each instance's **Add-ons** tab.
+- Pick **Mods**, **Datapacks**, **Packs**, **Shaders** or **All**, then delete that whole section in one confirmed action.
+- The confirmation shows exactly how many files will be removed.
+- Bulk deletion removes the installed files, cleans the affected entries out of every loadout, and keeps cached offline copies.
+- Datapacks installed inside worlds are removed from those worlds only when datapacks are included in the selected section.
+- World and modpack records are never removed by **Delete all**.
+- The action is disabled while Minecraft or another launcher task is using the instance.
 
-Everything from 0.1.24 and earlier is included.
+Everything from 0.1.25 and earlier is included.

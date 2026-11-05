@@ -1,5 +1,6 @@
 export type LoaderType = 'vanilla' | 'fabric' | 'quilt' | 'forge' | 'neoforge'
 export type AddonType = 'mod' | 'resourcepack' | 'shader' | 'modpack' | 'datapack' | 'world' | 'plugin'
+export type BulkAddonType = 'mod' | 'datapack' | 'resourcepack' | 'shader'
 export type AddonProvider = 'modrinth' | 'local'
 export type LoadoutMode = 'offline' | 'download'
 export type AccountType = 'microsoft' | 'tlauncher' | 'offline' | 'authlib'

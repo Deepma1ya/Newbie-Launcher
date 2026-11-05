@@ -21,6 +21,7 @@ import {
   Wrench
 } from '@phosphor-icons/react'
 import type { Instance, LoaderType, PerformanceProfile } from '@shared/types'
+import type { AddonBulkFilter } from '@shared/addonBulk'
 import { JAVA_MAJORS } from '@shared/constants'
 import { findTlsCapeArtifact } from '@shared/tlskincape'
 import {
@@ -42,6 +43,7 @@ import { errorMessage, formatBytes, formatPlaytime, loaderLabel, relativeTime } 
 import { PageHeader } from '../components/PageHeader'
 import { PlayButton } from '../components/PlayButton'
 import { AddonRow } from '../components/AddonRow'
+import { DeleteAllAddonsButton } from '../components/DeleteAllAddonsButton'
 import { LoadoutCard } from '../components/LoadoutCard'
 import { CopySettingsModal } from '../components/modals/CopySettingsModal'
 import { TlsCapeBadge } from '../components/TlsCapeBadge'
@@ -51,7 +53,7 @@ import { Button, IconButton } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 
 type Tab = 'overview' | 'addons' | 'loadouts' | 'settings'
-type AddonFilter = 'all' | 'mod' | 'datapack' | 'resourcepack' | 'shader'
+type AddonFilter = AddonBulkFilter
 
 export function InstancePage() {
   const { id } = useParams<{ id: string }>()
@@ -368,6 +370,12 @@ export function InstancePage() {
             <Button variant="secondary" size="sm" loading={scanning} onClick={() => void scan()} icon={<Package size={14} />}>
               Scan
             </Button>
+            <DeleteAllAddonsButton
+              instance={instance}
+              addons={instance.addons}
+              filter={addonFilter}
+              onChanged={refresh}
+            />
           </div>
           {filteredAddons.length === 0 ? (
             <EmptyState

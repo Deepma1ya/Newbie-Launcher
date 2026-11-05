@@ -48,6 +48,7 @@ import {
   checkAddonUpdates,
   installAddon,
   removeAddon,
+  removeAllAddons,
   scanUnmanagedAddons,
   toggleAddon,
   updateAllAddons
@@ -128,6 +129,7 @@ const usernameSchema = z.string().trim().min(3).max(16).regex(/^[A-Za-z0-9_]+$/)
 const pathSchema = z.string().min(3).max(4096)
 const loaderSchema = z.enum(['vanilla', 'fabric', 'quilt', 'forge', 'neoforge'])
 const addonTypeSchema = z.enum(['mod', 'resourcepack', 'shader', 'modpack', 'datapack', 'world', 'plugin'])
+const bulkAddonTypeSchema = z.enum(['mod', 'datapack', 'resourcepack', 'shader'])
 const bedrockChannelSchema = z.enum(['release', 'preview'])
 const bedrockIdSchema = z.string().min(3).max(200)
 
@@ -600,6 +602,12 @@ export function registerIpc(): void {
   })
   ipcMain.handle(IPC.addonsRemove, async (_event, instanceId: string, addonId: string, deleteFile: boolean) =>
     removeAddon(instanceId, addonId, Boolean(deleteFile))
+  )
+  ipcMain.handle(IPC.addonsRemoveAll, async (_event, instanceId: string, type?: string) =>
+    removeAllAddons(
+      z.string().parse(instanceId),
+      type === undefined ? undefined : bulkAddonTypeSchema.parse(type)
+    )
   )
   ipcMain.handle(IPC.addonsToggle, async (_event, instanceId: string, addonId: string, enabled: boolean) =>
     toggleAddon(instanceId, addonId, Boolean(enabled))

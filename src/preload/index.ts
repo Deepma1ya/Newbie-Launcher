@@ -101,6 +101,7 @@ const api: NewbieApi = {
       ipcRenderer.invoke(IPC.addonsVersions, projectId, gameVersion, loader, type),
     install: (instanceId, ref) => ipcRenderer.invoke(IPC.addonsInstall, instanceId, ref),
     remove: (instanceId, addonId, deleteFile) => ipcRenderer.invoke(IPC.addonsRemove, instanceId, addonId, deleteFile),
+    removeAll: (instanceId, type) => ipcRenderer.invoke(IPC.addonsRemoveAll, instanceId, type),
     toggle: (instanceId, addonId, enabled) => ipcRenderer.invoke(IPC.addonsToggle, instanceId, addonId, enabled),
     checkUpdates: (instanceId) => ipcRenderer.invoke(IPC.addonsCheckUpdates, instanceId),
     updateAll: (instanceId) => ipcRenderer.invoke(IPC.addonsUpdateAll, instanceId),

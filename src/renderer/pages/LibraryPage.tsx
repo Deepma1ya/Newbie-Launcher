@@ -13,14 +13,16 @@ import {
 import { useActiveInstance, useInstances, qk } from '../hooks/queries'
 import { useUi, toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
+import type { AddonBulkFilter } from '@shared/addonBulk'
 import { PageHeader } from '../components/PageHeader'
 import { AddonRow } from '../components/AddonRow'
+import { DeleteAllAddonsButton } from '../components/DeleteAllAddonsButton'
 import { LoadoutCard } from '../components/LoadoutCard'
 import { BlockIcon } from '../components/ui/BlockIcon'
 import { Badge, Card, EmptyState, Input, Segmented, Select } from '../components/ui/primitives'
 import { Button } from '../components/ui/Button'
 
-type TypeFilter = 'all' | 'mod' | 'datapack' | 'resourcepack' | 'shader'
+type TypeFilter = AddonBulkFilter
 
 export function LibraryPage() {
   const instances = useInstances().data ?? []
@@ -161,6 +163,12 @@ export function LibraryPage() {
             { value: 'resourcepack', label: 'Packs' },
             { value: 'shader', label: 'Shaders' }
           ]}
+        />
+        <DeleteAllAddonsButton
+          instance={instance!}
+          addons={addons}
+          filter={filter}
+          onChanged={refresh}
         />
       </div>
 
