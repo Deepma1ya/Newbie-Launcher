@@ -67,6 +67,8 @@ export interface AccountSummary {
   needsRefresh?: boolean
   apiRoot?: string
   xuid?: string
+  /** Xbox gamertag for Microsoft accounts. */
+  gamertag?: string
 }
 
 export type AuthAccount = AccountSummary & {
@@ -562,6 +564,12 @@ export interface BedrockState {
   catalogError?: string
 }
 
+export interface BedrockWindowsAccount {
+  /** Microsoft accounts signed into Windows, read from the local identity store. */
+  emails: string[]
+  xboxAppInstalled: boolean
+}
+
 export interface BedrockProgress {
   id: string
   version: string
@@ -743,6 +751,8 @@ export interface CreateServerInput {
   loaderVersion?: string
   /** Present when type is bedrock. */
   bedrockChannel?: BedrockChannel
+  /** Add the active Microsoft account to a Bedrock allow list. */
+  allowMicrosoftAccount?: boolean
   port: number
   memoryMb: number
   motd?: string
@@ -756,6 +766,11 @@ export interface BedrockServerBuild {
   channel: BedrockChannel
   version: string
   url: string
+}
+
+export interface ServerAllowlistEntry {
+  name: string
+  xuid: string
 }
 
 export interface UpdateServerInput {

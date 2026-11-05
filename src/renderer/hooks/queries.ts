@@ -19,6 +19,7 @@ import type {
   ServerShareInfo,
   ServerAddressTest,
   ServerSearchQuery,
+  ServerAllowlistEntry,
   ServerResourcePackSearchQuery,
   ServerResourcePackState,
   ServerStats,
@@ -55,6 +56,7 @@ export const qk = {
   serverStats: (id: string) => ['servers', id, 'stats'] as const,
   serverLogs: (id: string) => ['servers', id, 'logs'] as const,
   serverProperties: (id: string) => ['servers', id, 'properties'] as const,
+  serverAllowlist: (id: string) => ['servers', id, 'allowlist'] as const,
   serverShare: (id: string) => ['servers', id, 'share'] as const,
   serverSearch: (query: ServerSearchQuery) => ['server-search', query] as const,
   serverResourcePack: (id: string) => ['servers', id, 'resource-pack'] as const,
@@ -157,6 +159,17 @@ export function useServerProperties(id?: string | null): UseQueryResult<Record<s
     queryKey: qk.serverProperties(id ?? ''),
     queryFn: () => api.servers.properties(id!),
     enabled: Boolean(id)
+  })
+}
+
+export function useServerAllowlist(
+  id?: string | null,
+  enabled = true
+): UseQueryResult<ServerAllowlistEntry[]> {
+  return useQuery({
+    queryKey: qk.serverAllowlist(id ?? ''),
+    queryFn: () => api.servers.allowlist(id!),
+    enabled: Boolean(id) && enabled
   })
 }
 

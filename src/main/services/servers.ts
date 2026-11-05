@@ -17,6 +17,8 @@ import { downloadFile, fetchJson, fetchText } from './http'
 import { paths } from './paths'
 import { tasks } from './tasks'
 import { getServer, saveServer, uniqueServerId } from './serverStore'
+import { addServerAllowlistEntry } from './serverAllowlist'
+import { store } from './store'
 import {
   defaultProperties,
   ensureEula,
@@ -161,6 +163,17 @@ export async function createServer(input: CreateServerInput): Promise<ServerReco
         restartSchedule: { ...DEFAULT_RESTART_SCHEDULE }
       }
       await saveServer(record)
+      if (input.allowMicrosoftAccount) {
+        const account = store.activeAccount()
+        if (account?.type === 'microsoft' && account.xuid) {
+          await addServerAllowlistEntry(id, {
+            name: account.gamertag ?? account.username,
+            xuid: account.xuid
+          }).catch((error) => {
+            logger.warn('server', 'Could not add the Microsoft account to the Bedrock allow list', error)
+          })
+        }
+      }
       await task.done('Bedrock server ready')
       logger.info('server', `Created Bedrock server ${record.versionId} ${name}`)
       return record

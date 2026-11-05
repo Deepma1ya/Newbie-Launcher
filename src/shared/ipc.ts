@@ -9,6 +9,7 @@ import type {
   BedrockExclusionResult,
   BedrockServerBuild,
   BedrockState,
+  BedrockWindowsAccount,
   CreateInstanceInput,
   GpuApplyResult,
   Instance,
@@ -39,6 +40,7 @@ import type {
   ServerRecord,
   ServerRuntimeStatus,
   ServerStats,
+  ServerAllowlistEntry,
   ServerAddonRecord,
   ServerAddonType,
   ServerSearchQuery,
@@ -128,6 +130,9 @@ export const IPC = {
   serversTestAddress: 'servers:test-address',
   serversProperties: 'servers:properties',
   serversSaveProperties: 'servers:save-properties',
+  serversAllowlist: 'servers:allowlist',
+  serversAllowlistAdd: 'servers:allowlist-add',
+  serversAllowlistRemove: 'servers:allowlist-remove',
   serversSearchAddons: 'servers:search-addons',
   serversInstallAddon: 'servers:install-addon',
   serversRemoveAddon: 'servers:remove-addon',
@@ -186,7 +191,9 @@ export const IPC = {
   bedrockDelete: 'bedrock:delete',
   bedrockOpenFolder: 'bedrock:open-folder',
   bedrockAddExclusion: 'bedrock:add-exclusion',
-  bedrockOpenSecurity: 'bedrock:open-security'
+  bedrockOpenSecurity: 'bedrock:open-security',
+  bedrockWindowsAccount: 'bedrock:windows-account',
+  bedrockOpenXbox: 'bedrock:open-xbox'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
@@ -257,6 +264,9 @@ export interface NewbieApi {
     testAddress(address: string): Promise<ServerAddressTest>
     properties(id: string): Promise<Record<string, string>>
     saveProperties(id: string, patch: Record<string, string>): Promise<Record<string, string>>
+    allowlist(id: string): Promise<ServerAllowlistEntry[]>
+    allowlistAdd(id: string, entry: ServerAllowlistEntry): Promise<ServerAllowlistEntry[]>
+    allowlistRemove(id: string, xuid: string): Promise<ServerAllowlistEntry[]>
     searchAddons(query: ServerSearchQuery): Promise<SearchPage>
     installAddon(
       serverId: string,
@@ -367,5 +377,7 @@ export interface NewbieApi {
     openFolder(channel: BedrockChannel): Promise<void>
     addExclusion(): Promise<BedrockExclusionResult>
     openSecurity(): Promise<void>
+    windowsAccount(): Promise<BedrockWindowsAccount>
+    openXbox(): Promise<void>
   }
 }

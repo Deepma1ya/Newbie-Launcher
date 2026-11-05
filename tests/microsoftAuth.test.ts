@@ -21,7 +21,8 @@ vi.mock('@main/services/store', () => {
     capeUrl: account.capeUrl,
     createdAt: account.createdAt,
     expiresAt: account.expiresAt,
-    xuid: account.xuid
+    xuid: account.xuid,
+    gamertag: account.gamertag
   })
   return {
     store: {
@@ -57,7 +58,7 @@ function queueResponses(): void {
   } as never)
   mocked.mockResolvedValueOnce({
     Token: 'xsts-token',
-    DisplayClaims: { xui: [{ uhs: 'user-hash', xid: 'xbox-user-id' }] }
+    DisplayClaims: { xui: [{ uhs: 'user-hash', xid: 'xbox-user-id', gtg: 'NotchGamer' }] }
   } as never)
   mocked.mockResolvedValueOnce({
     username: 'Notch',
@@ -93,6 +94,7 @@ describe('Microsoft account activation', () => {
     expect(summary.active).toBe(true)
     expect(summary.username).toBe('Notch')
     expect(summary.xuid).toBe('xbox-user-id')
+    expect(summary.gamertag).toBe('NotchGamer')
   })
 
   it('keeps the selected account when an existing Microsoft session is refreshed', async () => {

@@ -11,7 +11,8 @@ import type {
   BedrockProgress,
   BedrockSetup,
   BedrockState,
-  BedrockVersion
+  BedrockVersion,
+  BedrockWindowsAccount
 } from '@shared/types'
 import {
   BEDROCK_LINKS_URLS,
@@ -763,6 +764,51 @@ export async function launchBedrock(channel: BedrockChannel): Promise<void> {
     throw new Error(`Windows could not start Minecraft. ${cleanPowerShellError(result)}`)
   }
   logger.info('bedrock', `Launched ${target.packageFullName}`)
+}
+
+/**
+ * Minecraft for Windows signs in with the Microsoft account used by the Xbox
+ * app on this PC. Newbie cannot inject its Java token, but it can show which
+ * Windows account is present and open the Xbox app to sign in or switch.
+ */
+export async function bedrockWindowsAccount(): Promise<BedrockWindowsAccount> {
+  const script = `
+$ErrorActionPreference = 'SilentlyContinue'
+$emails = @(Get-ChildItem 'HKCU:\\Software\\Microsoft\\IdentityCRL\\UserExtendedProperties' -ErrorAction SilentlyContinue |
+  ForEach-Object { $_.PSChildName } | Where-Object { $_ -match '@' })
+$xbox = [bool](Get-AppxPackage -Name 'Microsoft.GamingApp' -ErrorAction SilentlyContinue)
+[pscustomobject]@{
+  emails = @($emails)
+  xboxAppInstalled = $xbox
+} | ConvertTo-Json -Compress
+`
+  const result = await runPowerShell(script, 30_000)
+  if (result.code !== 0) return { emails: [], xboxAppInstalled: false }
+  try {
+    const parsed = JSON.parse(result.stdout.trim()) as { emails?: unknown; xboxAppInstalled?: unknown }
+    const emails = Array.isArray(parsed.emails)
+      ? parsed.emails.filter((entry): entry is string => typeof entry === 'string' && entry.includes('@')).slice(0, 5)
+      : []
+    return { emails, xboxAppInstalled: Boolean(parsed.xboxAppInstalled) }
+  } catch {
+    return { emails: [], xboxAppInstalled: false }
+  }
+}
+
+export async function openXboxApp(): Promise<void> {
+  const script = `
+$ErrorActionPreference = 'Stop'
+$pkg = Get-AppxPackage -Name 'Microsoft.GamingApp' -ErrorAction Stop | Select-Object -First 1
+if (-not $pkg) { throw 'The Xbox app is not installed.' }
+$manifest = Get-AppxPackageManifest -Package $pkg.PackageFullName
+$app = $manifest.Package.Applications.Application | Where-Object { $_.Id -eq 'Microsoft.Xbox.App' } | Select-Object -First 1
+if (-not $app) { $app = $manifest.Package.Applications.Application | Select-Object -First 1 }
+Start-Process "shell:appsFolder\\$($pkg.PackageFamilyName)!$($app.Id)"
+`
+  const result = await runPowerShell(script, 30_000)
+  if (result.code !== 0) {
+    throw new Error(`Windows could not open the Xbox app. ${cleanPowerShellError(result)}`)
+  }
 }
 
 export async function addBedrockExclusion(): Promise<BedrockExclusionResult> {

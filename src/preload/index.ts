@@ -64,6 +64,9 @@ const api: NewbieApi = {
     testAddress: (address) => ipcRenderer.invoke(IPC.serversTestAddress, address),
     properties: (id) => ipcRenderer.invoke(IPC.serversProperties, id),
     saveProperties: (id, patch) => ipcRenderer.invoke(IPC.serversSaveProperties, id, patch),
+    allowlist: (id) => ipcRenderer.invoke(IPC.serversAllowlist, id),
+    allowlistAdd: (id, entry) => ipcRenderer.invoke(IPC.serversAllowlistAdd, id, entry),
+    allowlistRemove: (id, xuid) => ipcRenderer.invoke(IPC.serversAllowlistRemove, id, xuid),
     searchAddons: (query) => ipcRenderer.invoke(IPC.serversSearchAddons, query),
     installAddon: (serverId, ref) => ipcRenderer.invoke(IPC.serversInstallAddon, serverId, ref),
     removeAddon: (serverId, addonId, deleteFile) =>
@@ -168,7 +171,9 @@ const api: NewbieApi = {
     delete: (id) => ipcRenderer.invoke(IPC.bedrockDelete, id),
     openFolder: (channel) => ipcRenderer.invoke(IPC.bedrockOpenFolder, channel),
     addExclusion: () => ipcRenderer.invoke(IPC.bedrockAddExclusion),
-    openSecurity: () => ipcRenderer.invoke(IPC.bedrockOpenSecurity)
+    openSecurity: () => ipcRenderer.invoke(IPC.bedrockOpenSecurity),
+    windowsAccount: () => ipcRenderer.invoke(IPC.bedrockWindowsAccount),
+    openXbox: () => ipcRenderer.invoke(IPC.bedrockOpenXbox)
   }
 }
 

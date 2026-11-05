@@ -89,7 +89,9 @@ export function AccountCard({
               <Badge tone={account.type === 'microsoft' ? 'blue' : account.type === 'tlauncher' ? 'green' : 'neutral'} className="h-4 px-1.5 text-[8.5px]">
                 {typeLabels[account.type]}
               </Badge>
-              {account.type === 'microsoft' && <span>Licensed · online servers</span>}
+              {account.type === 'microsoft' && (
+                <span>{account.gamertag ? `Xbox · ${account.gamertag}` : 'Licensed · online servers'}</span>
+              )}
               {account.type === 'tlauncher' && <span>Skin sync · offline play</span>}
               {account.type === 'offline' && <span>Local play</span>}
               {account.type === 'authlib' && <span>{account.apiRoot ? new URL(account.apiRoot).host : 'Third-party auth'}</span>}

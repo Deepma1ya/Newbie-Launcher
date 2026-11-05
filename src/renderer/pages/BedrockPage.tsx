@@ -7,6 +7,7 @@ import {
   Cube,
   DownloadSimple,
   GearSix,
+  GameController,
   Info,
   MagnifyingGlass,
   Play,
@@ -19,24 +20,34 @@ import {
   X
 } from '@phosphor-icons/react'
 import type {
+  AccountSummary,
   BedrockChannel,
   BedrockExclusionResult,
   BedrockProgress,
   BedrockSetup,
   BedrockState,
-  BedrockVersion
+  BedrockVersion,
+  BedrockWindowsAccount
 } from '@shared/types'
 import { normalizeExclusionPath } from '@shared/bedrock'
-import { BEDROCK_STORE_WEB_URL, GAMING_SERVICES_STORE_WEB_URL } from '@shared/constants'
+import {
+  BEDROCK_STORE_WEB_URL,
+  GAMING_SERVICES_STORE_WEB_URL,
+  XBOX_APP_STORE_WEB_URL
+} from '@shared/constants'
 import { PageHeader } from '../components/PageHeader'
 import { Button, IconButton } from '../components/ui/Button'
 import { Badge, Card, EmptyState, Input, Progress, Segmented, Skeleton } from '../components/ui/primitives'
+import { useAccounts } from '../hooks/queries'
 import { useUi, toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
 
 export function BedrockPage() {
   const askConfirm = useUi((state) => state.askConfirm)
+  const openModal = useUi((state) => state.openModal)
+  const accounts = useAccounts().data ?? []
   const [state, setState] = useState<BedrockState | null>(null)
+  const [windowsAccount, setWindowsAccount] = useState<BedrockWindowsAccount | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -77,6 +88,15 @@ export function BedrockPage() {
       })
       .finally(() => {
         if (alive) setLoading(false)
+      })
+
+    window.newbie.bedrock
+      .windowsAccount()
+      .then((next) => {
+        if (alive) setWindowsAccount(next)
+      })
+      .catch(() => {
+        if (alive) setWindowsAccount({ emails: [], xboxAppInstalled: false })
       })
 
     const unsubscribe = window.newbie.app.onEvent((event) => {
@@ -489,6 +509,27 @@ export function BedrockPage() {
         }
       />
 
+      <BedrockAccountCard
+        account={
+          accounts.find((entry) => entry.active && entry.type === 'microsoft') ??
+          accounts.find((entry) => entry.type === 'microsoft')
+        }
+        windowsAccount={windowsAccount}
+        onAddAccount={() => {
+          openModal('addAccountTab', 'microsoft')
+          openModal('addAccount', true)
+        }}
+        onOpenXbox={() => {
+          if (windowsAccount && !windowsAccount.xboxAppInstalled) {
+            void window.newbie.app.openExternal(XBOX_APP_STORE_WEB_URL)
+            return
+          }
+          void window.newbie.bedrock.openXbox().catch((failure) => {
+            toast('error', 'Could not open the Xbox app', errorMessage(failure))
+          })
+        }}
+      />
+
       <div className="space-y-4">
         {installations.length > 0 ? (
           <div className={installations.length > 1 ? 'grid gap-3 sm:grid-cols-2' : 'grid gap-3'}>
@@ -640,6 +681,113 @@ export function BedrockPage() {
         </div>
       </div>
     </div>
+  )
+}
+
+function BedrockAccountCard({
+  account,
+  windowsAccount,
+  onAddAccount,
+  onOpenXbox
+}: {
+  account?: AccountSummary
+  windowsAccount: BedrockWindowsAccount | null
+  onAddAccount: () => void
+  onOpenXbox: () => void
+}) {
+  const windowsEmail = windowsAccount?.emails[0]
+  const xboxInstalled = windowsAccount?.xboxAppInstalled ?? false
+
+  return (
+    <Card className="mb-4 p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-3">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-grass/20 bg-grass/10 text-grass">
+            <GameController size={18} weight="fill" />
+          </span>
+          <div>
+            <h2 className="font-display text-[13.5px] font-semibold text-ink">
+              Microsoft account for Bedrock
+            </h2>
+            <p className="mt-0.5 max-w-[70ch] text-[10.5px] leading-relaxed text-muted">
+              Minecraft for Windows signs in through the Xbox app on this PC. Newbie&apos;s Java sign-in is
+              separate, so use the same Microsoft account in the Xbox app before playing.
+            </p>
+          </div>
+        </div>
+        <Badge tone={account ? 'green' : 'neutral'}>
+          {account ? 'Newbie account ready' : 'No Microsoft account'}
+        </Badge>
+      </div>
+
+      <div className="mt-4 grid gap-3 md:grid-cols-2">
+        <div className="rounded-xl border border-line/50 bg-canvas/30 px-3.5 py-3">
+          <div className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted/70">
+            Newbie Microsoft account
+          </div>
+          {account ? (
+            <div className="mt-1.5">
+              <div className="truncate text-[12.5px] font-semibold text-ink">
+                {account.gamertag ?? account.username}
+              </div>
+              <div className="mt-0.5 font-mono text-[9.5px] text-muted/60">
+                {account.xuid ? `XUID ${account.xuid}` : 'Xbox ID loads when the account refreshes'}
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              onClick={onAddAccount}
+              className="mt-1.5 text-left text-[11px] font-medium text-grass hover:underline"
+            >
+              Add a Microsoft account
+            </button>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-line/50 bg-canvas/30 px-3.5 py-3">
+          <div className="text-[9.5px] font-semibold uppercase tracking-[0.1em] text-muted/70">
+            Windows / Xbox account
+          </div>
+          {windowsEmail ? (
+            <div className="mt-1.5">
+              <div className="truncate text-[12.5px] font-semibold text-ink">{windowsEmail}</div>
+              <div className="mt-0.5 text-[9.5px] text-muted/60">
+                {xboxInstalled ? 'Xbox app installed' : 'Xbox app not installed'}
+              </div>
+            </div>
+          ) : (
+            <div className="mt-1.5 text-[11px] text-muted/75">
+              {windowsAccount === null
+                ? 'Checking the Windows account…'
+                : 'No Microsoft account found in Windows'}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="mt-3 flex flex-wrap items-center gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={onOpenXbox}
+          icon={<GameController size={14} />}
+        >
+          {xboxInstalled ? 'Open Xbox app' : 'Get Xbox app'}
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => void window.newbie.app.openExternal(BEDROCK_STORE_WEB_URL)}
+          icon={<ArrowSquareOut size={14} />}
+        >
+          Minecraft Store page
+        </Button>
+        {windowsAccount === null && (
+          <span className="text-[10px] text-muted/60">Reading the local Windows account…</span>
+        )}
+      </div>
+    </Card>
   )
 }
 

@@ -75,6 +75,7 @@ The **Bedrock** page downloads and launches Minecraft for Windows separately fro
 - Launches the installed package through its real Windows app identity.
 - Manage installed release/preview packages directly: **Folder** opens the package install location (falling back to the game data folder when Windows protects `WindowsApps`), and **Uninstall** removes only the selected channel while preserving worlds, Marketplace content and settings.
 - Requires a Microsoft account with **Minecraft for Windows** or **Game Pass**. The full package is listed; the in-game 90-minute trial still applies if the account does not own the game. Newbie does not bypass licensing.
+- The Bedrock page shows your Newbie Microsoft account next to the Windows/Xbox account found on the PC, with a button to open the Xbox app. Minecraft for Windows always uses the account signed into the Xbox app, so sign in there with the same Microsoft account before playing. Newbie cannot pass its Java token into the Store app.
 - Bedrock is not moddable. Modrinth, loadouts, shaders and repair are Java-only.
 
 <p align="center">
@@ -106,6 +107,7 @@ The **Servers** page creates and runs Minecraft servers on this PC. It is a laun
 - **Runtime settings** let you rename the server and change its memory allocation without recreating it.
 - **Live console** with launcher-captured logs, server command input and quick commands.
 - **Bedrock specifics:** the official BDS runs without Java, uses UDP port 19132 by default, and does not load Java mods, plugins or datapacks. Use the Bedrock page for the Minecraft for Windows client.
+- **Bedrock player list:** the Players tab reads and writes `allowlist.json`, adds the selected Microsoft account with its Xbox XUID, and can turn on the Bedrock allow list. Players can also be added from the console with `allowlist add <gamertag>` while the server runs.
 - **Add-ons from Modrinth:** plugins for Paper, mods for modded servers, datapacks for every type. Required dependencies are installed automatically, add-ons can be enabled/disabled without deleting them, and **Check updates → Update** replaces every outdated file in one click while preserving disabled state.
 - **Resource packs:** pick a pack from Modrinth or add your own `.zip`, then Newbie writes the public URL, SHA-1, required-pack flag and prompt into `server.properties`. Modrinth packs use their public CDN link; custom files are copied into `resourcepacks/` and you paste the public link where the file is hosted.
 - **Scheduled restarts:** restart every few hours or daily at a local time. Newbie warns players in chat 10 seconds before the restart and shows the next run in Server Settings. The launcher must stay open and the server must be online when the timer is due.
@@ -127,7 +129,7 @@ The server **Share** tab detects your LAN, Radmin VPN and public addresses, your
 
 ## Accounts, honestly
 
-- **Microsoft** — opens Microsoft's real sign-in page in an embedded window. The resulting Minecraft token is used for licensed servers, and signing in makes that account the active player for the next launch. Tokens are encrypted with Windows DPAPI via Electron `safeStorage` and never reach the UI process.
+- **Microsoft** — opens Microsoft's real sign-in page in an embedded window. The resulting Minecraft token is used for licensed Java servers, and signing in makes that account the active player for the next launch. The Xbox gamertag and XUID are stored for Bedrock server allow lists. Tokens are encrypted with Windows DPAPI via Electron `safeStorage` and never reach the UI process.
 - **TLauncher** — stores your public TLauncher nickname and syncs your public skin/cape from `auth.tlauncher.org`. TLauncher does not issue Mojang/Microsoft game licences, so these profiles play in offline mode. In-game TLauncher skin rendering is on the roadmap; the launcher avatar sync is implemented.
 - **Offline** — a local username for single-player, LAN and offline-mode servers. You can upload a custom skin from the Accounts page; the launcher converts PNG, JPEG, WebP, BMP, GIF or TIFF images and applies it to the default player model through a local resource pack. Other players on servers will see the normal offline skin.
 - **Authlib** — third-party Yggdrasil servers (Ely.by, LittleSkin, private servers). The API root is resolved with the standard ALI header.

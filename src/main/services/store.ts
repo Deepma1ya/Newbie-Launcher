@@ -305,7 +305,8 @@ function sanitizeAccount(account: StoredAccount | AuthAccount): AccountSummary {
     expiresAt: account.expiresAt,
     needsRefresh: account.needsRefresh,
     apiRoot: account.apiRoot,
-    xuid: account.xuid
+    xuid: account.xuid,
+    gamertag: account.gamertag
   }
 }
 

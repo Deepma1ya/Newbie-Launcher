@@ -18,7 +18,7 @@ interface TokenResponse {
 
 interface XboxResponse {
   Token: string
-  DisplayClaims: { xui: { uhs: string; xid?: string }[] }
+  DisplayClaims: { xui: { uhs: string; xid?: string; gtg?: string }[] }
 }
 
 interface MinecraftProfile {
@@ -222,6 +222,7 @@ export async function completeLogin(token: TokenResponse, activate = false): Pro
 
   const uhs = xsts.DisplayClaims.xui[0]?.uhs
   const xid = xsts.DisplayClaims.xui[0]?.xid
+  const gamertag = xsts.DisplayClaims.xui[0]?.gtg
   if (!uhs) throw new Error('Xbox Live did not return a user hash')
 
   const minecraft = await fetchJson<{
@@ -263,7 +264,8 @@ export async function completeLogin(token: TokenResponse, activate = false): Pro
     accessToken: minecraft.access_token,
     refreshToken: token.refresh_token,
     clientToken: undefined,
-    xuid: xid
+    xuid: xid,
+    gamertag
   }
 
   const summary = await store.upsertAccount(account)

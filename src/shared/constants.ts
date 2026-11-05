@@ -41,6 +41,7 @@ export const BEDROCK_STORE_URL = 'ms-windows-store://pdp/?productid=9NBLGGH2JHXJ
 export const BEDROCK_STORE_WEB_URL = 'https://www.xbox.com/games/store/minecraft-for-windows/9NBLGGH2JHXJ'
 export const GAMING_SERVICES_STORE_URL = 'ms-windows-store://pdp/?productid=9MWPM2CQNLHN'
 export const GAMING_SERVICES_STORE_WEB_URL = 'https://apps.microsoft.com/detail/9mwpm2cqnlhn'
+export const XBOX_APP_STORE_WEB_URL = 'https://apps.microsoft.com/detail/9mv0b5hzvk9z'
 
 /** Microsoft's public Minecraft launcher client id. No client secret is used. */
 export const MICROSOFT_CLIENT_ID = '00000000402b5328'

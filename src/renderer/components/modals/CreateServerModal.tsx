@@ -3,7 +3,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { ArrowSquareOut, HardDrives, WarningCircle } from '@phosphor-icons/react'
 import type { BedrockChannel, LoaderType, ServerType } from '@shared/types'
 import { SERVER_TYPES, serverLoader, serverTypeInfo, serverTypeLabel } from '@shared/serverTypes'
-import { useBedrockServerBuilds, useLoaderVersions, useMinecraftVersions, useSystemInfo, qk } from '../../hooks/queries'
+import { useAccounts, useBedrockServerBuilds, useLoaderVersions, useMinecraftVersions, useSystemInfo, qk } from '../../hooks/queries'
 import { toast } from '../../store/ui'
 import { errorMessage } from '../../lib/utils'
 import { Modal } from '../ui/Modal'
@@ -28,6 +28,7 @@ export function CreateServerModal({
   const [type, setType] = useState<ServerType>('paper')
   const [bedrockChannel, setBedrockChannel] = useState<BedrockChannel>('release')
   const [bedrockVersion, setBedrockVersion] = useState('')
+  const [allowMicrosoftAccount, setAllowMicrosoftAccount] = useState(true)
   const [versionId, setVersionId] = useState('')
   const [loaderVersion, setLoaderVersion] = useState('')
   const [memoryMb, setMemoryMb] = useState(4096)
@@ -47,6 +48,9 @@ export function CreateServerModal({
   const typeInfo = serverTypeInfo(edition === 'bedrock' ? 'bedrock' : type)
   const bedrockBuilds = useBedrockServerBuilds(edition === 'bedrock')
   const javaTypes = SERVER_TYPES.filter((entry) => entry.value !== 'bedrock')
+  const accounts = useAccounts().data ?? []
+  const microsoftAccount = accounts.find((entry) => entry.active && entry.type === 'microsoft')
+  const hasMicrosoftAccount = accounts.some((entry) => entry.type === 'microsoft')
 
   useEffect(() => {
     if (!open) return
@@ -99,6 +103,7 @@ export function CreateServerModal({
         type: edition === 'bedrock' ? 'bedrock' : type,
         versionId: version,
         bedrockChannel: edition === 'bedrock' ? bedrockChannel : undefined,
+        allowMicrosoftAccount: edition === 'bedrock' ? allowMicrosoftAccount : undefined,
         loaderVersion: typeInfo.mods ? loaderVersion : undefined,
         port,
         memoryMb,
@@ -304,6 +309,24 @@ export function CreateServerModal({
               Version {bedrockVersion || '—'} will be downloaded from Minecraft.net. Bedrock manages memory
               automatically; 4 GB or more is recommended for a small server.
             </p>
+            {microsoftAccount ? (
+              <Switch
+                checked={allowMicrosoftAccount}
+                onChange={setAllowMicrosoftAccount}
+                label={`Add ${microsoftAccount.gamertag ?? microsoftAccount.username} to the allow list`}
+                description={
+                  microsoftAccount.xuid
+                    ? 'The account can still join after you turn on the Bedrock allow list. Friends can be added later from the server Players tab.'
+                    : 'Refresh this Microsoft account from Accounts to load its Xbox ID, then recreate the server or add it from Players.'
+                }
+              />
+            ) : (
+              hasMicrosoftAccount && (
+                <p className="text-[10px] leading-relaxed text-gold/80">
+                  Select your Microsoft account on the Accounts page to add it to this server&apos;s allow list.
+                </p>
+              )
+            )}
           </>
         )}
 

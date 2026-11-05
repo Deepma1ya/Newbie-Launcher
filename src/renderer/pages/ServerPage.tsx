@@ -3,6 +3,7 @@ import { useNavigate, useParams, Link } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowLeft,
+  ArrowSquareOut,
   ArrowsClockwise,
   CaretRight,
   CheckCircle,
@@ -15,6 +16,7 @@ import {
   Plus,
   Stop,
   Trash,
+  UserPlus,
   UsersThree,
   WarningCircle
 } from '@phosphor-icons/react'
@@ -45,7 +47,9 @@ import {
   serverTypeLabel
 } from '@shared/serverTypes'
 import {
+  useAccounts,
   useServer,
+  useServerAllowlist,
   useServerLogs,
   useServerProperties,
   useServerSearch,
@@ -64,7 +68,7 @@ import { ServerSharePanel } from '../components/ServerSharePanel'
 import { ServerResourcePackPanel } from '../components/ServerResourcePackPanel'
 import { ServerCommandSnippets } from '../components/ServerCommandSnippets'
 
-type Tab = 'console' | 'share' | 'settings' | 'resource-pack' | 'addons'
+type Tab = 'console' | 'share' | 'players' | 'settings' | 'resource-pack' | 'addons'
 
 export function ServerPage() {
   const { id } = useParams<{ id: string }>()
@@ -190,6 +194,15 @@ export function ServerPage() {
           options={[
             { value: 'console', label: 'Console', icon: <PaperPlaneTilt size={14} /> },
             { value: 'share', label: 'Share', icon: <UsersThree size={14} /> },
+            ...(isBedrock
+              ? [
+                  {
+                    value: 'players',
+                    label: 'Players',
+                    icon: <UserPlus size={14} />
+                  }
+                ]
+              : []),
             { value: 'settings', label: 'Settings', icon: <HardDrives size={14} /> },
             ...(isBedrock
               ? []
@@ -227,6 +240,13 @@ export function ServerPage() {
           server={server}
           running={running}
           onStart={() => void action('start')}
+          onOpenSettings={() => setTab('settings')}
+        />
+      )}
+      {tab === 'players' && isBedrock && (
+        <ServerPlayersPanel
+          server={server}
+          running={running}
           onOpenSettings={() => setTab('settings')}
         />
       )}
@@ -423,6 +443,259 @@ function ServerConsole({
           />
         )}
       </div>
+    </div>
+  )
+}
+
+function ServerPlayersPanel({
+  server,
+  running,
+  onOpenSettings
+}: {
+  server: ServerRecord
+  running: boolean
+  onOpenSettings: () => void
+}) {
+  const queryClient = useQueryClient()
+  const openModal = useUi((state) => state.openModal)
+  const allowlist = useServerAllowlist(server.id, server.type === 'bedrock')
+  const properties = useServerProperties(server.id)
+  const accounts = useAccounts().data ?? []
+  const account =
+    accounts.find((entry) => entry.active && entry.type === 'microsoft') ??
+    accounts.find((entry) => entry.type === 'microsoft')
+  const [busyXuid, setBusyXuid] = useState<string | null>(null)
+  const [saving, setSaving] = useState(false)
+  const allowListEnabled = properties.data?.['allow-list'] === 'true'
+  const onlineMode = properties.data?.['online-mode'] !== 'false'
+  const entries = allowlist.data ?? []
+  const accountAdded = Boolean(
+    account?.xuid && entries.some((entry) => entry.xuid === account.xuid)
+  )
+
+  const refresh = async (): Promise<void> => {
+    await queryClient.invalidateQueries({ queryKey: qk.serverAllowlist(server.id) })
+  }
+
+  const toggleAllowList = async (checked: boolean): Promise<void> => {
+    setSaving(true)
+    try {
+      await window.newbie.servers.saveProperties(server.id, { 'allow-list': String(checked) })
+      await queryClient.invalidateQueries({ queryKey: qk.serverProperties(server.id) })
+      toast(
+        'success',
+        checked ? 'Allow list enabled' : 'Allow list disabled',
+        checked
+          ? running
+            ? 'Bedrock checks the list when players join. Restart the server if a new entry is ignored.'
+            : 'Bedrock checks the list the next time the server starts.'
+          : 'Anyone with the server address can join again.'
+      )
+    } catch (error) {
+      toast('error', 'Could not change the allow list', errorMessage(error))
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const addMyAccount = async (): Promise<void> => {
+    if (!account) {
+      openModal('addAccountTab', 'microsoft')
+      openModal('addAccount', true)
+      return
+    }
+    if (!account.xuid) {
+      toast(
+        'error',
+        'Xbox ID missing',
+        'Refresh this Microsoft account from Accounts to load its Xbox ID, then try again.'
+      )
+      return
+    }
+    setBusyXuid(account.xuid)
+    try {
+      await window.newbie.servers.allowlistAdd(server.id, {
+        name: account.gamertag ?? account.username,
+        xuid: account.xuid
+      })
+      await refresh()
+      toast(
+        'success',
+        'Player added',
+        `${account.gamertag ?? account.username} can join this Bedrock server when the allow list is on.`
+      )
+    } catch (error) {
+      toast('error', 'Could not add that player', errorMessage(error))
+    } finally {
+      setBusyXuid(null)
+    }
+  }
+
+  const removeEntry = async (xuid: string): Promise<void> => {
+    setBusyXuid(xuid)
+    try {
+      await window.newbie.servers.allowlistRemove(server.id, xuid)
+      await refresh()
+      toast('success', 'Player removed', 'The change applies on the next join or server restart.')
+    } catch (error) {
+      toast('error', 'Could not remove that player', errorMessage(error))
+    } finally {
+      setBusyXuid(null)
+    }
+  }
+
+  return (
+    <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="space-y-4">
+        <Card className="p-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <h2 className="font-display text-[14px] font-semibold text-ink">Allowed players</h2>
+              <p className="mt-0.5 text-[10.5px] leading-relaxed text-muted">
+                Bedrock matches players by Xbox ID. The allow list only restricts joins while online mode is on.
+              </p>
+            </div>
+            <Badge tone={allowListEnabled ? 'green' : 'neutral'}>
+              {allowListEnabled ? 'Allow list on' : 'Allow list off'}
+            </Badge>
+          </div>
+          <div className="mt-4">
+            <Switch
+              checked={allowListEnabled}
+              onChange={(checked) => void toggleAllowList(checked)}
+              label="Only allow listed players"
+              description="Turns allow-list=true in server.properties. Changes apply on the next server start; Newbie reloads the list when the server is running."
+            />
+          </div>
+          {saving && <p className="mt-2 text-[10px] text-muted/70">Saving…</p>}
+          {!onlineMode && (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border border-gold/25 bg-gold/[0.055] px-3 py-2.5 text-[10.5px] leading-relaxed text-gold">
+              <WarningCircle size={14} className="shrink-0" />
+              <span className="min-w-0 flex-1">
+                Online mode is off, so Bedrock cannot verify Xbox identities and the allow list will not
+                protect the server.
+              </span>
+              <Button variant="ghost" size="sm" onClick={onOpenSettings}>
+                Open settings
+              </Button>
+            </div>
+          )}
+        </Card>
+
+        <Card className="p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div>
+              <h2 className="font-display text-[14px] font-semibold text-ink">Player list</h2>
+              <p className="mt-0.5 text-[10.5px] text-muted">
+                {entries.length} player{entries.length === 1 ? '' : 's'} allowed by Xbox ID.
+              </p>
+            </div>
+            <Badge tone="neutral">{entries.length}</Badge>
+          </div>
+          {entries.length === 0 ? (
+            <p className="mt-3 rounded-xl border border-dashed border-line/70 p-4 text-center text-[11px] text-muted/70">
+              No players yet. Add your Microsoft account or use the console command{' '}
+              <span className="font-mono text-ink/80">allowlist add &lt;gamertag&gt;</span> while the server is
+              running.
+            </p>
+          ) : (
+            <div className="mt-3 space-y-2">
+              {entries.map((entry) => (
+                <div
+                  key={entry.xuid}
+                  className="flex items-center gap-3 rounded-xl border border-line/45 bg-canvas/30 px-3 py-2.5"
+                >
+                  <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-grass/20 bg-grass/10 text-grass">
+                    <UserPlus size={15} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate text-[12px] font-medium text-ink">{entry.name}</div>
+                    <div className="font-mono text-[9.5px] text-muted/60">{entry.xuid}</div>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    loading={busyXuid === entry.xuid}
+                    onClick={() => void removeEntry(entry.xuid)}
+                    icon={<Trash size={13} />}
+                  >
+                    Remove
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+        </Card>
+      </div>
+
+      <Card className="p-4">
+        <div className="flex items-center gap-2">
+          <UserPlus size={16} className="text-grass" />
+          <h2 className="font-display text-[13.5px] font-semibold text-ink">Your Microsoft account</h2>
+        </div>
+        <p className="mt-1.5 text-[10.5px] leading-relaxed text-muted">
+          Add the account you play Bedrock with. Minecraft for Windows uses the Microsoft account signed into
+          the Xbox app; this list controls who may join the server.
+        </p>
+        {account ? (
+          <>
+            <div className="mt-3 rounded-xl border border-line/50 bg-canvas/30 px-3 py-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[12.5px] font-semibold text-ink">
+                  {account.gamertag ?? account.username}
+                </span>
+                <Badge tone={accountAdded ? 'green' : 'neutral'}>
+                  {accountAdded ? 'Allowed' : 'Not added'}
+                </Badge>
+              </div>
+              <div className="mt-1 font-mono text-[9.5px] text-muted/60">
+                {account.xuid ?? 'Xbox ID not loaded'}
+              </div>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-2">
+              <Button
+                variant="primary"
+                size="sm"
+                loading={Boolean(account.xuid && busyXuid === account.xuid)}
+                disabled={accountAdded || !account.xuid}
+                onClick={() => void addMyAccount()}
+                icon={<UserPlus size={14} />}
+              >
+                {accountAdded ? 'Already allowed' : 'Add my account'}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => void window.newbie.bedrock.openXbox().catch((error) => {
+                  toast('error', 'Could not open the Xbox app', errorMessage(error))
+                })}
+                icon={<ArrowSquareOut size={14} />}
+              >
+                Open Xbox app
+              </Button>
+            </div>
+            {!account.xuid && (
+              <p className="mt-2 text-[10px] leading-relaxed text-gold">
+                Refresh this account from Accounts to load its Xbox ID.
+              </p>
+            )}
+          </>
+        ) : (
+          <Button
+            variant="primary"
+            size="sm"
+            className="mt-3"
+            onClick={() => void addMyAccount()}
+            icon={<Plus size={14} />}
+          >
+            Add Microsoft account
+          </Button>
+        )}
+        <p className="mt-3 text-[10px] leading-relaxed text-muted/60">
+          To play with this account, sign in to the Xbox app with the same Microsoft account once. Newbie
+          launches the installed Bedrock game normally.
+        </p>
+      </Card>
     </div>
   )
 }

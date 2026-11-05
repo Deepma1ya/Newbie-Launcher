@@ -90,6 +90,11 @@ import { copyInstanceSettings } from './services/instanceSettings'
 import { getServer, listServers } from './services/serverStore'
 import { getServerShareInfo, testServerAddress } from './services/serverShare'
 import {
+  addServerAllowlistEntry,
+  removeServerAllowlistEntry,
+  serverAllowlist
+} from './services/serverAllowlist'
+import {
   bedrockServerBuilds,
   createServer,
   removeServer,
@@ -126,6 +131,7 @@ import { resetServerRestartSchedule, stopServerScheduler } from './services/serv
 import { getServerStats } from './services/serverStats'
 import {
   addBedrockExclusion,
+  bedrockWindowsAccount,
   cancelBedrockDownload,
   deleteBedrockDownload,
   downloadBedrockVersion,
@@ -134,6 +140,7 @@ import {
   launchBedrock,
   openBedrockInstallFolder,
   openWindowsSecurity,
+  openXboxApp,
   uninstallBedrockVersion
 } from './services/bedrock'
 import { addOfflineAccount } from './auth/offline'
@@ -269,6 +276,7 @@ const createServerSchema = z.object({
   versionId: z.string().min(0).max(120),
   loaderVersion: z.string().max(120).optional(),
   bedrockChannel: z.enum(['release', 'preview']).optional(),
+  allowMicrosoftAccount: z.boolean().optional(),
   port: z.number().int().min(1).max(65535),
   memoryMb: z.number().int().min(1024).max(65536),
   motd: z.string().max(256).optional(),
@@ -276,6 +284,10 @@ const createServerSchema = z.object({
   levelName: z.string().max(80).optional(),
   javaPath: z.string().nullable().optional(),
   eulaAccepted: z.boolean()
+})
+const serverAllowlistEntrySchema = z.object({
+  name: z.string().trim().min(1).max(64),
+  xuid: z.string().regex(/^\d{1,20}$/)
 })
 const updateServerSchema = z.object({
   name: z.string().trim().min(1).max(60).optional(),
@@ -483,6 +495,15 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.serversSaveProperties, async (_event, id: string, patch: unknown) =>
     saveServerProperties(z.string().parse(id), serverPropertiesSchema.parse(patch))
+  )
+  ipcMain.handle(IPC.serversAllowlist, async (_event, id: string) =>
+    serverAllowlist(z.string().parse(id))
+  )
+  ipcMain.handle(IPC.serversAllowlistAdd, async (_event, id: string, entry: unknown) =>
+    addServerAllowlistEntry(z.string().parse(id), serverAllowlistEntrySchema.parse(entry))
+  )
+  ipcMain.handle(IPC.serversAllowlistRemove, async (_event, id: string, xuid: string) =>
+    removeServerAllowlistEntry(z.string().parse(id), z.string().regex(/^\d{1,20}$/).parse(xuid))
   )
   ipcMain.handle(IPC.serversSearchAddons, async (_event, query: unknown) =>
     searchServerAddons(serverSearchSchema.parse(query) as ServerSearchQuery)
@@ -998,6 +1019,8 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.bedrockAddExclusion, () => addBedrockExclusion())
   ipcMain.handle(IPC.bedrockOpenSecurity, () => openWindowsSecurity())
+  ipcMain.handle(IPC.bedrockWindowsAccount, () => bedrockWindowsAccount())
+  ipcMain.handle(IPC.bedrockOpenXbox, () => openXboxApp())
 
   nativeTheme.themeSource = 'dark'
   logger.info('ipc', 'IPC handlers registered')
