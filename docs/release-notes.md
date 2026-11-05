@@ -1,18 +1,21 @@
-# Newbie Launcher 0.1.35
+# Newbie Launcher 0.1.36
 
-Windows Security exclusions are now reliable and fail gracefully.
+The create-server flow now offers Java and Bedrock.
 
-## Bedrock
+## Bedrock servers
 
-- Fixed the false **“Could not add the exclusion”** error when Windows accepted some folders but rejected another.
-- Exclusions now run from a shared script/result folder, so an elevated process can always hand the result back to Newbie.
-- Newbie verifies each exclusion after Windows applies it. If Windows silently ignores a change (for example under Tamper Protection or a managed policy), it reports the exact folders instead of claiming success.
-- Partial success is no longer treated as a hard failure. The setup card lists the folders that still need approval.
-- Added **Open Windows Security** and **Copy paths** actions for manual approval when Windows blocks the automatic change.
-- Tamper Protection status is detected and explained in the setup card.
+- **Edition selector:** choosing **Create server** now asks for Java Edition or Bedrock first.
+- **Official software:** Bedrock servers use the Mojang Bedrock Dedicated Server for Windows, downloaded from Minecraft.net. No Java runtime is needed.
+- **Stable or preview:** pick the current stable BDS build or the preview channel; Newbie reads both versions from the official Mojang download catalog.
+- **UDP defaults:** new Bedrock servers use UDP port `19132` (IPv6 `19133`) and the standard `bedrock_server.exe` launch.
+- **Bedrock settings:** the settings tab shows the native Bedrock `server.properties` fields — server name, ports, world type, game mode, difficulty, cheats, view and tick distance, allow list, Xbox online mode, movement authority and chat restrictions.
+- **Bedrock console:** live console, quick commands such as `list`, `save hold` and `allowlist list`, plus start, stop and restart all work against the BDS process.
+- **Share tab:** a UDP warning replaces the TCP-only reachability test, because Bedrock clients connect over UDP.
+- **Java-only features hidden:** resource packs, add-ons, TPS and Java command snippets stay out of the Bedrock UI.
 
 ## Also included
 
+- Windows Security exclusion fixes from 0.1.35.
 - Pack sharing and instance-to-instance add-on copying from 0.1.34.
 - Server command snippets, TPS, resource packs and scheduled restarts from 0.1.33.
 - Everything from earlier releases is included.
