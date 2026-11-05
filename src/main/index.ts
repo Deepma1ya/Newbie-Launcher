@@ -7,6 +7,7 @@ import { createMainWindow, getMainWindow, initTray, markQuitting, showWindow } f
 import { initUpdater } from './services/updater'
 import { stopAllServers, runningServerIds } from './services/serverProcess'
 import { initServerScheduler, stopServerScheduler } from './services/serverScheduler'
+import { stopPackShare } from './services/packTransfer'
 import { logger } from './util/log'
 
 const gotLock = app.requestSingleInstanceLock()
@@ -60,6 +61,7 @@ if (!gotLock) {
   app.on('before-quit', (event) => {
     markQuitting()
     stopServerScheduler()
+    void stopPackShare()
     if (shutdownComplete) return
     event.preventDefault()
     if (shuttingDown) return

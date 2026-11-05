@@ -17,6 +17,7 @@ import {
   SquaresFour,
   TerminalWindow,
   Trash,
+  UsersThree,
   WarningCircle,
   Wrench
 } from '@phosphor-icons/react'
@@ -46,6 +47,7 @@ import { AddonRow } from '../components/AddonRow'
 import { DeleteAllAddonsButton } from '../components/DeleteAllAddonsButton'
 import { LoadoutCard } from '../components/LoadoutCard'
 import { CopySettingsModal } from '../components/modals/CopySettingsModal'
+import { PackTransferModal } from '../components/modals/PackTransferModal'
 import { TlsCapeBadge } from '../components/TlsCapeBadge'
 import { BlockIcon } from '../components/ui/BlockIcon'
 import { Badge, Card, EmptyState, Field, Input, Progress, Segmented, Select, Skeleton, Switch } from '../components/ui/primitives'
@@ -70,6 +72,7 @@ export function InstancePage() {
   const [addonQuery, setAddonQuery] = useState('')
   const [addonFilter, setAddonFilter] = useState<AddonFilter>('all')
   const [changeVersionOpen, setChangeVersionOpen] = useState(false)
+  const [packOpen, setPackOpen] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [scanning, setScanning] = useState(false)
   const backups = useBackups(id).data ?? []
@@ -234,6 +237,9 @@ export function InstancePage() {
               {pendingUpdates} update{pendingUpdates === 1 ? '' : 's'}
             </Button>
           )}
+          <IconButton label="Share or copy this instance" onClick={() => setPackOpen(true)}>
+            <UsersThree size={16} />
+          </IconButton>
           <IconButton label="Open instance folder" onClick={() => void window.newbie.instances.openFolder(instance.id)}>
             <FolderOpen size={16} />
           </IconButton>
@@ -391,6 +397,34 @@ export function InstancePage() {
               ))}
             </div>
           )}
+
+          <Card className="mt-4 p-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 items-start gap-2.5">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-grass/20 bg-grass/10 text-grass">
+                  <UsersThree size={16} />
+                </span>
+                <div>
+                  <h2 className="font-display text-[13.5px] font-semibold text-ink">Share or move this pack</h2>
+                  <p className="mt-0.5 max-w-xl text-[10.5px] leading-relaxed text-muted">
+                    Bundle every enabled mod, resource pack, datapack and shader into a standard `.mrpack`, create a
+                    temporary download link, or copy the files to another instance.
+                  </p>
+                </div>
+              </div>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => setPackOpen(true)}
+                icon={<UsersThree size={14} />}
+              >
+                Share or copy
+              </Button>
+            </div>
+            <p className="mt-2 text-[9.5px] text-muted/55">
+              Worlds, configs, accounts and disabled add-ons are never included.
+            </p>
+          </Card>
         </div>
       )}
 
@@ -427,6 +461,12 @@ export function InstancePage() {
           await refresh()
           setChangeVersionOpen(false)
         }}
+      />
+
+      <PackTransferModal
+        open={packOpen}
+        onClose={() => setPackOpen(false)}
+        source={instance}
       />
     </div>
   )

@@ -40,6 +40,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Library** | Review installed mods, resource packs, datapacks and shaders by section; update them or delete a whole section with confirmation. |
 | **Settings transfer** | Copy keybinds, video/audio options, resource pack order and Iris shader setup between instances, or make the selected settings the default for every other instance. |
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
+| **Pack sharing** | Bundle every enabled mod, resource pack, datapack and shader into a standard `.mrpack`, share a temporary LAN download link, or copy the files into another instance |
 | **Updating** | Check and update mods, resource packs and shaders in one click; version changes carry add-ons forward |
 | **Repair** | Installs missing dependencies and re-enables disabled providers first. Essential mods such as Fabric API and Sodium are protected from conflict disables. Other duplicate, wrong-loader or incompatible mods are only disabled after a confirmation popup, with a backup |
 | **Launcher updates** | Built-in updater over free GitHub Releases: background download, live progress and speed, release notes, restart-and-install, stable or beta channel |

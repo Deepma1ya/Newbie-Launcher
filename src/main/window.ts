@@ -143,6 +143,20 @@ export async function pickFile(filters?: { name: string; extensions: string[] }[
   return result.canceled ? null : result.filePaths[0] ?? null
 }
 
+export async function pickSaveFile(
+  defaultPath: string,
+  filters?: { name: string; extensions: string[] }[]
+): Promise<string | null> {
+  const options: Electron.SaveDialogOptions = {
+    defaultPath,
+    filters: filters ?? [{ name: 'All files', extensions: ['*'] }]
+  }
+  const result = mainWindow
+    ? await dialog.showSaveDialog(mainWindow, options)
+    : await dialog.showSaveDialog(options)
+  return result.canceled ? null : result.filePath ?? null
+}
+
 export function initTray(): void {
   try {
     const iconPath = appIconPath()

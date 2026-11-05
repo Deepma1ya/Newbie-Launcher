@@ -1,20 +1,44 @@
 import { useState } from 'react'
-import { MagnifyingGlass, Plus, SquaresFour } from '@phosphor-icons/react'
-import { useInstances, useDiskUsage } from '../hooks/queries'
-import { useUi } from '../store/ui'
-import { formatBytes } from '../lib/utils'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
+import { DownloadSimple, MagnifyingGlass, Plus, SquaresFour } from '@phosphor-icons/react'
+import { useInstances, useDiskUsage, qk } from '../hooks/queries'
+import { toast, useUi } from '../store/ui'
+import { errorMessage, formatBytes } from '../lib/utils'
 import { PageHeader } from '../components/PageHeader'
 import { InstanceCard } from '../components/InstanceCard'
 import { Button } from '../components/ui/Button'
 import { EmptyState, Input, Segmented, Skeleton } from '../components/ui/primitives'
 
 export function InstancesPage() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const instances = useInstances().data ?? []
   const loading = useInstances().isLoading
   const disk = useDiskUsage().data
   const openModal = useUi((state) => state.openModal)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<'all' | 'modded' | 'vanilla'>('all')
+  const [importing, setImporting] = useState(false)
+
+  const importPack = async (): Promise<void> => {
+    try {
+      const file = await window.newbie.app.pickFile([
+        { name: 'Modpack', extensions: ['mrpack', 'zip'] }
+      ])
+      if (!file) return
+      setImporting(true)
+      const instance = await window.newbie.instances.importPack(file)
+      await queryClient.invalidateQueries({ queryKey: qk.instances })
+      await queryClient.invalidateQueries({ queryKey: qk.disk })
+      toast('success', 'Modpack imported', instance.name)
+      navigate(`/instances/${instance.id}`)
+    } catch (error) {
+      toast('error', 'Could not import the modpack', errorMessage(error))
+    } finally {
+      setImporting(false)
+    }
+  }
 
   const filtered = instances.filter((instance) => {
     if (filter === 'modded' && instance.loader === 'vanilla') return false
@@ -30,9 +54,19 @@ export function InstancesPage() {
         title="Instances"
         description="Each instance keeps its own worlds, add-ons and loadouts. Versions, libraries and assets are shared to save disk."
         actions={
-          <Button variant="primary" onClick={() => openModal('createInstance', true)} icon={<Plus size={15} />}>
-            New instance
-          </Button>
+          <>
+            <Button
+              variant="secondary"
+              loading={importing}
+              onClick={() => void importPack()}
+              icon={<DownloadSimple size={15} />}
+            >
+              Import pack
+            </Button>
+            <Button variant="primary" onClick={() => openModal('createInstance', true)} icon={<Plus size={15} />}>
+              New instance
+            </Button>
+          </>
         }
       />
 

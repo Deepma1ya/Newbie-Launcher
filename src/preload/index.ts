@@ -105,7 +105,14 @@ const api: NewbieApi = {
     repair: (id, apply, allowDisable, reuseBackup) =>
       ipcRenderer.invoke(IPC.instancesRepair, id, apply, allowDisable, reuseBackup),
     clearRepairFailures: (id) => ipcRenderer.invoke(IPC.instancesClearRepairFailures, id),
-    syncTlsCape: (id) => ipcRenderer.invoke(IPC.instancesSyncTlsCape, id)
+    syncTlsCape: (id) => ipcRenderer.invoke(IPC.instancesSyncTlsCape, id),
+    exportPack: (id) => ipcRenderer.invoke(IPC.instancesExportPack, id),
+    importPack: (filePath) => ipcRenderer.invoke(IPC.instancesImportPack, filePath),
+    copyAddons: (sourceId, targetId, options) =>
+      ipcRenderer.invoke(IPC.instancesCopyAddons, sourceId, targetId, options),
+    sharePack: (id) => ipcRenderer.invoke(IPC.instancesSharePackStart, id),
+    stopPackShare: () => ipcRenderer.invoke(IPC.instancesSharePackStop),
+    packShare: () => ipcRenderer.invoke(IPC.instancesSharePackStatus)
   },
   addons: {
     search: (query) => ipcRenderer.invoke(IPC.addonsSearch, query),

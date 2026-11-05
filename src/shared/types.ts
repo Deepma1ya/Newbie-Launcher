@@ -189,6 +189,38 @@ export interface UpdateInstanceInput {
   tlauncherCape?: boolean
 }
 
+export interface PackExportResult {
+  path: string
+  filename: string
+  addons: number
+  bytes: number
+  skipped: string[]
+}
+
+export interface PackCopyOptions {
+  types: BulkAddonType[]
+  includeDisabled?: boolean
+  replace?: boolean
+}
+
+export interface PackCopyResult {
+  targetId: string
+  targetName: string
+  copied: number
+  skipped: number
+  conflicts: string[]
+  warnings: string[]
+}
+
+export interface PackShareInfo {
+  instanceId: string
+  filename: string
+  bytes: number
+  port: number
+  urls: string[]
+  startedAt: string
+}
+
 export interface WorldSummary {
   folder: string
   name: string

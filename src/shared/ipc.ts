@@ -11,6 +11,10 @@ import type {
   CreateInstanceInput,
   GpuApplyResult,
   Instance,
+  PackCopyOptions,
+  PackCopyResult,
+  PackExportResult,
+  PackShareInfo,
   JavaRuntime,
   LaunchState,
   LauncherSettings,
@@ -99,6 +103,12 @@ export const IPC = {
   instancesRepair: 'instances:repair',
   instancesClearRepairFailures: 'instances:clear-repair-failures',
   instancesSyncTlsCape: 'instances:sync-tls-cape',
+  instancesExportPack: 'instances:export-pack',
+  instancesImportPack: 'instances:import-pack',
+  instancesCopyAddons: 'instances:copy-addons',
+  instancesSharePackStart: 'instances:share-pack-start',
+  instancesSharePackStop: 'instances:share-pack-stop',
+  instancesSharePackStatus: 'instances:share-pack-status',
   serversList: 'servers:list',
   serversGet: 'servers:get',
   serversCreate: 'servers:create',
@@ -286,6 +296,12 @@ export interface NewbieApi {
     repair(id: string, apply: boolean, allowDisable?: boolean, reuseBackup?: string): Promise<RepairReport>
     clearRepairFailures(id: string): Promise<void>
     syncTlsCape(id: string): Promise<TlsCapeSyncResult>
+    exportPack(id: string): Promise<PackExportResult | null>
+    importPack(filePath: string): Promise<Instance>
+    copyAddons(sourceId: string, targetId: string, options: PackCopyOptions): Promise<PackCopyResult>
+    sharePack(id: string): Promise<PackShareInfo>
+    stopPackShare(): Promise<void>
+    packShare(): Promise<PackShareInfo | null>
   }
   addons: {
     search(query: SearchQuery): Promise<SearchPage>

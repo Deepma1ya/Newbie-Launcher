@@ -16,6 +16,7 @@ import type {
   LauncherSettings,
   LoaderType,
   Loadout,
+  PackCopyOptions,
   SearchQuery,
   ServerAddonType,
   ServerSearchQuery,
@@ -27,7 +28,7 @@ import type {
 import { store } from './services/store'
 import { getSettings, updateSettings, changeDataDir } from './services/settings'
 import { paths } from './services/paths'
-import { safeJoin } from './util/fs'
+import { safeJoin, slugify } from './util/fs'
 import {
   listMinecraftVersions,
   installedVersionIds
@@ -65,6 +66,15 @@ import {
   updateLoadout
 } from './services/loadouts'
 import { installModpack, installModpackToInstance } from './services/modpacks'
+import {
+  copyAddonsToInstance,
+  exportInstancePack,
+  importInstancePack,
+  packExportFilters,
+  packShareInfo,
+  startPackShare,
+  stopPackShare
+} from './services/packTransfer'
 import {
   applyGpuPreference,
   diskUsage,
@@ -135,6 +145,7 @@ import {
   openExternalSafe,
   pickDirectory,
   pickFile,
+  pickSaveFile,
   toggleMaximize,
   windowState
 } from './window'
@@ -241,6 +252,11 @@ const copySettingsSchema = z.object({
     )
     .min(1)
     .max(20)
+})
+const packCopySchema = z.object({
+  types: z.array(z.enum(['mod', 'datapack', 'resourcepack', 'shader'])).min(1).max(4),
+  includeDisabled: z.boolean().optional(),
+  replace: z.boolean().optional()
 })
 
 const serverTypeSchema = z.enum(['vanilla', 'paper', 'fabric', 'quilt', 'forge', 'neoforge'])
@@ -349,6 +365,7 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.appRelaunch, async () => {
     stopServerScheduler()
+    await stopPackShare()
     await stopAllServers()
     app.relaunch()
     app.exit(0)
@@ -661,6 +678,83 @@ export function registerIpc(): void {
     if (!instance) throw new Error('Instance not found')
     return syncTlsCape(instance, store.activeAccount())
   })
+  ipcMain.handle(IPC.instancesExportPack, async (_event, id: string) => {
+    const instance = store.instance(z.string().parse(id))
+    if (!instance) throw new Error('Instance not found')
+    const defaultPath = path.join(
+      app.getPath('downloads'),
+      `${slugify(instance.name) || 'newbie-pack'}-${instance.versionId}.mrpack`
+    )
+    const destination = await pickSaveFile(defaultPath, packExportFilters())
+    if (!destination) return null
+    const handle = tasks.start('modpack', 'Exporting modpack', instance.name)
+    try {
+      const result = await exportInstancePack(instance.id, destination, (message, percent) =>
+        handle.progress({
+          stage: 'addons',
+          message,
+          current: percent ?? 0,
+          total: 100,
+          percent: percent ?? 10
+        })
+      )
+      await handle.done(`${result.addons} add-on(s) packed`)
+      return result
+    } catch (error) {
+      await handle.fail(error)
+      throw error
+    }
+  })
+  ipcMain.handle(IPC.instancesImportPack, async (_event, filePath: string) => {
+    const archive = pathSchema.parse(filePath)
+    const handle = tasks.start('modpack', 'Importing modpack', path.basename(archive))
+    try {
+      const instance = await importInstancePack(archive, (message, percent) =>
+        handle.progress({
+          stage: 'addons',
+          message,
+          current: percent ?? 0,
+          total: 100,
+          percent: percent ?? 8
+        })
+      )
+      await handle.done('Modpack imported')
+      return instance
+    } catch (error) {
+      await handle.fail(error)
+      throw error
+    }
+  })
+  ipcMain.handle(IPC.instancesCopyAddons, async (_event, sourceId: string, targetId: string, options: unknown) =>
+    copyAddonsToInstance(
+      z.string().parse(sourceId),
+      z.string().parse(targetId),
+      packCopySchema.parse(options) as PackCopyOptions
+    )
+  )
+  ipcMain.handle(IPC.instancesSharePackStart, async (_event, id: string) => {
+    const instance = store.instance(z.string().parse(id))
+    if (!instance) throw new Error('Instance not found')
+    const handle = tasks.start('modpack', 'Preparing pack download', instance.name)
+    try {
+      const info = await startPackShare(instance.id, (message, percent) =>
+        handle.progress({
+          stage: 'addons',
+          message,
+          current: percent ?? 0,
+          total: 100,
+          percent: percent ?? 8
+        })
+      )
+      await handle.done('Download link ready')
+      return info
+    } catch (error) {
+      await handle.fail(error)
+      throw error
+    }
+  })
+  ipcMain.handle(IPC.instancesSharePackStop, () => stopPackShare())
+  ipcMain.handle(IPC.instancesSharePackStatus, () => packShareInfo())
 
   ipcMain.handle(IPC.addonsSearch, async (_event, raw: unknown) => {
     const query = searchSchema.parse(raw) as SearchQuery

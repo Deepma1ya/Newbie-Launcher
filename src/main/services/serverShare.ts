@@ -56,6 +56,17 @@ export async function getServerShareInfo(serverId: string): Promise<ServerShareI
   }
 }
 
+/** Plain LAN addresses, reused by pack sharing for temporary download links. */
+export async function getServerShareAddresses(): Promise<ServerShareAddress[]> {
+  const network = await detectNetwork()
+  return [
+    ...network.lan,
+    ...(network.radminAddress
+      ? [{ interface: 'Radmin VPN', address: network.radminAddress }]
+      : [])
+  ]
+}
+
 export async function testServerAddress(raw: string): Promise<ServerAddressTest> {
   const address = normaliseAddress(raw)
   if (!address) throw new Error('Enter a server address like play.example.com or 1.2.3.4:25565')
