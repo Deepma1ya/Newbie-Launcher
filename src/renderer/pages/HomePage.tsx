@@ -153,33 +153,6 @@ export function HomePage() {
                         </p>
                       </div>
                     </div>
-
-                    <div className="mt-5 flex flex-wrap items-center gap-2">
-                      <PlayButton instance={active} size="lg" className="min-w-[128px]" />
-                      <Button
-                        variant="secondary"
-                        onClick={() => navigate(`/instances/${active.id}`)}
-                        icon={<Stack size={15} />}
-                      >
-                        Manage
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        onClick={() => openModal('console', { instanceId: active.id })}
-                        icon={<TerminalWindow size={15} />}
-                      >
-                        Console
-                      </Button>
-                      {pendingUpdates > 0 && (
-                        <Button
-                          variant="subtle"
-                          onClick={() => void window.newbie.addons.updateAll(active.id)}
-                          icon={<ArrowsClockwise size={15} />}
-                        >
-                          {pendingUpdates} update{pendingUpdates === 1 ? '' : 's'}
-                        </Button>
-                      )}
-                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 gap-2 self-center">
@@ -212,6 +185,39 @@ export function HomePage() {
                       value={active.lastPlayedAt ? relativeTime(active.lastPlayedAt) : 'Never'}
                       detail={active.lastPlayedAt ? 'Last session' : 'Not played yet'}
                     />
+                  </div>
+                </div>
+
+                <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/[0.07] pt-5">
+                  <div className="w-[148px]">
+                    <PlayButton instance={active} size="lg" fullWidth />
+                  </div>
+                  <Button
+                    variant="secondary"
+                    size="lg"
+                    className="w-[148px]"
+                    onClick={() => navigate(`/instances/${active.id}`)}
+                    icon={<Stack size={15} />}
+                  >
+                    Manage
+                  </Button>
+                  <div className="ml-auto flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="ghost"
+                      onClick={() => openModal('console', { instanceId: active.id })}
+                      icon={<TerminalWindow size={15} />}
+                    >
+                      Console
+                    </Button>
+                    {pendingUpdates > 0 && (
+                      <Button
+                        variant="subtle"
+                        onClick={() => void window.newbie.addons.updateAll(active.id)}
+                        icon={<ArrowsClockwise size={15} />}
+                      >
+                        {pendingUpdates} update{pendingUpdates === 1 ? '' : 's'}
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
