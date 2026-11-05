@@ -143,7 +143,6 @@ import {
   openXboxApp,
   uninstallBedrockVersion
 } from './services/bedrock'
-import { openBedrockFixFolder, setBedrockFixFolder } from './services/bedrockFix'
 import { addOfflineAccount } from './auth/offline'
 import { addTLauncherAccount, refreshTLauncherAccount } from './auth/tlauncher'
 import { addAuthlibAccount, refreshAuthlibAccount } from './auth/authlib'
@@ -1021,10 +1020,6 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.bedrockOpenSecurity, () => openWindowsSecurity())
   ipcMain.handle(IPC.bedrockWindowsAccount, () => bedrockWindowsAccount())
   ipcMain.handle(IPC.bedrockOpenXbox, () => openXboxApp())
-  ipcMain.handle(IPC.bedrockSetFixFolder, (_event, folder: unknown) =>
-    setBedrockFixFolder(z.string().trim().min(1).max(4096).nullable().parse(folder))
-  )
-  ipcMain.handle(IPC.bedrockOpenFixFolder, () => openBedrockFixFolder())
 
   nativeTheme.themeSource = 'dark'
   logger.info('ipc', 'IPC handlers registered')

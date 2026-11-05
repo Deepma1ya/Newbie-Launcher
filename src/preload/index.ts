@@ -173,9 +173,7 @@ const api: NewbieApi = {
     addExclusion: () => ipcRenderer.invoke(IPC.bedrockAddExclusion),
     openSecurity: () => ipcRenderer.invoke(IPC.bedrockOpenSecurity),
     windowsAccount: () => ipcRenderer.invoke(IPC.bedrockWindowsAccount),
-    openXbox: () => ipcRenderer.invoke(IPC.bedrockOpenXbox),
-    setFixFolder: (folder) => ipcRenderer.invoke(IPC.bedrockSetFixFolder, folder),
-    openFixFolder: () => ipcRenderer.invoke(IPC.bedrockOpenFixFolder)
+    openXbox: () => ipcRenderer.invoke(IPC.bedrockOpenXbox)
   }
 }
 

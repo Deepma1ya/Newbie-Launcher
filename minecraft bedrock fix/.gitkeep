@@ -1,0 +1,4 @@
+This folder is packaged into the launcher installer and delivered through auto-updates.
+
+Put the Bedrock fix files here before cutting a release. The launcher copies
+changed files into the installed Minecraft for Windows package before launch.

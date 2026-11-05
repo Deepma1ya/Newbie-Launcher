@@ -3,17 +3,15 @@ import os from 'node:os'
 import { constants as fsConstants, existsSync, promises as fs } from 'node:fs'
 import { execFile } from 'node:child_process'
 import { promisify } from 'node:util'
-import { app, shell } from 'electron'
+import { app } from 'electron'
 import type {
   BedrockFixFailure,
   BedrockFixFile,
   BedrockFixManifestEntry,
   BedrockFixResult,
-  BedrockFixState,
   BedrockInstallation
 } from '@shared/types'
 import { BEDROCK_FIX_FOLDER_NAME, isFixFilePending, isIgnoredFixEntry, normalizeFixRelativePath } from '@shared/bedrockFix'
-import { store } from './store'
 import { paths } from './paths'
 import { ensureDir, readJson, writeJsonAtomic } from '../util/fs'
 import { logger } from '../util/log'
@@ -49,28 +47,23 @@ function manifestFile(): string {
 }
 
 /**
- * The fix folder normally sits next to the launcher, which keeps it convenient
- * in development and portable installs. Store installs fall back to the
- * launcher data directory and the Bedrock page lets the player pick another.
+ * The fix folder ships inside the launcher resources and is replaced by the
+ * installer or auto-update. Development builds read it from the repository.
  */
 export function bedrockFixFolder(): string {
-  const configured = store.settings().bedrockFixDir?.trim()
-  if (configured) return path.resolve(configured)
-  const candidates = [
-    path.join(app.getAppPath(), BEDROCK_FIX_FOLDER_NAME),
-    path.join(path.dirname(app.getPath('exe')), BEDROCK_FIX_FOLDER_NAME)
-  ]
+  const candidates = app.isPackaged
+    ? [
+        path.join(process.resourcesPath, BEDROCK_FIX_FOLDER_NAME),
+        path.join(path.dirname(app.getPath('exe')), 'resources', BEDROCK_FIX_FOLDER_NAME)
+      ]
+    : [
+        path.join(app.getAppPath(), BEDROCK_FIX_FOLDER_NAME),
+        path.join(process.resourcesPath, BEDROCK_FIX_FOLDER_NAME)
+      ]
   for (const candidate of candidates) {
     if (existsSync(candidate)) return path.resolve(candidate)
   }
-  return path.join(bedrockRoot(), 'fix')
-}
-
-function currentTarget(installations: BedrockInstallation[]): BedrockInstallation | undefined {
-  return (
-    installations.find((entry) => entry.channel === 'release') ??
-    installations.find((entry) => entry.channel === 'preview')
-  )
+  return path.resolve(candidates[0]!)
 }
 
 function sameTarget(manifest: FixManifest | null, target: BedrockInstallation | undefined): boolean {
@@ -154,37 +147,6 @@ async function destinationSize(file: string): Promise<number | null | undefined>
     // Windows refused to inspect the package. Trust the manifest rather than
     // forcing an administrator prompt on every launch.
     return undefined
-  }
-}
-
-export async function getBedrockFixState(installations: BedrockInstallation[] = []): Promise<BedrockFixState> {
-  const folder = bedrockFixFolder()
-  try {
-    await ensureDir(folder)
-    const [files, manifest] = await Promise.all([listFixFiles(folder), loadManifest()])
-    const target = currentTarget(installations)
-    const synced = sameTarget(manifest, target)
-    const pending = files.filter((file) =>
-      isFixFilePending(file, synced ? manifest?.entries[file.path] : undefined, undefined)
-    ).length
-    return {
-      folder,
-      exists: true,
-      files: files.length,
-      bytes: files.reduce((total, file) => total + file.size, 0),
-      pending,
-      lastSyncedAt: manifest?.updatedAt,
-      lastSyncTarget: manifest?.target
-    }
-  } catch (error) {
-    return {
-      folder,
-      exists: false,
-      files: 0,
-      bytes: 0,
-      pending: 0,
-      error: error instanceof Error ? error.message : String(error)
-    }
   }
 }
 
@@ -473,26 +435,4 @@ export async function applyBedrockFix(target: BedrockInstallation): Promise<Bedr
     `Copied ${result.copied} of ${pending.length} fix file(s) into ${target.packageFullName}`
   )
   return result
-}
-
-export async function setBedrockFixFolder(folder: string | null): Promise<void> {
-  if (folder === null || !folder.trim()) {
-    await store.updateSettings({ bedrockFixDir: '' })
-    return
-  }
-  const resolved = path.resolve(folder)
-  const stat = await fs.stat(resolved).catch(() => null)
-  if (!stat?.isDirectory()) throw new Error('That folder does not exist. Choose an existing folder.')
-  if (resolved.length < 4 || /^[a-zA-Z]:\\?$/.test(resolved)) {
-    throw new Error('Choose a dedicated folder, not a drive root.')
-  }
-  await store.updateSettings({ bedrockFixDir: resolved })
-  logger.info('bedrock-fix', `Fix folder set to ${resolved}`)
-}
-
-export async function openBedrockFixFolder(): Promise<void> {
-  const folder = bedrockFixFolder()
-  await ensureDir(folder)
-  const error = await shell.openPath(folder)
-  if (error) throw new Error(`Could not open the Bedrock fix folder. ${error}`)
 }

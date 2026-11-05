@@ -8,7 +8,6 @@ import type {
   BedrockChannel,
   BedrockExclusionResult,
   BedrockInstallation,
-  BedrockLaunchResult,
   BedrockProgress,
   BedrockSetup,
   BedrockState,
@@ -31,7 +30,7 @@ import {
 import { emit } from './events'
 import { fetchJson } from './http'
 import { paths, freeSpaceMb } from './paths'
-import { applyBedrockFix, getBedrockFixState } from './bedrockFix'
+import { applyBedrockFix, bedrockFixFolder } from './bedrockFix'
 import { preservePackageData, restorePreservedData } from './bedrockData'
 import { ensureDir, pathExists, readJson, sanitizeFilename, writeJsonAtomic } from '../util/fs'
 import { logger } from '../util/log'
@@ -117,6 +116,7 @@ function gameDataDirs(): string[] {
 function requiredExclusionPaths(installations: BedrockInstallation[]): string[] {
   const candidates = [
     bedrockRoot(),
+    bedrockFixFolder(),
     ...gameDataDirs(),
     ...installations.map((entry) => entry.installLocation)
   ].filter(Boolean)
@@ -407,12 +407,11 @@ export async function getBedrockState(forceRefresh = false): Promise<BedrockStat
     loadCatalog(forceRefresh),
     detectBedrockInstallations()
   ])
-  const [setup, fix] = await Promise.all([getSetup(installations), getBedrockFixState(installations)])
+  const setup = await getSetup(installations)
   return {
     setup,
     installations,
     versions: await enrichVersions(catalog.versions, installations),
-    fix,
     catalogUpdatedAt: catalog.fetchedAt,
     catalogError: catalog.error
   }
@@ -804,7 +803,7 @@ export async function installBedrockVersion(id: string, replaceInstalled = false
   }
 }
 
-export async function launchBedrock(channel: BedrockChannel): Promise<BedrockLaunchResult> {
+export async function launchBedrock(channel: BedrockChannel): Promise<void> {
   const installations = await detectBedrockInstallations()
   const target = installations.find((entry) => entry.channel === channel)
   if (!target) {
@@ -842,15 +841,6 @@ export async function launchBedrock(channel: BedrockChannel): Promise<BedrockLau
   )
   gameSessionStarted()
   monitorBedrockSession()
-  return {
-    fix: {
-      folder: fix.folder,
-      target: fix.target,
-      copied: fix.copied,
-      skipped: fix.skipped,
-      pending: fix.pending
-    }
-  }
 }
 
 async function bedrockClientRunning(): Promise<boolean> {

@@ -24,6 +24,7 @@ describe('Bedrock fix paths', () => {
     expect(isIgnoredFixEntry('Thumbs.db')).toBe(true)
     expect(isIgnoredFixEntry('desktop.ini')).toBe(true)
     expect(isIgnoredFixEntry('.DS_Store')).toBe(true)
+    expect(isIgnoredFixEntry('.gitkeep')).toBe(true)
     expect(isIgnoredFixEntry('~$document.docx')).toBe(true)
     expect(isIgnoredFixEntry('download.part')).toBe(true)
     expect(isIgnoredFixEntry('d3d11.dll')).toBe(false)

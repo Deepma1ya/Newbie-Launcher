@@ -23,14 +23,12 @@ import type {
   AccountSummary,
   BedrockChannel,
   BedrockExclusionResult,
-  BedrockFixState,
   BedrockProgress,
   BedrockSetup,
   BedrockState,
   BedrockVersion,
   BedrockWindowsAccount
 } from '@shared/types'
-import { normalizeExclusionPath } from '@shared/bedrock'
 import {
   BEDROCK_STORE_WEB_URL,
   GAMING_SERVICES_STORE_WEB_URL,
@@ -56,7 +54,6 @@ export function BedrockPage() {
   const [uninstalling, setUninstalling] = useState<BedrockChannel | null>(null)
   const [launching, setLaunching] = useState<BedrockChannel | null>(null)
   const [excluding, setExcluding] = useState(false)
-  const [fixBusy, setFixBusy] = useState(false)
   const [channel, setChannel] = useState<BedrockChannel>('release')
   const [query, setQuery] = useState('')
   const [progress, setProgress] = useState<Record<string, BedrockProgress>>({})
@@ -182,7 +179,7 @@ export function BedrockPage() {
     askConfirm({
       title: 'Add Windows Security exclusion?',
       description: 'Windows Defender can slow down or block the 1–2 GB Bedrock package download.',
-      body: 'Newbie will ask Windows to exclude only its own Bedrock download folder, Microsoft’s Minecraft data folders and the installed Microsoft package folder. This opens a UAC prompt; nothing is excluded unless you approve it. Third-party files such as OnlineFix are never excluded.',
+      body: 'Newbie will ask Windows to exclude only its own Bedrock download folder, Microsoft’s Minecraft data folders, the installed Microsoft package folder and its bundled fix folder. This opens a UAC prompt; nothing is excluded unless you approve it.',
       confirmLabel,
       cancelLabel,
       onCancel: () => {
@@ -202,7 +199,7 @@ export function BedrockPage() {
     askConfirm({
       title: alreadyAdded ? 'Update Windows Security exclusion?' : 'Add Windows Security exclusion?',
       description: 'Windows Defender can slow down or block large Bedrock packages.',
-      body: 'This opens a Windows administrator (UAC) prompt. Newbie excludes only its own Bedrock download folder, the official Minecraft data folders and the installed Microsoft package folder. It never excludes third-party DLLs or cracks.',
+      body: 'This opens a Windows administrator (UAC) prompt. Newbie excludes only its own Bedrock download folder, the official Minecraft data folders, the installed Microsoft package folder and the bundled fix folder.',
       confirmLabel: alreadyAdded ? 'Update exclusion' : 'Add exclusion',
       action: async () => {
         await addExclusion()
@@ -223,29 +220,6 @@ export function BedrockPage() {
       toast('success', 'Folder paths copied', `${paths.length} path${paths.length === 1 ? '' : 's'}`)
     } catch (failure) {
       toast('error', 'Could not copy the paths', errorMessage(failure))
-    }
-  }
-
-  const chooseFixFolder = async (): Promise<void> => {
-    try {
-      const folder = await window.newbie.app.pickDirectory(state?.fix.folder)
-      if (!folder) return
-      setFixBusy(true)
-      await window.newbie.bedrock.setFixFolder(folder)
-      await refresh(false)
-      toast('success', 'Bedrock fix folder updated', folder)
-    } catch (failure) {
-      toast('error', 'Could not change the fix folder', errorMessage(failure))
-    } finally {
-      setFixBusy(false)
-    }
-  }
-
-  const openFixFolder = async (): Promise<void> => {
-    try {
-      await window.newbie.bedrock.openFixFolder()
-    } catch (failure) {
-      toast('error', 'Could not open the fix folder', errorMessage(failure))
     }
   }
 
@@ -284,7 +258,7 @@ export function BedrockPage() {
     askConfirm({
       title: `Exclude Minecraft ${version.version} from Windows Security?`,
       description: `Minecraft ${version.version} is installed. Each Bedrock version gets a new Windows package folder, so add it to the Windows Security exclusion list before you play.`,
-      body: 'Windows Defender scans the newly installed package while the game starts. This opens a UAC prompt. Newbie excludes only its Bedrock download folder, Microsoft’s Minecraft data folders and the installed Microsoft package folder. Third-party files such as OnlineFix are never excluded.',
+      body: 'Windows Defender scans the newly installed package while the game starts. This opens a UAC prompt. Newbie excludes only its Bedrock download folder, Microsoft’s Minecraft data folders, the installed Microsoft package folder and the bundled fix folder.',
       confirmLabel: 'Exclude folder',
       cancelLabel: 'Not now',
       onCancel: () => {
@@ -347,15 +321,8 @@ export function BedrockPage() {
   const launchNow = async (target: BedrockChannel): Promise<void> => {
     setLaunching(target)
     try {
-      const result = await window.newbie.bedrock.launch(target)
-      const copied = result.fix.copied
-      toast(
-        'info',
-        'Starting Minecraft…',
-        copied > 0
-          ? `${copied} fix file${copied === 1 ? '' : 's'} copied to the game folder. The game window will open in a few seconds.`
-          : 'The game window will open in a few seconds.'
-      )
+      await window.newbie.bedrock.launch(target)
+      toast('info', 'Starting Minecraft…', 'The game window will open in a few seconds.')
     } catch (failure) {
       toast('error', 'Could not start Minecraft', errorMessage(failure))
     } finally {
@@ -370,16 +337,13 @@ export function BedrockPage() {
       setup &&
       installation &&
       setup.defenderExclusion !== 'added' &&
-      setup.defenderMissingPaths.some(
-        (entry) =>
-          normalizeExclusionPath(entry) === normalizeExclusionPath(installation.installLocation)
-      )
+      setup.defenderMissingPaths.length > 0
 
     if (installation && needsExclusion && declinedExclusionFor.current !== installation.installLocation) {
       askConfirm({
         title: 'Exclude Minecraft from Windows Security before playing?',
         description: 'The installed Bedrock package folder is not in the Windows Security exclusion list yet.',
-        body: 'Windows Defender can scan or block the package while the game starts. This opens a UAC prompt. Newbie excludes only its Bedrock download folder, Microsoft’s Minecraft data folders and the installed Microsoft package folder. Third-party files are never excluded.',
+        body: 'Windows Defender can scan or block the package while the game starts. This opens a UAC prompt. Newbie excludes only its Bedrock download folder, Microsoft’s Minecraft data folders, the installed Microsoft package folder and the bundled fix folder.',
         confirmLabel: 'Exclude and play',
         cancelLabel: 'Play anyway',
         onCancel: () => {
@@ -685,12 +649,6 @@ export function BedrockPage() {
               onOpenSecurity={() => void window.newbie.bedrock.openSecurity()}
               onCopyPaths={() => void copyExclusionPaths()}
               onOpenGamingServices={() => void window.newbie.app.openExternal(GAMING_SERVICES_STORE_WEB_URL)}
-            />
-            <BedrockFixCard
-              fix={state!.fix}
-              busy={fixBusy}
-              onChoose={() => void chooseFixFolder()}
-              onOpen={() => void openFixFolder()}
             />
             <Card className="p-5">
               <div className="flex items-start gap-2.5">
@@ -1040,73 +998,6 @@ function BedrockVersionRow({
   )
 }
 
-function BedrockFixCard({
-  fix,
-  busy,
-  onChoose,
-  onOpen
-}: {
-  fix: BedrockFixState
-  busy: boolean
-  onChoose: () => void
-  onOpen: () => void
-}) {
-  return (
-    <Card className="p-5">
-      <div className="flex items-start justify-between gap-3">
-        <div className="flex items-start gap-2.5">
-          <FolderOpen size={17} className="mt-0.5 shrink-0 text-info" />
-          <div>
-            <h2 className="font-display text-[13.5px] font-semibold text-ink">Bedrock fix files</h2>
-            <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
-              Everything in this folder is copied into the installed Minecraft package before every launch. Changed
-              files are applied only when needed.
-            </p>
-          </div>
-        </div>
-        <Badge tone={fix.files > 0 ? 'green' : 'neutral'} className="h-5 text-[8.5px]">
-          {fix.files} file{fix.files === 1 ? '' : 's'}
-        </Badge>
-      </div>
-
-      <div className="mt-3 rounded-xl border border-line/50 bg-canvas/30 px-3.5 py-3">
-        <div className="break-all font-mono text-[9px] leading-relaxed text-muted/70" title={fix.folder}>
-          {fix.folder}
-        </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-2 text-[10px] text-muted/70">
-          <span>{formatBytes(fix.bytes)}</span>
-          {fix.pending > 0 ? (
-            <span className="text-gold">
-              {fix.pending} file{fix.pending === 1 ? '' : 's'} will be copied on the next Play
-            </span>
-          ) : fix.files > 0 ? (
-            <span className="text-grass">Up to date</span>
-          ) : (
-            <span>Add the files you want copied here</span>
-          )}
-        </div>
-        {fix.lastSyncedAt && (
-          <div className="mt-1 text-[9.5px] text-muted/55">
-            Last applied {new Date(fix.lastSyncedAt).toLocaleString()}
-          </div>
-        )}
-        {fix.error && (
-          <div className="mt-1.5 text-[9.5px] leading-relaxed text-danger">{fix.error}</div>
-        )}
-      </div>
-
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button size="sm" variant="secondary" onClick={onOpen} icon={<FolderOpen size={13} />}>
-          Open folder
-        </Button>
-        <Button size="sm" variant="ghost" loading={busy} onClick={onChoose} icon={<GearSix size={13} />}>
-          Choose folder
-        </Button>
-      </div>
-    </Card>
-  )
-}
-
 function SetupCard({
   setup,
   excluding,
@@ -1136,7 +1027,7 @@ function SetupCard({
           title="Windows Security exclusion"
           detail={
             setup.defenderExclusion === 'added'
-              ? 'Minecraft, download and data folders are excluded.'
+              ? 'Minecraft, download, data and bundled fix folders are excluded.'
               : setup.defenderTamperExclusions
                 ? 'Windows Tamper Protection protects the exclusion list. Add these folders manually.'
                 : setup.defenderExclusion === 'partial'

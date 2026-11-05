@@ -14,6 +14,5 @@ shots/
 .test-userdata*/
 /TLauncher-Installer-*.exe
 /Modrinth App_*-setup.exe
-/minecraft bedrock fix/
 .DS_Store
 Thumbs.db

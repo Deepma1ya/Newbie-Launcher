@@ -13,4 +13,4 @@ The maintainer expects a GitHub release after every user-visible update.
 7. Confirm the release, installer assets and `latest.yml` on GitHub.
 8. The product site is deployed by `.github/workflows/pages.yml` and reads the latest release from the GitHub API, so its version and download button follow the release automatically.
 
-Never stage local-only files such as the unrelated `minecraft bedrock fix/` folder.
+Never stage local-only files such as installers, scratch files or logs. The `minecraft bedrock fix/` folder is release content: commit its files when they should ship with the installer and auto-update.

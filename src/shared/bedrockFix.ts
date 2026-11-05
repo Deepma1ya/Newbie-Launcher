@@ -3,7 +3,7 @@ import type { BedrockFixFile, BedrockFixManifestEntry } from './types'
 /** Folder next to the launcher that holds files applied to Bedrock before launch. */
 export const BEDROCK_FIX_FOLDER_NAME = 'minecraft bedrock fix'
 
-const IGNORED_NAMES = new Set(['thumbs.db', 'desktop.ini', '.ds_store'])
+const IGNORED_NAMES = new Set(['thumbs.db', 'desktop.ini', '.ds_store', '.gitkeep'])
 
 /**
  * Operating-system droppings and half-finished downloads should never be
