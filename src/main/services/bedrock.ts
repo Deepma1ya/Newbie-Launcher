@@ -30,6 +30,7 @@ import {
 import { emit } from './events'
 import { fetchJson } from './http'
 import { paths, freeSpaceMb } from './paths'
+import { preservePackageData, restorePreservedData } from './bedrockData'
 import { ensureDir, pathExists, readJson, sanitizeFilename, writeJsonAtomic } from '../util/fs'
 import { logger } from '../util/log'
 import { gameSessionEnded, gameSessionStarted } from '../window'
@@ -158,7 +159,16 @@ function cleanPowerShellError(result: { stdout: string; stderr: string }): strin
     .join('\n')
     .replace(/\r/g, '')
   const lines = text.split('\n').map((line) => line.trim()).filter(Boolean)
-  return lines.slice(-4).join(' ').slice(0, 700) || 'Windows reported an unknown error.'
+  const meaningful = lines.filter(
+    (line) =>
+      !line.startsWith('+') &&
+      !line.startsWith('    +') &&
+      !line.startsWith('At line:') &&
+      !line.startsWith('CategoryInfo') &&
+      !line.startsWith('FullyQualifiedErrorId') &&
+      !line.startsWith('PSMessageDetails')
+  )
+  return (meaningful.slice(-4).join(' ') || lines.slice(-4).join(' ')).slice(0, 700) || 'Windows reported an unknown error.'
 }
 
 export async function detectBedrockInstallations(): Promise<BedrockInstallation[]> {
@@ -607,17 +617,47 @@ async function addBedrockPackage(file: string): Promise<void> {
 }
 
 async function removeBedrockPackage(
-  packageFullName: string,
+  target: BedrockInstallation,
   action: 'replace' | 'uninstall' = 'replace'
 ): Promise<void> {
-  const script = `Remove-AppxPackage -Package '${escapePowerShell(packageFullName)}' -PreserveApplicationData -ErrorAction Stop`
-  const result = await runPowerShell(script, 5 * 60 * 1000)
-  if (result.code === 0) return
-  throw new Error(
-    `Windows could not ${
-      action === 'uninstall' ? 'uninstall' : 'replace'
-    } the installed Bedrock package. ${cleanPowerShellError(result)}`
-  )
+  const preserved = await preservePackageData(localAppData(), target)
+  try {
+    // -PreserveApplicationData only works for development-mode loose packages.
+    // Store-installed Minecraft rejects it, so move the player data aside and
+    // restore it after Windows removes the package.
+    const script = `Remove-AppxPackage -Package '${escapePowerShell(target.packageFullName)}' -ErrorAction Stop`
+    const result = await runPowerShell(script, 5 * 60 * 1000)
+    if (result.code !== 0) {
+      const stillInstalled = (await detectBedrockInstallations().catch(() => [])).some(
+        (entry) => entry.packageFullName.toLowerCase() === target.packageFullName.toLowerCase()
+      )
+      if (stillInstalled) {
+        throw new Error(
+          `Windows could not ${
+            action === 'uninstall' ? 'uninstall' : 'replace'
+          } the installed Bedrock package. ${cleanPowerShellError(result)}`
+        )
+      }
+      logger.warn(
+        'bedrock',
+        `Remove-AppxPackage reported an error but ${target.packageFullName} is gone`,
+        cleanPowerShellError(result)
+      )
+    }
+  } catch (error) {
+    await restorePreservedData(preserved).catch((restoreError) => {
+      logger.error('bedrock', 'Could not restore Minecraft data after a failed package removal', restoreError)
+    })
+    throw error
+  }
+  await restorePreservedData(preserved).catch((error) => {
+    const backup = preserved[0]?.backup
+    throw new Error(
+      `Minecraft was removed, but its data could not be restored${
+        backup ? ` from ${path.dirname(backup)}` : ''
+      }. ${error instanceof Error ? error.message : String(error)}`
+    )
+  })
 }
 
 export async function uninstallBedrockVersion(channel: BedrockChannel): Promise<BedrockState> {
@@ -631,18 +671,24 @@ export async function uninstallBedrockVersion(channel: BedrockChannel): Promise<
   if (target.running) {
     throw new Error('Minecraft is running. Close it before uninstalling.')
   }
-  await removeBedrockPackage(target.packageFullName, 'uninstall')
-  await waitForUninstall(channel)
+  await removeBedrockPackage(target, 'uninstall')
+  const removed = await waitForUninstall(channel)
+  if (!removed) {
+    throw new Error(
+      'Windows reported success, but the Bedrock package is still installed. Try again, or remove it from Windows Settings → Installed apps.'
+    )
+  }
   logger.info('bedrock', `Uninstalled ${target.packageFullName}`)
   return getBedrockState()
 }
 
-async function waitForUninstall(channel: BedrockChannel): Promise<void> {
+async function waitForUninstall(channel: BedrockChannel): Promise<boolean> {
   for (let attempt = 0; attempt < 8; attempt += 1) {
     const installations = await detectBedrockInstallations()
-    if (!installations.some((entry) => entry.channel === channel)) return
+    if (!installations.some((entry) => entry.channel === channel)) return true
     await new Promise((resolve) => setTimeout(resolve, 500))
   }
+  return false
 }
 
 export async function openBedrockInstallFolder(channel: BedrockChannel): Promise<void> {
@@ -724,7 +770,7 @@ export async function installBedrockVersion(id: string, replaceInstalled = false
   })
 
   try {
-    if (current) await removeBedrockPackage(current.packageFullName)
+    if (current) await removeBedrockPackage(current)
     await addBedrockPackage(file)
     const installed = await waitForInstallation(version.id, version.channel)
     if (!installed) {
