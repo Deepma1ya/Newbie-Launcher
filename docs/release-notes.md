@@ -1,13 +1,21 @@
-# Newbie Launcher 0.1.32
+# Newbie Launcher 0.1.33
 
-Bedrock exclusions now follow every installed version.
+A sharper server dashboard — and a new home on the web.
 
-## Windows Security
+## Servers
 
-- After each Bedrock install, Newbie asks once whether to exclude the newly installed Minecraft package folder before you play.
-- The **Play** button checks that installed version's folder first and offers **Exclude and play** when it is not covered yet.
-- The setup card now reports the real exclusion state — all folders, some folders, or none — instead of trusting a one-time flag.
-- Windows requires administrator approval to read the exclusion list. When it is hidden, Newbie falls back to its last confirmed record and still re-checks every new install folder.
-- Exclusions stay opt-in: nothing changes without the in-app confirmation and Windows UAC prompt. Only Newbie's Bedrock download folder, Microsoft's official Minecraft data folders and the installed Microsoft package folder are excluded. Third-party files are never excluded.
+- **Command snippets:** 80+ ready-made console commands with player pickers, item suggestions, coordinate fields and careful warnings for destructive commands.
+- **TPS dashboard:** live TPS, MSPT and online player counts sampled from the server console, with 1m, 5m and 15m readings.
+- **Resource packs:** install a pack from Modrinth or add your own `.zip`, then let Newbie write the URL, SHA-1, required flag and prompt into `server.properties`.
+- **Scheduled restarts:** restart every few hours or daily at a local time, with an in-game warning before the server cycles.
+- Command snippets, TPS and player data only appear for the server type that supports them.
 
-Everything from 0.1.31 and earlier is included.
+## Website
+
+- New product site at [deepma1ya.github.io/Newbie-Launcher](https://deepma1ya.github.io/Newbie-Launcher/) with a feature tour, live screenshots, latest release download, FAQ and light/dark themes.
+- The launcher now links to the website from Home and the About settings.
+
+## Also included
+
+- The Bedrock Defender exclusion fix from 0.1.32: every newly installed Bedrock version is checked before Play.
+- Everything from 0.1.32 and earlier is included.
