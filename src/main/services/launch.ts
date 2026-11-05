@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs'
 import { createWriteStream } from 'node:fs'
 import { APP_VERSION, MAX_LOG_LINES } from '@shared/constants'
 import type { Instance, LaunchExit, LaunchLog, LaunchState } from '@shared/types'
+import { isCrashedExit } from '@shared/launch'
 import { getVersionJson, resolveVersion, rulesAllow, currentRuleContext, nativeArtifact } from './mojang'
 import { buildArguments, buildClasspath } from './launchArgs'
 import { assetRootFor, clientJarPath, installGame, missingGameFiles } from './installer'
@@ -258,7 +259,7 @@ async function finish(
 ): Promise<void> {
   running.delete(entry.instanceId)
   const durationSec = Math.round((Date.now() - entry.startedAt) / 1000)
-  const crashed = spawnError || (code !== null && code !== 0)
+  const crashed = isCrashedExit(code, spawnError, entry.stopping)
   appendLog(entry, 'system', `Minecraft exited with code ${code ?? 'unknown'}${signal ? ` (${signal})` : ''}`)
   if (crashed) {
     const hint = diagnoseCrash(entry.logs)

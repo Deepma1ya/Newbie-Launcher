@@ -31,6 +31,9 @@ export function useAppEvents(): void {
           break
         case 'launch-exit':
           void queryClient.invalidateQueries({ queryKey: qk.instances })
+          if (event.payload.crashed) {
+            ui.openModal('console', { instanceId: event.payload.instanceId })
+          }
           break
         case 'microsoft-auth':
           ui.setAuth(event.payload)

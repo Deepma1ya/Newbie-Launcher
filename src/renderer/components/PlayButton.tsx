@@ -24,7 +24,6 @@ export function PlayButton({
   const launchState = useUi((state) => state.running.find((entry) => entry.instanceId === instance.id))
   const running = launchState?.status === 'running'
   const starting = launchState?.status === 'starting'
-  const openModal = useUi((state) => state.openModal)
   const tasks = useTasks().data ?? []
   const liveTasks = useUi((state) => state.tasks)
   const queryClient = useQueryClient()
@@ -44,7 +43,6 @@ export function PlayButton({
       return
     }
     setLaunching(true)
-    openModal('console', { instanceId: instance.id })
     try {
       await window.newbie.instances.launch(instance.id)
       await queryClient.invalidateQueries({ queryKey: qk.instances })

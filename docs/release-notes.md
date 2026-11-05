@@ -1,17 +1,13 @@
-# Newbie Launcher 0.1.12
+# Newbie Launcher 0.1.13
 
-Repair reliability.
+Console opens only after a crash.
 
-## Fixed
+## Changed
 
-- Repair now plans and verifies each change; the dialog shows the post-repair state instead of the old list.
-- Duplicate repairs no longer silently skip when a `.disabled` copy already exists.
-- Mutual mod incompatibilities disable one side only, instead of both.
-- Missing dependencies are grouped and attempted once. A dependency that is present but disabled is reported as manual instead of being reinstalled in a loop.
-- Failed automatic fixes are persisted per instance and paused. Use **Retry automatic fixes** to retry deliberately.
-- Repair only checks tracked mods in the active loadout, so switching loadouts no longer creates false missing-file issues.
-- Stale active/disabled copies are resolved, and mods disabled by repair are removed from the active loadout.
-- Applying repair when there is nothing to change no longer creates a backup or touches files.
-- Added a **Rescan** action and failed/blocked reporting to the repair dialog.
+- Clicking **Play** no longer opens the console drawer.
+- The console opens automatically only when Minecraft exits unexpectedly.
+- Pressing **Stop** is not treated as a crash, so it does not open the console.
+- A clean exit keeps the console closed. Use the **Console** button to inspect history whenever you want.
+- Added a regression test for crash classification.
 
-Everything from 0.1.11 (new icon), 0.1.10 (toggle alignment) and 0.1.9 (built-in update center) is included.
+Everything from 0.1.12 (repair reliability) and 0.1.11 (new icon) is included.

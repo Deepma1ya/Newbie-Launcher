@@ -1,6 +1,6 @@
 {
   "name": "newbie-launcher",
-  "version": "0.1.12",
+  "version": "0.1.13",
   "description": "Newbie Launcher — a calm, fast Minecraft: Java Edition launcher with Modrinth, custom offline skins, a built-in updater and loadouts.",
   "main": "./out/main/index.js",
   "author": {
