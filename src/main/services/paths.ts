@@ -77,6 +77,9 @@ export const paths = {
   get instances() {
     return path.join(dataDir(), 'instances')
   },
+  get servers() {
+    return path.join(dataDir(), 'servers')
+  },
   get cache() {
     return path.join(dataDir(), 'cache')
   },
@@ -107,6 +110,9 @@ export const paths = {
   get instanceTrash() {
     return path.join(dataDir(), 'trash', 'instances')
   },
+  get serverTrash() {
+    return path.join(dataDir(), 'trash', 'servers')
+  },
   get natives() {
     return path.join(dataDir(), 'natives')
   },
@@ -124,6 +130,15 @@ export const paths = {
   },
   instanceLogs(id: string) {
     return path.join(dataDir(), 'instances', id, 'logs')
+  },
+  server(id: string) {
+    return path.join(dataDir(), 'servers', id)
+  },
+  serverMeta(id: string) {
+    return path.join(dataDir(), 'servers', id, 'server.json')
+  },
+  serverLogs(id: string) {
+    return path.join(dataDir(), 'servers', id, 'logs')
   },
   addonCacheEntry(sha1: string, filename: string) {
     return path.join(dataDir(), 'cache', 'addons', sha1, filename)
@@ -146,6 +161,7 @@ export async function ensureLayout(dir: string): Promise<void> {
     ensureDir(path.join(dir, 'runtimes')),
     ensureDir(path.join(dir, 'meta')),
     ensureDir(path.join(dir, 'instances')),
+    ensureDir(path.join(dir, 'servers')),
     ensureDir(path.join(dir, 'cache', 'addons')),
     ensureDir(path.join(dir, 'cache', 'downloads')),
     ensureDir(path.join(dir, 'backups', 'worlds')),

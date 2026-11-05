@@ -5,6 +5,7 @@ import {
   Cube,
   DownloadSimple,
   GearSix,
+  HardDrives,
   House,
   SquaresFour,
   UserCircle
@@ -21,6 +22,7 @@ const nav = [
   { to: '/', label: 'Home', icon: House, end: true },
   { to: '/instances', label: 'Instances', icon: SquaresFour },
   { to: '/bedrock', label: 'Bedrock', icon: Cube },
+  { to: '/servers', label: 'Servers', icon: HardDrives },
   { to: '/browse', label: 'Browse', icon: Compass },
   { to: '/library', label: 'Library', icon: Books },
   { to: '/downloads', label: 'Downloads', icon: DownloadSimple },

@@ -4,7 +4,7 @@
   <img src="build/icon.png" alt="Newbie Launcher icon" width="96" />
 </p>
 
-A calm, stable Minecraft **Java Edition** and **Bedrock (Minecraft for Windows)** launcher — built around the things that actually break modded play: Java versions, loader installs, conflicting mods, pack drift, and losing a world.
+A calm, stable Minecraft **Java Edition** and **Bedrock (Minecraft for Windows)** launcher with one-click local servers — built around the things that actually break modded play: Java versions, loader installs, conflicting mods, pack drift, and losing a world.
 
 <p align="center">
   <img src="docs/images/home.png" alt="Newbie Launcher home screen" width="900" />
@@ -31,6 +31,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Game versions** | Every Mojang release, snapshot, beta and alpha, installed from official metadata and verified files |
 | **Bedrock** | Minecraft for Windows versions: download official signed GDK packages, install through Windows/Gaming Services, launch the installed package, and switch versions without touching Java |
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
+| **Servers** | One-click local Vanilla, Paper, Fabric, Quilt, Forge and NeoForge servers with a live console, GUI settings and Modrinth plugins, mods and datapacks |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/11/17/21/25 from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, and generic authlib/Yggdrasil servers |
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
@@ -86,6 +87,21 @@ Only these are excluded:
 
 Third-party DLLs, online fixes or cracks are never excluded. Newbie does not support them.
 
+## Local servers
+
+The **Servers** page creates and runs Minecraft servers on this PC. It is a launcher-managed alternative to downloading a server jar and editing text files by hand.
+
+- **Six server types:** Vanilla, Paper, Fabric, Quilt, Forge and NeoForge.
+- **Create & start** downloads the server software, prepares the Java runtime named in the Minecraft version metadata, writes a starter configuration, writes `eula=true` only after you tick the EULA checkbox, and starts the server.
+- **Start, stop and restart** from the server list or the server page. Status is live, and servers are stopped gracefully when you quit or relaunch Newbie.
+- **Settings** are switches, selectors and number fields: MOTD, port, player limit, game mode, difficulty, hardcore, PvP, flight, command blocks, the Nether, spawn protection, world name/seed/type, structures, mob spawning, view/simulation distance, compression, idle timeout, chunk writes, native transport, watchdog, entity range, online mode, whitelist, proxy/secure-profile checks, RCON and permission levels.
+- **Runtime settings** let you rename the server and change its memory allocation without recreating it.
+- **Live console** with launcher-captured logs, server command input and quick commands.
+- **Add-ons from Modrinth:** plugins for Paper, mods for modded servers, datapacks for every type. Required dependencies are installed automatically, add-ons can be enabled/disabled without deleting them, and **Check updates → Update** replaces every outdated file in one click while preserving disabled state.
+- Datapacks go into the active world's `datapacks` folder, so they keep working after the world folder is renamed.
+
+Servers are stored under `<dataDir>/servers/<id>`. Each folder contains `server.json`, `server.properties`, the installed software, the world, add-on folders and logs. Newbie keeps its captured console in `logs/launcher-console.log` so it does not compete with Minecraft's own `logs/latest.log`.
+
 ## Accounts, honestly
 
 - **Microsoft** — opens Microsoft's real sign-in page in an embedded window. The resulting Minecraft token is used for licensed servers. Tokens are encrypted with Windows DPAPI via Electron `safeStorage` and never reach the UI process.
@@ -138,7 +154,7 @@ src/
   main/              Electron main process
     auth/            Microsoft, TLauncher, offline, authlib
     services/        installs, launch, loaders, Java, Modrinth,
-                     add-ons, loadouts, repair, backups, updater, settings
+                     add-ons, loadouts, repair, backups, servers, updater, settings
     util/            hashing, HTTP, archives, tokens
   preload/           contextBridge API (no Node in the renderer)
   renderer/          React 19 + Tailwind + Framer Motion UI
@@ -156,6 +172,7 @@ docs/                architecture notes and the TLauncher investigation
   assets/            content-addressed game assets
   runtimes/java/     Adoptium JREs installed by Newbie
   instances/<id>/    instance.json + minecraft/ (worlds, mods, configs, logs)
+  servers/<id>/      server.json, server.properties, software, world, add-ons and logs
   cache/addons/      offline loadout cache (SHA-1 addressed)
   backups/worlds/    world ZIPs
   backups/repairs/   pre-repair snapshots
@@ -171,6 +188,8 @@ docs/                architecture notes and the TLauncher investigation
 - Minecraft stdout is Log4j XML on modern versions; Newbie parses it back into readable console lines.
 - Temporary game process access tokens are redacted from log files.
 - Forge/NeoForge installer output is captured and surfaced if the installer fails.
+- Server installers run with a relative install directory so data folders containing spaces work; Quilt installs are checked for a real launch jar instead of silently doing nothing.
+- Server add-on updates replace only the add-on files, preserve disabled state and resolve required Modrinth dependencies.
 - World and repair backups use streaming ZIP and are pruned by age/size.
 
 ## Security
@@ -187,7 +206,7 @@ The TLauncher installer and its feature surface were inspected with REA for inte
 
 ## Roadmap
 
-- Bedrock Edition support
+- Server backups, scheduled restarts and player management
 - In-game TLauncher skin provider (optional)
 - OptiFine one-click compatibility
 - Additional UI languages

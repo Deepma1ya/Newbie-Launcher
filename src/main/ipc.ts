@@ -11,17 +11,21 @@ import type {
   AppInfo,
   BackupRecord,
   CreateInstanceInput,
+  CreateServerInput,
   JavaRuntime,
   LauncherSettings,
   LoaderType,
   Loadout,
   SearchQuery,
+  ServerAddonType,
+  ServerSearchQuery,
   SystemInfo,
   UpdateInstanceInput
 } from '@shared/types'
 import { store } from './services/store'
 import { getSettings, updateSettings, changeDataDir } from './services/settings'
 import { paths } from './services/paths'
+import { safeJoin } from './util/fs'
 import {
   listMinecraftVersions,
   installedVersionIds
@@ -70,6 +74,31 @@ import { checkForUpdates, installUpdate, updaterState } from './services/updater
 import { clearRepairFailures } from './services/repair'
 import { syncTlsCape } from './services/tlskincape'
 import { copyInstanceSettings } from './services/instanceSettings'
+import { getServer, listServers } from './services/serverStore'
+import {
+  createServer,
+  removeServer,
+  saveServerProperties,
+  serverProperties,
+  updateServer
+} from './services/servers'
+import {
+  restartServer,
+  sendServerCommand,
+  serverLogs,
+  serverRuntimeStatus,
+  startServer,
+  stopAllServers,
+  stopServer
+} from './services/serverProcess'
+import {
+  checkServerAddonUpdates,
+  installServerAddon,
+  removeServerAddon,
+  searchServerAddons,
+  toggleServerAddon,
+  updateAllServerAddons
+} from './services/serverAddons'
 import {
   addBedrockExclusion,
   cancelBedrockDownload,
@@ -98,7 +127,7 @@ import { logger } from './util/log'
 const usernameSchema = z.string().trim().min(3).max(16).regex(/^[A-Za-z0-9_]+$/)
 const pathSchema = z.string().min(3).max(4096)
 const loaderSchema = z.enum(['vanilla', 'fabric', 'quilt', 'forge', 'neoforge'])
-const addonTypeSchema = z.enum(['mod', 'resourcepack', 'shader', 'modpack', 'datapack', 'world'])
+const addonTypeSchema = z.enum(['mod', 'resourcepack', 'shader', 'modpack', 'datapack', 'world', 'plugin'])
 const bedrockChannelSchema = z.enum(['release', 'preview'])
 const bedrockIdSchema = z.string().min(3).max(200)
 
@@ -197,9 +226,42 @@ const copySettingsSchema = z.object({
     .max(20)
 })
 
-const searchSchema = z.object({
+const serverTypeSchema = z.enum(['vanilla', 'paper', 'fabric', 'quilt', 'forge', 'neoforge'])
+const serverAddonTypeSchema = z.enum(['mod', 'plugin', 'datapack'])
+const createServerSchema = z.object({
+  name: z.string().trim().min(1).max(60),
+  type: serverTypeSchema,
+  versionId: z.string().min(1).max(120),
+  loaderVersion: z.string().max(120).optional(),
+  port: z.number().int().min(1).max(65535),
+  memoryMb: z.number().int().min(1024).max(65536),
+  motd: z.string().max(256).optional(),
+  onlineMode: z.boolean().optional(),
+  levelName: z.string().max(80).optional(),
+  javaPath: z.string().nullable().optional(),
+  eulaAccepted: z.boolean()
+})
+const updateServerSchema = z.object({
+  name: z.string().trim().min(1).max(60).optional(),
+  memoryMb: z.number().int().min(1024).max(65536).optional()
+})
+const serverSearchSchema = z.object({
+  serverId: z.string().max(200),
+  type: serverAddonTypeSchema,
   query: z.string().max(200),
-  type: addonTypeSchema,
+  sort: z.enum(['relevance', 'downloads', 'follows', 'newest', 'updated']).optional(),
+  offset: z.number().int().min(0).optional(),
+  limit: z.number().int().min(1).max(48).optional()
+})
+const serverAddonRefSchema = z.object({
+  projectId: z.string().max(200),
+  versionId: z.string().max(200).optional(),
+  type: serverAddonTypeSchema.optional()
+})
+const serverPropertiesSchema = z.record(z.string().max(120), z.string().max(2000))
+
+const searchSchema = z.object({
+  query: z.string().max(200),  type: addonTypeSchema,
   gameVersion: z.string().max(120).optional(),
   loader: loaderSchema.optional(),
   categories: z.array(z.string().max(60)).max(12).optional(),
@@ -239,7 +301,8 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.appPickFile, async (_event, filters?: { name: string; extensions: string[] }[]) =>
     pickFile(filters)
   )
-  ipcMain.handle(IPC.appRelaunch, () => {
+  ipcMain.handle(IPC.appRelaunch, async () => {
+    await stopAllServers()
     app.relaunch()
     app.exit(0)
   })
@@ -296,6 +359,107 @@ export function registerIpc(): void {
       return summary
     }
     throw new Error('This account type does not need refreshing')
+  })
+
+  ipcMain.handle(IPC.serversList, () => listServers())
+  ipcMain.handle(IPC.serversGet, (_event, id: string) => getServer(z.string().parse(id)))
+  ipcMain.handle(IPC.serversCreate, async (_event, input: unknown) => {
+    const value = createServerSchema.parse(input) as CreateServerInput
+    return createServer(value)
+  })
+  ipcMain.handle(IPC.serversUpdate, async (_event, id: string, patch: unknown) =>
+    updateServer(z.string().parse(id), updateServerSchema.parse(patch))
+  )
+  ipcMain.handle(IPC.serversRemove, async (_event, id: string, deleteFiles: boolean) => {
+    await removeServer(z.string().parse(id), Boolean(deleteFiles))
+  })
+  ipcMain.handle(IPC.serversStart, async (_event, id: string) => {
+    const server = await getServer(z.string().parse(id))
+    if (!server) throw new Error('Server not found')
+    await startServer(server)
+  })
+  ipcMain.handle(IPC.serversStop, async (_event, id: string) => {
+    await stopServer(z.string().parse(id))
+  })
+  ipcMain.handle(IPC.serversRestart, async (_event, id: string) => {
+    const server = await getServer(z.string().parse(id))
+    if (!server) throw new Error('Server not found')
+    await restartServer(server)
+  })
+  ipcMain.handle(IPC.serversStatus, async (_event, id: string) => {
+    const server = await getServer(z.string().parse(id))
+    if (!server) throw new Error('Server not found')
+    return serverRuntimeStatus(server.id, server.port)
+  })
+  ipcMain.handle(IPC.serversStatuses, async () => {
+    const servers = await listServers()
+    return servers.map((server) => serverRuntimeStatus(server.id, server.port))
+  })
+  ipcMain.handle(IPC.serversLogs, async (_event, id: string) => serverLogs(z.string().parse(id)))
+  ipcMain.handle(IPC.serversCommand, async (_event, id: string, command: string) => {
+    sendServerCommand(z.string().parse(id), z.string().max(1000).parse(command))
+  })
+  ipcMain.handle(IPC.serversProperties, async (_event, id: string) =>
+    serverProperties(z.string().parse(id))
+  )
+  ipcMain.handle(IPC.serversSaveProperties, async (_event, id: string, patch: unknown) =>
+    saveServerProperties(z.string().parse(id), serverPropertiesSchema.parse(patch))
+  )
+  ipcMain.handle(IPC.serversSearchAddons, async (_event, query: unknown) =>
+    searchServerAddons(serverSearchSchema.parse(query) as ServerSearchQuery)
+  )
+  ipcMain.handle(IPC.serversInstallAddon, async (_event, serverId: string, ref: unknown) => {
+    const id = z.string().parse(serverId)
+    const value = serverAddonRefSchema.parse(ref)
+    const server = await getServer(id)
+    const handle = tasks.start('server-addon', 'Installing server add-on', server?.name)
+    try {
+      const records = await installServerAddon(id, value, (message, percent) =>
+        handle.progress({ stage: 'addons', message, current: percent ?? 0, total: 100, percent: percent ?? 20 })
+      )
+      await handle.done(`${records.length} add-on(s) installed`)
+      return records
+    } catch (error) {
+      await handle.fail(error)
+      throw error
+    }
+  })
+  ipcMain.handle(IPC.serversRemoveAddon, async (_event, serverId: string, addonId: string, deleteFile: boolean) => {
+    await removeServerAddon(
+      z.string().parse(serverId),
+      z.string().parse(addonId),
+      Boolean(deleteFile)
+    )
+  })
+  ipcMain.handle(IPC.serversToggleAddon, async (_event, serverId: string, addonId: string, enabled: boolean) =>
+    toggleServerAddon(
+      z.string().parse(serverId),
+      z.string().parse(addonId),
+      Boolean(enabled)
+    )
+  )
+  ipcMain.handle(IPC.serversCheckAddonUpdates, async (_event, serverId: string) =>
+    checkServerAddonUpdates(z.string().parse(serverId))
+  )
+  ipcMain.handle(IPC.serversUpdateAllAddons, async (_event, serverId: string) => {
+    const id = z.string().parse(serverId)
+    const server = await getServer(id)
+    const handle = tasks.start('server-addon', 'Updating server add-ons', server?.name)
+    try {
+      const records = await updateAllServerAddons(id, (message, percent) =>
+        handle.progress({ stage: 'addons', message, current: percent ?? 0, total: 100, percent: percent ?? 30 })
+      )
+      await handle.done('Server add-ons updated')
+      return records
+    } catch (error) {
+      await handle.fail(error)
+      throw error
+    }
+  })
+  ipcMain.handle(IPC.serversOpenFolder, async (_event, id: string, sub?: string) => {
+    const serverId = z.string().parse(id)
+    const target = safeJoin(paths.server(serverId), sub ? z.string().max(500).parse(sub) : '')
+    await shell.openPath(target)
   })
 
   ipcMain.handle(IPC.versionsMinecraft, async (_event, force?: boolean) => listMinecraftVersions(Boolean(force)))

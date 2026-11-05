@@ -5,12 +5,16 @@ import { registerIpc } from './ipc'
 import { bindEventWindow } from './services/events'
 import { createMainWindow, getMainWindow, initTray, markQuitting, showWindow } from './window'
 import { initUpdater } from './services/updater'
+import { stopAllServers, runningServerIds } from './services/serverProcess'
 import { logger } from './util/log'
 
 const gotLock = app.requestSingleInstanceLock()
 if (!gotLock) {
   app.quit()
 } else {
+  let shuttingDown = false
+  let shutdownComplete = false
+
   app.on('second-instance', () => {
     const window = getMainWindow()
     if (window) {
@@ -51,9 +55,23 @@ if (!gotLock) {
     }
   })
 
-  app.on('before-quit', () => {
+  app.on('before-quit', (event) => {
     markQuitting()
-    void store.flush()
+    if (shutdownComplete) return
+    event.preventDefault()
+    if (shuttingDown) return
+    shuttingDown = true
+    const finish = (): void => {
+      void store.flush().finally(() => {
+        shutdownComplete = true
+        app.quit()
+      })
+    }
+    if (runningServerIds().length === 0) {
+      finish()
+      return
+    }
+    void stopAllServers().finally(finish)
   })
 
   app.on('window-all-closed', () => {

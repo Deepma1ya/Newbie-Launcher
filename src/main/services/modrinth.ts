@@ -161,7 +161,7 @@ export function selectBestVersion(
 }
 
 export function projectTypeToAddonType(type: string): AddonType {
-  if (type === 'modpack' || type === 'resourcepack' || type === 'shader' || type === 'datapack' || type === 'world') {
+  if (type === 'modpack' || type === 'resourcepack' || type === 'shader' || type === 'datapack' || type === 'plugin' || type === 'world') {
     return type
   }
   return 'mod'

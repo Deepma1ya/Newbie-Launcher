@@ -13,6 +13,9 @@ import type {
   ModrinthVersion,
   SearchPage,
   SearchQuery,
+  ServerRecord,
+  ServerRuntimeStatus,
+  ServerSearchQuery,
   SystemInfo,
   TaskRecord,
   WorldSummary
@@ -37,7 +40,14 @@ export const qk = {
   projectVersions: (id: string, game?: string, loader?: string, type?: string) =>
     ['project-versions', id, game, loader, type] as const,
   backups: (id?: string) => ['backups', id ?? 'all'] as const,
-  disk: ['disk'] as const
+  disk: ['disk'] as const,
+  servers: ['servers'] as const,
+  server: (id: string) => ['servers', id] as const,
+  serverStatuses: ['servers', 'statuses'] as const,
+  serverStatus: (id: string) => ['servers', id, 'status'] as const,
+  serverLogs: (id: string) => ['servers', id, 'logs'] as const,
+  serverProperties: (id: string) => ['servers', id, 'properties'] as const,
+  serverSearch: (query: ServerSearchQuery) => ['server-search', query] as const
 }
 
 export function useInstances(): UseQueryResult<Instance[]> {
@@ -65,6 +75,67 @@ export function useActiveInstance(): Instance | null {
   const instances = useInstances().data ?? []
   const activeId = useUi((state) => state.activeInstanceId)
   return instances.find((instance) => instance.id === activeId) ?? instances[0] ?? null
+}
+
+export function useServers(): UseQueryResult<ServerRecord[]> {
+  return useQuery({ queryKey: qk.servers, queryFn: () => api.servers.list() })
+}
+
+export function useServer(id?: string | null): UseQueryResult<ServerRecord | null> {
+  return useQuery({
+    queryKey: qk.server(id ?? ''),
+    queryFn: () => (id ? api.servers.get(id) : Promise.resolve(null)),
+    enabled: Boolean(id)
+  })
+}
+
+export function useServerStatuses(): UseQueryResult<ServerRuntimeStatus[]> {
+  return useQuery({
+    queryKey: qk.serverStatuses,
+    queryFn: () => api.servers.statuses(),
+    refetchInterval: 2_000
+  })
+}
+
+export function useServerStatus(id?: string | null): UseQueryResult<ServerRuntimeStatus> {
+  return useQuery({
+    queryKey: qk.serverStatus(id ?? ''),
+    queryFn: () => api.servers.status(id!),
+    enabled: Boolean(id),
+    refetchInterval: 1_500
+  })
+}
+
+export function useServerLogs(
+  id?: string | null,
+  enabled = true
+): UseQueryResult<string[]> {
+  return useQuery({
+    queryKey: qk.serverLogs(id ?? ''),
+    queryFn: () => api.servers.logs(id!),
+    enabled: Boolean(id) && enabled,
+    refetchInterval: enabled ? 1_200 : false
+  })
+}
+
+export function useServerProperties(id?: string | null): UseQueryResult<Record<string, string>> {
+  return useQuery({
+    queryKey: qk.serverProperties(id ?? ''),
+    queryFn: () => api.servers.properties(id!),
+    enabled: Boolean(id)
+  })
+}
+
+export function useServerSearch(
+  query: ServerSearchQuery,
+  enabled = true
+): UseQueryResult<SearchPage> {
+  return useQuery({
+    queryKey: qk.serverSearch(query),
+    queryFn: () => api.servers.searchAddons(query),
+    enabled,
+    staleTime: 30_000
+  })
 }
 
 export function useAccounts(): UseQueryResult<AccountSummary[]> {

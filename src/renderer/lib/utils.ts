@@ -62,6 +62,8 @@ export function addonTypeLabel(type: string): string {
       return 'Modpack'
     case 'datapack':
       return 'Data pack'
+    case 'plugin':
+      return 'Plugin'
     case 'world':
       return 'World'
     default:

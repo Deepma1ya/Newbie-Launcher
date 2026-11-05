@@ -19,7 +19,9 @@ const icons: Record<TaskRecord['kind'], typeof DownloadSimple> = {
   repair: Wrench,
   java: Sparkle,
   backup: HardDrives,
-  modpack: ShieldCheck
+  modpack: ShieldCheck,
+  server: HardDrives,
+  'server-addon': Package
 }
 
 export function TaskRow({ task }: { task: TaskRecord }) {

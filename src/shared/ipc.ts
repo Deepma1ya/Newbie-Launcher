@@ -29,7 +29,14 @@ import type {
   UpdateInstanceInput,
   UpdateState,
   WindowState,
-  WorldSummary
+  WorldSummary,
+  ServerRecord,
+  ServerRuntimeStatus,
+  ServerAddonRecord,
+  ServerAddonType,
+  ServerSearchQuery,
+  CreateServerInput,
+  UpdateServerInput
 } from './types'
 import type { TlsCapeSyncResult } from './tlskincape'
 import type { CopyInstanceSettingsInput, CopyInstanceSettingsResult } from './instanceSettings'
@@ -84,6 +91,27 @@ export const IPC = {
   instancesRepair: 'instances:repair',
   instancesClearRepairFailures: 'instances:clear-repair-failures',
   instancesSyncTlsCape: 'instances:sync-tls-cape',
+  serversList: 'servers:list',
+  serversGet: 'servers:get',
+  serversCreate: 'servers:create',
+  serversUpdate: 'servers:update',
+  serversRemove: 'servers:remove',
+  serversStart: 'servers:start',
+  serversStop: 'servers:stop',
+  serversRestart: 'servers:restart',
+  serversStatus: 'servers:status',
+  serversStatuses: 'servers:statuses',
+  serversLogs: 'servers:logs',
+  serversCommand: 'servers:command',
+  serversProperties: 'servers:properties',
+  serversSaveProperties: 'servers:save-properties',
+  serversSearchAddons: 'servers:search-addons',
+  serversInstallAddon: 'servers:install-addon',
+  serversRemoveAddon: 'servers:remove-addon',
+  serversToggleAddon: 'servers:toggle-addon',
+  serversCheckAddonUpdates: 'servers:check-addon-updates',
+  serversUpdateAllAddons: 'servers:update-all-addons',
+  serversOpenFolder: 'servers:open-folder',
 
   addonsSearch: 'addons:search',
   addonsProject: 'addons:project',
@@ -176,6 +204,32 @@ export interface NewbieApi {
     refresh(id: string): Promise<AccountSummary>
     setSkin(id: string, filePath: string): Promise<AccountSummary>
     removeSkin(id: string): Promise<AccountSummary>
+  }
+  servers: {
+    list(): Promise<ServerRecord[]>
+    get(id: string): Promise<ServerRecord | null>
+    create(input: CreateServerInput): Promise<ServerRecord>
+    update(id: string, patch: UpdateServerInput): Promise<ServerRecord>
+    remove(id: string, deleteFiles: boolean): Promise<void>
+    start(id: string): Promise<void>
+    stop(id: string): Promise<void>
+    restart(id: string): Promise<void>
+    status(id: string): Promise<ServerRuntimeStatus>
+    statuses(): Promise<ServerRuntimeStatus[]>
+    logs(id: string): Promise<string[]>
+    command(id: string, command: string): Promise<void>
+    properties(id: string): Promise<Record<string, string>>
+    saveProperties(id: string, patch: Record<string, string>): Promise<Record<string, string>>
+    searchAddons(query: ServerSearchQuery): Promise<SearchPage>
+    installAddon(
+      serverId: string,
+      ref: { projectId: string; versionId?: string; type?: ServerAddonType }
+    ): Promise<ServerAddonRecord[]>
+    removeAddon(serverId: string, addonId: string, deleteFile: boolean): Promise<void>
+    toggleAddon(serverId: string, addonId: string, enabled: boolean): Promise<ServerAddonRecord>
+    checkAddonUpdates(serverId: string): Promise<ServerAddonRecord[]>
+    updateAllAddons(serverId: string): Promise<ServerAddonRecord[]>
+    openFolder(id: string, sub?: string): Promise<void>
   }
   versions: {
     minecraft(force?: boolean): Promise<MinecraftVersionSummary[]>

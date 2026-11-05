@@ -1,5 +1,5 @@
 export type LoaderType = 'vanilla' | 'fabric' | 'quilt' | 'forge' | 'neoforge'
-export type AddonType = 'mod' | 'resourcepack' | 'shader' | 'modpack' | 'datapack' | 'world'
+export type AddonType = 'mod' | 'resourcepack' | 'shader' | 'modpack' | 'datapack' | 'world' | 'plugin'
 export type AddonProvider = 'modrinth' | 'local'
 export type LoadoutMode = 'offline' | 'download'
 export type AccountType = 'microsoft' | 'tlauncher' | 'offline' | 'authlib'
@@ -254,7 +254,7 @@ export interface LaunchState {
 
 export interface TaskRecord {
   id: string
-  kind: 'install-version' | 'install-loader' | 'install-addon' | 'update-addons' | 'repair' | 'java' | 'backup' | 'modpack'
+  kind: 'install-version' | 'install-loader' | 'install-addon' | 'update-addons' | 'repair' | 'java' | 'backup' | 'modpack' | 'server' | 'server-addon'
   instanceId?: string
   title: string
   subtitle?: string
@@ -542,6 +542,90 @@ export interface BackupRecord {
   path: string
   size: number
   createdAt: string
+}
+
+export type ServerType = 'vanilla' | 'paper' | 'fabric' | 'quilt' | 'forge' | 'neoforge'
+export type ServerRuntimeState = 'stopped' | 'starting' | 'running' | 'stopping'
+export type ServerAddonType = 'mod' | 'plugin' | 'datapack'
+
+export interface ServerAddonRecord {
+  id: string
+  provider: 'modrinth' | 'local'
+  projectId: string
+  versionId: string
+  name: string
+  filename: string
+  type: ServerAddonType
+  versionNumber: string
+  sha1?: string
+  size: number
+  iconUrl?: string
+  description?: string
+  sourceUrl?: string
+  enabled: boolean
+  installedAt: string
+  updatedAt: string
+  latestVersionId?: string
+  latestVersionNumber?: string
+  /** Folder relative to the server directory, e.g. mods, plugins or world/datapacks. */
+  relativePath: string
+}
+
+export interface ServerRecord {
+  id: string
+  name: string
+  type: ServerType
+  versionId: string
+  loaderVersion: string
+  port: number
+  memoryMb: number
+  javaPath: string | null
+  javaMajor: number
+  eulaAccepted: boolean
+  createdAt: string
+  lastStartedAt?: string
+  lastStoppedAt?: string
+  levelName: string
+  launchKind: 'jar' | 'script' | 'args'
+  launchFile: string
+  paperBuild?: number
+  addons: ServerAddonRecord[]
+}
+
+export interface ServerRuntimeStatus {
+  serverId: string
+  status: ServerRuntimeState
+  pid?: number
+  startedAt?: number
+  address?: string
+}
+
+export interface CreateServerInput {
+  name: string
+  type: ServerType
+  versionId: string
+  loaderVersion?: string
+  port: number
+  memoryMb: number
+  motd?: string
+  onlineMode?: boolean
+  levelName?: string
+  javaPath?: string | null
+  eulaAccepted: boolean
+}
+
+export interface UpdateServerInput {
+  name?: string
+  memoryMb?: number
+}
+
+export interface ServerSearchQuery {
+  serverId: string
+  type: ServerAddonType
+  query: string
+  sort?: 'relevance' | 'downloads' | 'follows' | 'newest' | 'updated'
+  offset?: number
+  limit?: number
 }
 
 export type AppEvent =

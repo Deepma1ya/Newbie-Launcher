@@ -43,6 +43,8 @@ export function addonFolder(type: AddonType): string {
       return 'shaderpacks'
     case 'datapack':
       return 'datapacks'
+    case 'plugin':
+      return 'plugins'
     case 'world':
       return 'saves'
     default:

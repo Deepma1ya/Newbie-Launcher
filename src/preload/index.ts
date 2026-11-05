@@ -45,6 +45,31 @@ const api: NewbieApi = {
     setSkin: (id, filePath) => ipcRenderer.invoke(IPC.accountsSetSkin, id, filePath),
     removeSkin: (id) => ipcRenderer.invoke(IPC.accountsRemoveSkin, id)
   },
+  servers: {
+    list: () => ipcRenderer.invoke(IPC.serversList),
+    get: (id) => ipcRenderer.invoke(IPC.serversGet, id),
+    create: (input) => ipcRenderer.invoke(IPC.serversCreate, input),
+    update: (id, patch) => ipcRenderer.invoke(IPC.serversUpdate, id, patch),
+    remove: (id, deleteFiles) => ipcRenderer.invoke(IPC.serversRemove, id, deleteFiles),
+    start: (id) => ipcRenderer.invoke(IPC.serversStart, id),
+    stop: (id) => ipcRenderer.invoke(IPC.serversStop, id),
+    restart: (id) => ipcRenderer.invoke(IPC.serversRestart, id),
+    status: (id) => ipcRenderer.invoke(IPC.serversStatus, id),
+    statuses: () => ipcRenderer.invoke(IPC.serversStatuses),
+    logs: (id) => ipcRenderer.invoke(IPC.serversLogs, id),
+    command: (id, command) => ipcRenderer.invoke(IPC.serversCommand, id, command),
+    properties: (id) => ipcRenderer.invoke(IPC.serversProperties, id),
+    saveProperties: (id, patch) => ipcRenderer.invoke(IPC.serversSaveProperties, id, patch),
+    searchAddons: (query) => ipcRenderer.invoke(IPC.serversSearchAddons, query),
+    installAddon: (serverId, ref) => ipcRenderer.invoke(IPC.serversInstallAddon, serverId, ref),
+    removeAddon: (serverId, addonId, deleteFile) =>
+      ipcRenderer.invoke(IPC.serversRemoveAddon, serverId, addonId, deleteFile),
+    toggleAddon: (serverId, addonId, enabled) =>
+      ipcRenderer.invoke(IPC.serversToggleAddon, serverId, addonId, enabled),
+    checkAddonUpdates: (serverId) => ipcRenderer.invoke(IPC.serversCheckAddonUpdates, serverId),
+    updateAllAddons: (serverId) => ipcRenderer.invoke(IPC.serversUpdateAllAddons, serverId),
+    openFolder: (id, sub) => ipcRenderer.invoke(IPC.serversOpenFolder, id, sub)
+  },
   versions: {
     minecraft: (force) => ipcRenderer.invoke(IPC.versionsMinecraft, force),
     loaders: (type, gameVersion) => ipcRenderer.invoke(IPC.versionsLoaders, type, gameVersion),
