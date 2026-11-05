@@ -1,19 +1,17 @@
-# Newbie Launcher 0.1.40
+# Newbie Launcher 0.1.41
 
-The launcher now gets out of the way while you play.
+The instance resolution fields are easy to edit again.
 
-## Tray mode
+## Resolution fix
 
-- Starting a Java or Bedrock game hides Newbie in the notification area instead of leaving it over the game.
-- When the last running game closes, Newbie reopens automatically and comes back to the foreground.
-- Multiple games are tracked together: the launcher stays hidden until every game has closed.
-- **Open Newbie Launcher** or a double-click on the tray icon restores the window, including when it was minimized.
-- The setting is now called **Hide to tray while a game runs** and is enabled by default. Its description explains the automatic reopen.
-- If the tray icon cannot be created, Newbie falls back to minimizing the window instead.
-- Duplicate game-exit signals no longer update playtime or restore the window twice.
+- Width and height are now edited as text while you type, so Backspace can clear the old value instead of snapping back to `0`.
+- The Save button stays disabled until both fields are valid.
+- Width accepts 320–7680 and height accepts 240–4320, with an inline message when a value is out of range.
+- Values are rounded to whole pixels when saved.
 
 ## Also included
 
+- Hide-to-tray while a Java or Bedrock game runs, with automatic reopen on exit (0.1.40).
 - `.mrpack` import from the pack-sharing dialog and the Instances page (0.1.39).
-- Bedrock Microsoft account card, Xbox app shortcut, and Bedrock server allow lists (0.1.38).
-- Microsoft sign-in activation fix, Bedrock Dedicated Server creation, server tools, resource packs and scheduled restarts from earlier releases.
+- Bedrock Microsoft account card, Xbox app shortcut and Bedrock server allow lists (0.1.38).
+- Microsoft sign-in activation, Bedrock Dedicated Server creation, server tools and scheduled restarts from earlier releases.
