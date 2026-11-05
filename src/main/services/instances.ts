@@ -6,7 +6,8 @@ import type {
   Instance,
   Loadout,
   RepairReport,
-  UpdateInstanceInput
+  UpdateInstanceInput,
+  WorldSummary
 } from '@shared/types'
 import { store } from './store'
 import { paths } from './paths'
@@ -33,6 +34,26 @@ export function listInstances(): Instance[] {
 
 export function getInstance(id: string): Instance | null {
   return store.instance(id)
+}
+
+export async function listWorlds(id: string): Promise<WorldSummary[]> {
+  const instance = store.instance(id)
+  if (!instance) throw new Error('Instance not found')
+  const saves = path.join(instance.gameDir, 'saves')
+  const entries = await fs.readdir(saves, { withFileTypes: true }).catch(() => [])
+  const worlds: WorldSummary[] = []
+  for (const entry of entries) {
+    if (!entry.isDirectory()) continue
+    const levelFile = path.join(saves, entry.name, 'level.dat')
+    const stat = await fs.stat(levelFile).catch(() => null)
+    if (!stat) continue
+    worlds.push({
+      folder: entry.name,
+      name: entry.name,
+      updatedAt: stat.mtime.toISOString()
+    })
+  }
+  return worlds.sort((a, b) => Date.parse(b.updatedAt) - Date.parse(a.updatedAt))
 }
 
 export async function createInstance(input: CreateInstanceInput): Promise<Instance> {

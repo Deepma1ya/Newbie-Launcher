@@ -1,6 +1,7 @@
 import type {
   AccountSummary,
   AddonRecord,
+  AddonType,
   AppEvent,
   AppInfo,
   BackupRecord,
@@ -27,7 +28,8 @@ import type {
   TaskRecord,
   UpdateInstanceInput,
   UpdateState,
-  WindowState
+  WindowState,
+  WorldSummary
 } from './types'
 import type { TlsCapeSyncResult } from './tlskincape'
 
@@ -76,6 +78,7 @@ export const IPC = {
   instancesRunning: 'instances:running',
   instancesLogs: 'instances:logs',
   instancesOpenFolder: 'instances:open-folder',
+  instancesWorlds: 'instances:worlds',
   instancesRepair: 'instances:repair',
   instancesClearRepairFailures: 'instances:clear-repair-failures',
   instancesSyncTlsCape: 'instances:sync-tls-cape',
@@ -128,6 +131,10 @@ export type IpcChannel = (typeof IPC)[keyof typeof IPC]
 export interface AddonVersionRef {
   projectId: string
   versionId: string
+  /** Force the add-on type for projects published as both mods and datapacks. */
+  type?: AddonType
+  /** World folder under saves/ for a world-specific datapack install. */
+  world?: string
 }
 
 export type DeepPartial<T> = {
@@ -185,6 +192,7 @@ export interface NewbieApi {
     running(): Promise<LaunchState[]>
     logs(id: string): Promise<string[]>
     openFolder(id: string, sub?: string): Promise<void>
+    worlds(id: string): Promise<WorldSummary[]>
     repair(id: string, apply: boolean, allowDisable?: boolean, reuseBackup?: string): Promise<RepairReport>
     clearRepairFailures(id: string): Promise<void>
     syncTlsCape(id: string): Promise<TlsCapeSyncResult>
@@ -192,7 +200,7 @@ export interface NewbieApi {
   addons: {
     search(query: SearchQuery): Promise<SearchPage>
     project(id: string): Promise<ModrinthProject>
-    versions(projectId: string, gameVersion?: string, loader?: LoaderType): Promise<ModrinthVersion[]>
+    versions(projectId: string, gameVersion?: string, loader?: LoaderType, type?: AddonType): Promise<ModrinthVersion[]>
     install(instanceId: string, ref: AddonVersionRef): Promise<AddonRecord[]>
     remove(instanceId: string, addonId: string, deleteFile: boolean): Promise<void>
     toggle(instanceId: string, addonId: string, enabled: boolean): Promise<AddonRecord>

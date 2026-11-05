@@ -49,3 +49,8 @@ export function addonFolder(type: AddonType): string {
       return 'mods'
   }
 }
+
+/** World-specific datapacks carry their own folder; everything else uses the type default. */
+export function addonRecordFolder(record: { type: AddonType; relativeFolder?: string }): string {
+  return record.relativeFolder ?? addonFolder(record.type)
+}

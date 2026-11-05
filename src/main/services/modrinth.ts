@@ -56,12 +56,19 @@ export async function getModrinthProject(id: string): Promise<ModrinthProject> {
 export async function getModrinthVersions(
   projectId: string,
   gameVersion?: string,
-  loader?: LoaderType
+  loader?: LoaderType,
+  type?: AddonType
 ): Promise<ModrinthVersion[]> {
   await polite()
   const params = new URLSearchParams()
   if (gameVersion) params.set('game_versions', JSON.stringify([gameVersion]))
-  if (loader && loader !== 'vanilla') params.set('loaders', JSON.stringify([loaderTypeToModrinth(loader)]))
+  const loaderKey =
+    type === 'datapack'
+      ? 'datapack'
+      : loader && loader !== 'vanilla'
+        ? loaderTypeToModrinth(loader)
+        : undefined
+  if (loaderKey) params.set('loaders', JSON.stringify([loaderKey]))
   return fetchJson<ModrinthVersion[]>(
     `${MODRINTH_API}/project/${encodeURIComponent(projectId)}/version?${params.toString()}`,
     {},
@@ -135,6 +142,7 @@ export function selectBestVersion(
 ): ModrinthVersion | null {
   const compatible = versions.filter((version) => {
     if (!version.game_versions.includes(gameVersion)) return false
+    if (type === 'datapack') return version.loaders.includes('datapack')
     if (type === 'mod' || type === 'modpack') {
       if (loader === 'vanilla') return true
       return version.loaders.includes(loaderTypeToModrinth(loader))

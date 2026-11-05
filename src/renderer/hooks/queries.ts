@@ -1,6 +1,7 @@
 import { useQuery, type UseQueryResult } from '@tanstack/react-query'
 import type {
   AccountSummary,
+  AddonType,
   BackupRecord,
   Instance,
   JavaRuntime,
@@ -13,7 +14,8 @@ import type {
   SearchPage,
   SearchQuery,
   SystemInfo,
-  TaskRecord
+  TaskRecord,
+  WorldSummary
 } from '@shared/types'
 import { useUi } from '../store/ui'
 
@@ -22,6 +24,7 @@ const api = window.newbie
 export const qk = {
   instances: ['instances'] as const,
   instance: (id: string) => ['instances', id] as const,
+  worlds: (id: string) => ['instances', id, 'worlds'] as const,
   accounts: ['accounts'] as const,
   settings: ['settings'] as const,
   system: ['system'] as const,
@@ -31,8 +34,8 @@ export const qk = {
   loaders: (type: LoaderType, version: string) => ['versions', 'loaders', type, version] as const,
   search: (query: SearchQuery) => ['search', query] as const,
   project: (id: string) => ['project', id] as const,
-  projectVersions: (id: string, game?: string, loader?: string) =>
-    ['project-versions', id, game, loader] as const,
+  projectVersions: (id: string, game?: string, loader?: string, type?: string) =>
+    ['project-versions', id, game, loader, type] as const,
   backups: (id?: string) => ['backups', id ?? 'all'] as const,
   disk: ['disk'] as const
 }
@@ -46,6 +49,15 @@ export function useInstance(id?: string | null): UseQueryResult<Instance | null>
     queryKey: qk.instance(id ?? ''),
     queryFn: () => (id ? api.instances.get(id) : Promise.resolve(null)),
     enabled: Boolean(id)
+  })
+}
+
+export function useWorlds(id?: string | null, enabled = true): UseQueryResult<WorldSummary[]> {
+  return useQuery({
+    queryKey: qk.worlds(id ?? ''),
+    queryFn: () => (id ? api.instances.worlds(id) : Promise.resolve([])),
+    enabled: Boolean(id) && enabled,
+    staleTime: 15_000
   })
 }
 
@@ -110,11 +122,12 @@ export function useProject(id?: string): UseQueryResult<ModrinthProject> {
 export function useProjectVersions(
   id?: string,
   gameVersion?: string,
-  loader?: LoaderType
+  loader?: LoaderType,
+  type?: AddonType
 ): UseQueryResult<ModrinthVersion[]> {
   return useQuery({
-    queryKey: qk.projectVersions(id ?? '', gameVersion, loader),
-    queryFn: () => api.addons.versions(id!, gameVersion, loader),
+    queryKey: qk.projectVersions(id ?? '', gameVersion, loader, type),
+    queryFn: () => api.addons.versions(id!, gameVersion, loader, type),
     enabled: Boolean(id),
     staleTime: 60_000
   })

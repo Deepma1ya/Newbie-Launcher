@@ -18,11 +18,11 @@ import {
   projectTypeToAddonType,
   selectBestVersion
 } from './modrinth'
-import { addonFolder } from './addonTypes'
+import { addonFolder, addonRecordFolder } from './addonTypes'
 import { store } from './store'
 import { sha1File } from '../util/hash'
 import { addonCacheEntry, cacheFileFromUrl } from './installer'
-import { ensureDir, pathExists, sanitizeFilename, uniqueId } from '../util/fs'
+import { ensureDir, pathExists, safeJoin, sanitizeFilename, uniqueId } from '../util/fs'
 import { readJarMeta } from './jarMeta'
 import { logger } from '../util/log'
 
@@ -35,7 +35,7 @@ type Progress = (message: string, percent?: number) => void
 
 export async function installAddon(
   instanceId: string,
-  ref: { projectId: string; versionId: string },
+  ref: { projectId: string; versionId: string; type?: AddonType; world?: string },
   onProgress?: Progress
 ): Promise<InstallAddonResult> {
   const instance = store.instance(instanceId)
@@ -51,26 +51,27 @@ export async function installAddon(
 
 async function installRef(
   instance: Instance,
-  ref: { projectId: string; versionId: string },
+  ref: { projectId: string; versionId: string; type?: AddonType; world?: string },
   added: Map<string, AddonRecord>,
   visited: Set<string>,
   depth: number,
   onProgress?: Progress
 ): Promise<void> {
   if (depth > 6) return
-  const key = `modrinth:${ref.projectId}`
+  const key = `modrinth:${ref.projectId}:${ref.world ?? ''}:${ref.type ?? ''}`
   if (visited.has(key)) return
   visited.add(key)
 
   const project = await getModrinthProject(ref.projectId)
-  const type = projectTypeToAddonType(project.project_type)
+  const type = ref.type ?? projectTypeToAddonType(project.project_type)
   const version = ref.versionId
     ? await getModrinthVersion(ref.versionId)
     : selectBestVersion(
         await getModrinthVersions(
           ref.projectId,
           instance.versionId,
-          type === 'mod' || type === 'modpack' ? instance.loader : undefined
+          type === 'mod' || type === 'modpack' ? instance.loader : undefined,
+          type
         ),
         instance.versionId,
         instance.loader,
@@ -84,6 +85,7 @@ async function installRef(
   }
   const file = pickPrimaryFile(version)
   if (!file) throw new Error(`${project.title} has no downloadable file`)
+  const relativeFolder = await resolveTargetFolder(instance, type, ref.world)
   onProgress?.(`Downloading ${project.title} ${version.version_number}`, 25)
   const record = await materialiseFile(instance, {
     provider: 'modrinth',
@@ -99,6 +101,7 @@ async function installRef(
     iconUrl: project.icon_url ?? undefined,
     description: project.description,
     sourceUrl: `https://modrinth.com/${project.project_type}/${project.slug}`,
+    relativeFolder,
     dependencies: version.dependencies
       .filter((dependency) => dependency.project_id)
       .map((dependency) => ({
@@ -114,14 +117,23 @@ async function installRef(
 
   for (const dependency of version.dependencies) {
     if (dependency.dependency_type !== 'required' || !dependency.project_id) continue
-    if (instance.addons.some((addon) => addon.provider === 'modrinth' && addon.projectId === dependency.project_id)) continue
-    if (visited.has(`modrinth:${dependency.project_id}`)) continue
+    const targetFolder = relativeFolder ?? 'datapacks'
+    const alreadyInstalled = instance.addons.some(
+      (addon) =>
+        addon.provider === 'modrinth' &&
+        addon.projectId === dependency.project_id &&
+        (type !== 'datapack' || (addon.relativeFolder ?? 'datapacks') === targetFolder)
+    )
+    if (alreadyInstalled) continue
+    if (visited.has(`modrinth:${dependency.project_id}:${ref.world ?? ''}:${ref.type ?? ''}`)) continue
     try {
       await installRef(
         instance,
         {
           projectId: dependency.project_id,
-          versionId: dependency.version_id ?? ''
+          versionId: dependency.version_id ?? '',
+          type: type === 'datapack' ? 'datapack' : undefined,
+          world: type === 'datapack' ? ref.world : undefined
         },
         added,
         visited,
@@ -132,6 +144,21 @@ async function installRef(
       logger.warn('addons', `Unable to install dependency ${dependency.project_id}`, error)
     }
   }
+}
+
+async function resolveTargetFolder(
+  instance: Instance,
+  type: AddonType,
+  world?: string
+): Promise<string | undefined> {
+  if (type !== 'datapack' || !world) return undefined
+  const saves = path.join(instance.gameDir, 'saves')
+  const worldDir = safeJoin(saves, world)
+  const levelFile = path.join(worldDir, 'level.dat')
+  if (!(await pathExists(levelFile))) {
+    throw new Error('That world no longer exists. Choose another world or the instance datapacks folder.')
+  }
+  return path.relative(instance.gameDir, path.join(worldDir, 'datapacks')).replace(/\\/g, '/')
 }
 
 async function materialiseFile(
@@ -150,6 +177,7 @@ async function materialiseFile(
     iconUrl?: string
     description?: string
     sourceUrl?: string
+    relativeFolder?: string
     dependencies: AddonDependency[]
     url: string
   }
@@ -158,12 +186,19 @@ async function materialiseFile(
     ? addonCacheEntry(input.sha1, input.filename)
     : path.join(store.settings().dataDir, 'cache', 'downloads', input.filename)
   await cacheFileFromUrl(input.url, input.sha1, input.filename)
-  const recordId = `addon_${input.provider}_${input.projectId}`
+  const baseRecordId = `addon_${input.provider}_${input.projectId}`
+  const recordId = input.relativeFolder
+    ? `${baseRecordId}_${sanitizeFilename(input.relativeFolder)}`
+    : baseRecordId
   const existing = instance.addons.find((addon) => addon.id === recordId)
   if (existing && existing.filename !== input.filename) {
     await removeRecordFile(instance, existing)
   }
-  const target = path.join(instance.gameDir, addonFolder(input.type), input.filename)
+  const target = path.join(
+    instance.gameDir,
+    input.relativeFolder ?? addonFolder(input.type),
+    input.filename
+  )
   await ensureDir(path.dirname(target))
   await fs.copyFile(cachePath, target)
 
@@ -183,6 +218,7 @@ async function materialiseFile(
     iconUrl: input.iconUrl,
     description: input.description,
     sourceUrl: input.sourceUrl,
+    relativeFolder: input.relativeFolder,
     dependencies: input.dependencies,
     enabled: true,
     installedAt: existing?.installedAt ?? now,
@@ -228,8 +264,7 @@ export async function toggleAddon(
   if (!instance) throw new Error('Instance not found')
   const record = instance.addons.find((addon) => addon.id === addonId)
   if (!record) throw new Error('Add-on not found')
-  const folder = addonFolder(record.type)
-  const active = path.join(instance.gameDir, folder, record.filename)
+  const active = addonFilePath(instance, record)
   const disabled = `${active}.disabled`
   if (enabled) {
     if (await pathExists(disabled)) await fs.rename(disabled, active)
@@ -252,7 +287,8 @@ export async function checkAddonUpdates(instanceId: string): Promise<AddonRecord
       const versions = await getModrinthVersions(
         record.projectId,
         instance.versionId,
-        record.type === 'mod' || record.type === 'modpack' ? instance.loader : undefined
+        record.type === 'mod' || record.type === 'modpack' ? instance.loader : undefined,
+        record.type
       )
       const best = selectBestVersion(versions, instance.versionId, instance.loader, record.type)
       if (best) {
@@ -285,7 +321,9 @@ export async function updateAllAddons(
     try {
       await installAddon(instanceId, {
         projectId: record.projectId,
-        versionId: record.latestVersionId ?? ''
+        versionId: record.latestVersionId ?? '',
+        type: record.type,
+        world: worldForRecord(record)
       })
     } catch (error) {
       logger.warn('addons', `Failed to update ${record.name}`, error)
@@ -303,8 +341,27 @@ export async function scanUnmanagedAddons(instanceId: string): Promise<AddonReco
     { folder: 'shaderpacks', type: 'shader' },
     { folder: 'datapacks', type: 'datapack' }
   ]
-  const known = new Set(instance.addons.flatMap((addon) => [addon.filename, `${addon.filename}.disabled`]))
-  const candidates: { file: string; filename: string; type: AddonType; sha1: string }[] = []
+  const saves = path.join(instance.gameDir, 'saves')
+  const worldEntries = await fs.readdir(saves, { withFileTypes: true }).catch(() => [])
+  for (const world of worldEntries) {
+    if (!world.isDirectory()) continue
+    if (!(await pathExists(path.join(saves, world.name, 'level.dat')))) continue
+    folders.push({ folder: `saves/${world.name}/datapacks`, type: 'datapack' })
+  }
+
+  const known = new Set(
+    instance.addons.flatMap((addon) => {
+      const folder = addonRecordFolder(addon)
+      return [`${folder}/${addon.filename}`.toLowerCase(), `${folder}/${addon.filename}.disabled`.toLowerCase()]
+    })
+  )
+  const candidates: {
+    file: string
+    filename: string
+    type: AddonType
+    relativeFolder?: string
+    sha1: string
+  }[] = []
   for (const { folder, type } of folders) {
     const dir = path.join(instance.gameDir, folder)
     let entries
@@ -316,10 +373,16 @@ export async function scanUnmanagedAddons(instanceId: string): Promise<AddonReco
     for (const entry of entries) {
       if (!entry.isFile()) continue
       if (!/\.(jar|zip|mrpack)$/i.test(entry.name)) continue
-      if (known.has(entry.name)) continue
+      if (known.has(`${folder}/${entry.name}`.toLowerCase())) continue
       const file = path.join(dir, entry.name)
       const sha1 = await sha1File(file)
-      candidates.push({ file, filename: entry.name, type, sha1 })
+      candidates.push({
+        file,
+        filename: entry.name,
+        type,
+        relativeFolder: folder === 'datapacks' ? undefined : folder,
+        sha1
+      })
     }
   }
   if (candidates.length === 0) return []
@@ -343,6 +406,7 @@ export async function scanUnmanagedAddons(instanceId: string): Promise<AddonReco
         sha1: candidate.sha1,
         size: (await fs.stat(candidate.file)).size,
         description: meta?.description,
+        relativeFolder: candidate.relativeFolder,
         dependencies: [],
         enabled: !candidate.filename.endsWith('.disabled'),
         installedAt: new Date().toISOString(),
@@ -357,9 +421,13 @@ export async function scanUnmanagedAddons(instanceId: string): Promise<AddonReco
       project = await getModrinthProject(version.project_id)
       projectCache.set(version.project_id, project)
     }
-    const type = projectTypeToAddonType(project.project_type)
+    const type = candidate.type
+    const baseRecordId = `addon_modrinth_${project.id}`
+    const recordId = candidate.relativeFolder
+      ? `${baseRecordId}_${sanitizeFilename(candidate.relativeFolder)}`
+      : baseRecordId
     const record: AddonRecord = {
-      id: `addon_modrinth_${project.id}`,
+      id: recordId,
       provider: 'modrinth',
       projectId: project.id,
       versionId: version.id,
@@ -373,6 +441,7 @@ export async function scanUnmanagedAddons(instanceId: string): Promise<AddonReco
       iconUrl: project.icon_url ?? undefined,
       description: project.description,
       sourceUrl: `https://modrinth.com/${project.project_type}/${project.slug}`,
+      relativeFolder: candidate.relativeFolder,
       dependencies: version.dependencies
         .filter((dependency) => dependency.project_id)
         .map((dependency) => ({
@@ -411,8 +480,14 @@ export async function updateHashesForLoadout(instanceId: string): Promise<Record
 }
 
 export function addonFilePath(instance: Instance, record: AddonRecord, disabled = false): string {
-  const base = path.join(instance.gameDir, addonFolder(record.type), record.filename)
+  const base = path.join(instance.gameDir, addonRecordFolder(record), record.filename)
   return disabled ? `${base}.disabled` : base
+}
+
+export function worldForRecord(record: Pick<AddonRecord, 'type' | 'relativeFolder'>): string | undefined {
+  if (record.type !== 'datapack' || !record.relativeFolder) return undefined
+  const parts = record.relativeFolder.split('/')
+  return parts[0] === 'saves' && parts[2] === 'datapacks' ? parts[1] : undefined
 }
 
 async function removeRecordFile(instance: Instance, record: AddonRecord): Promise<void> {

@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowClockwise,
+  BookOpen,
   Check,
   CircleNotch,
   Compass,
@@ -27,6 +28,7 @@ import { Button } from '../components/ui/Button'
 const types: { value: AddonType; label: string; icon: React.ReactNode }[] = [
   { value: 'mod', label: 'Mods', icon: <Package size={14} /> },
   { value: 'modpack', label: 'Modpacks', icon: <SquaresFour size={14} /> },
+  { value: 'datapack', label: 'Datapacks', icon: <BookOpen size={14} /> },
   { value: 'resourcepack', label: 'Resource packs', icon: <Image size={14} /> },
   { value: 'shader', label: 'Shaders', icon: <Sparkle size={14} /> }
 ]
@@ -89,7 +91,7 @@ export function BrowsePage() {
   )
 
   const search = useSearch(searchQuery)
-  const hideLoader = type === 'resourcepack' || type === 'shader'
+  const hideLoader = type === 'resourcepack' || type === 'shader' || type === 'datapack'
   const releaseVersions = versions.filter((version) => version.type === 'release').slice(0, 120)
 
   useEffect(() => {
@@ -115,12 +117,16 @@ export function BrowsePage() {
       return
     }
     if (data.type === 'modpack') {
-      openModal('modDetail', { id: data.id })
+      openModal('modDetail', { id: data.id, type: data.type })
+      return
+    }
+    if (data.type === 'datapack') {
+      openModal('modDetail', { id: data.id, type: data.type })
       return
     }
     if (data.type === 'mod' && targetInstance.loader === 'vanilla') {
       toast('info', 'Vanilla cannot load mods', 'Open the details to switch this instance to a mod loader.')
-      openModal('modDetail', { id: data.id })
+      openModal('modDetail', { id: data.id, type: data.type })
       return
     }
     if (targetInstance.addons.some((addon) => addon.projectId === data.id)) {
@@ -150,7 +156,7 @@ export function BrowsePage() {
       <PageHeader
         eyebrow="Discover"
         title="Browse"
-        description="Mods, modpacks, resource packs and shaders from Modrinth — installed with dependencies handled."
+        description="Mods, modpacks, datapacks, resource packs and shaders from Modrinth — installed with dependencies handled."
         actions={
           targetInstance ? (
             <button
@@ -238,8 +244,9 @@ export function BrowsePage() {
         <>
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
             {results.map((hit) => {
-              const data = normalizeHit(hit)
-              const installed = targetInstance?.addons.some((addon) => addon.projectId === data.id) ?? false
+              const data = normalizeHit(hit, type)
+              const installed = data.type !== 'datapack' &&
+                (targetInstance?.addons.some((addon) => addon.projectId === data.id) ?? false)
               const installing = Boolean(quickInstalling[data.id])
               const quickLabel = !targetInstance
                 ? 'Choose an instance first'
@@ -247,13 +254,15 @@ export function BrowsePage() {
                   ? `${data.title} is already installed`
                   : data.type === 'modpack'
                     ? 'Choose a pack version and target'
-                    : data.type === 'mod' && targetInstance.loader === 'vanilla'
-                      ? 'Open details to enable a mod loader'
-                      : `Install ${data.title} to ${targetInstance.name}`
+                    : data.type === 'datapack'
+                      ? 'Choose a world and install'
+                      : data.type === 'mod' && targetInstance.loader === 'vanilla'
+                        ? 'Open details to enable a mod loader'
+                        : `Install ${data.title} to ${targetInstance.name}`
               return (
                 <div
                   key={data.id}
-                  onClick={() => openModal('modDetail', { id: data.id })}
+                  onClick={() => openModal('modDetail', { id: data.id, type: data.type })}
                   className="card-hover relative flex min-h-[148px] cursor-pointer flex-col rounded-2xl border border-line/55 bg-card/65 p-4 text-left"
                 >
                   <button
@@ -286,7 +295,7 @@ export function BrowsePage() {
                         type="button"
                         onClick={(event) => {
                           event.stopPropagation()
-                          openModal('modDetail', { id: data.id })
+                          openModal('modDetail', { id: data.id, type: data.type })
                         }}
                         className="block max-w-full truncate text-left font-display text-[13.5px] font-semibold text-ink outline-none focus-visible:underline"
                       >
@@ -323,13 +332,14 @@ export function BrowsePage() {
       )}
 
       <div className="mt-6 rounded-xl border border-line/40 bg-card/30 p-3 text-[10.5px] leading-relaxed text-muted/70">
-        Modrinth is free and open. Newbie resolves required dependencies and picks the newest compatible release for your selected loader and game version.
+        Modrinth is free and open. Newbie resolves required dependencies and picks the newest compatible release.
+        Datapacks are copied into the world you choose, or into an instance staging folder.
       </div>
     </div>
   )
 }
 
-function normalizeHit(hit: ModrinthHit) {
+function normalizeHit(hit: ModrinthHit, type: AddonType) {
   return {
     id: hit.project_id,
     title: hit.title,
@@ -338,6 +348,6 @@ function normalizeHit(hit: ModrinthHit) {
     downloads: hit.downloads,
     categories: hit.display_categories ?? hit.categories ?? [],
     loaders: hit.categories ?? [],
-    type: hit.project_type
+    type
   }
 }

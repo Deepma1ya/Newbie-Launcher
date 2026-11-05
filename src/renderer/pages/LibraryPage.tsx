@@ -20,7 +20,7 @@ import { BlockIcon } from '../components/ui/BlockIcon'
 import { Badge, Card, EmptyState, Input, Segmented, Select } from '../components/ui/primitives'
 import { Button } from '../components/ui/Button'
 
-type TypeFilter = 'all' | 'mod' | 'resourcepack' | 'shader'
+type TypeFilter = 'all' | 'mod' | 'datapack' | 'resourcepack' | 'shader'
 
 export function LibraryPage() {
   const instances = useInstances().data ?? []
@@ -47,7 +47,7 @@ export function LibraryPage() {
         <EmptyState
           icon={<Books size={22} />}
           title="Nothing installed yet"
-          description="Create an instance first, then install mods, resource packs and shaders from Browse."
+          description="Create an instance first, then install mods, datapacks, resource packs and shaders from Browse."
           action={<Button variant="primary" onClick={() => openModal('createInstance', true)} icon={<Plus size={15} />}>Create an instance</Button>}
         />
       </div>
@@ -157,6 +157,7 @@ export function LibraryPage() {
           options={[
             { value: 'all', label: `All ${addons.length}` },
             { value: 'mod', label: 'Mods' },
+            { value: 'datapack', label: 'Datapacks' },
             { value: 'resourcepack', label: 'Packs' },
             { value: 'shader', label: 'Shaders' }
           ]}

@@ -48,7 +48,7 @@ import { Button, IconButton } from '../components/ui/Button'
 import { Modal } from '../components/ui/Modal'
 
 type Tab = 'overview' | 'addons' | 'loadouts' | 'settings'
-type AddonFilter = 'all' | 'mod' | 'resourcepack' | 'shader'
+type AddonFilter = 'all' | 'mod' | 'datapack' | 'resourcepack' | 'shader'
 
 export function InstancePage() {
   const { id } = useParams<{ id: string }>()
@@ -96,6 +96,7 @@ export function InstancePage() {
   const addonCounts = {
     all: instance.addons.length,
     mod: instance.addons.filter((addon) => addon.type === 'mod').length,
+    datapack: instance.addons.filter((addon) => addon.type === 'datapack').length,
     resourcepack: instance.addons.filter((addon) => addon.type === 'resourcepack').length,
     shader: instance.addons.filter((addon) => addon.type === 'shader').length
   }
@@ -353,6 +354,7 @@ export function InstancePage() {
               options={[
                 { value: 'all', label: `All ${addonCounts.all}` },
                 { value: 'mod', label: `Mods ${addonCounts.mod}` },
+                { value: 'datapack', label: `Datapacks ${addonCounts.datapack}` },
                 { value: 'resourcepack', label: `Packs ${addonCounts.resourcepack}` },
                 { value: 'shader', label: `Shaders ${addonCounts.shader}` }
               ]}

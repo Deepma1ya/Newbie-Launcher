@@ -2,7 +2,7 @@ import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import type { AddonRecord, Instance, Loadout, LoadoutMode, LoadoutPlan } from '@shared/types'
 import { store } from './store'
-import { addonFolder } from './addonTypes'
+import { addonRecordFolder } from './addonTypes'
 import { addonCacheEntry, cacheFileFromUrl } from './installer'
 import { getModrinthVersion, pickPrimaryFile } from './modrinth'
 import { ensureDir, pathExists, uniqueId } from '../util/fs'
@@ -79,7 +79,7 @@ export async function planLoadout(instanceId: string, loadoutId: string): Promis
   let download = 0
   let totalBytes = 0
   for (const record of required) {
-    const target = path.join(instance.gameDir, addonFolder(record.type), record.filename)
+    const target = path.join(instance.gameDir, addonRecordFolder(record), record.filename)
     if (await pathExists(target)) continue
     const cached = await cachedPathFor(record)
     if (cached) copy += 1
@@ -113,7 +113,7 @@ export async function activateLoadout(
 
   for (const record of instance.addons) {
     if (wanted.has(record.id)) {
-      const active = path.join(instance.gameDir, addonFolder(record.type), record.filename)
+      const active = path.join(instance.gameDir, addonRecordFolder(record), record.filename)
       if (!record.enabled) {
         const disabled = `${active}.disabled`
         if (await pathExists(disabled)) await fs.rename(disabled, active)
@@ -121,7 +121,7 @@ export async function activateLoadout(
       await ensureAddonFile(instance, record)
       record.enabled = true
     } else if (record.enabled) {
-      const active = path.join(instance.gameDir, addonFolder(record.type), record.filename)
+      const active = path.join(instance.gameDir, addonRecordFolder(record), record.filename)
       if (await pathExists(active)) await fs.rm(active, { force: true }).catch(() => undefined)
       record.enabled = false
     }
@@ -190,7 +190,7 @@ export async function backupLoadout(instanceId: string, loadoutId: string): Prom
 }
 
 export async function ensureAddonFile(instance: Instance, record: AddonRecord, forceCache = false): Promise<void> {
-  const target = path.join(instance.gameDir, addonFolder(record.type), record.filename)
+  const target = path.join(instance.gameDir, addonRecordFolder(record), record.filename)
   if (!forceCache && (await pathExists(target))) return
 
   let source = await cachedPathFor(record)

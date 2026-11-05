@@ -7,6 +7,7 @@ import { IPC } from '@shared/ipc'
 import type {
   AccountSummary,
   AddonRecord,
+  AddonType,
   AppInfo,
   BackupRecord,
   CreateInstanceInput,
@@ -32,6 +33,7 @@ import {
   duplicateInstance,
   getInstance,
   listInstances,
+  listWorlds,
   openInstanceFolder,
   removeInstance,
   repair,
@@ -298,6 +300,7 @@ export function registerIpc(): void {
 
   ipcMain.handle(IPC.instancesList, () => listInstances())
   ipcMain.handle(IPC.instancesGet, (_event, id: string) => getInstance(z.string().parse(id)))
+  ipcMain.handle(IPC.instancesWorlds, async (_event, id: string) => listWorlds(z.string().parse(id)))
   ipcMain.handle(IPC.instancesCreate, async (_event, input: unknown) =>
     createInstance(createInstanceSchema.parse(input) as CreateInstanceInput)
   )
@@ -375,14 +378,21 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.addonsProject, async (_event, id: string) => getModrinthProject(id))
   ipcMain.handle(
     IPC.addonsVersions,
-    async (_event, projectId: string, gameVersion?: string, loader?: LoaderType) =>
-      getModrinthVersions(projectId, gameVersion, loader)
+    async (_event, projectId: string, gameVersion?: string, loader?: LoaderType, type?: AddonType) =>
+      getModrinthVersions(
+        projectId,
+        gameVersion,
+        loader,
+        type ? addonTypeSchema.parse(type) : undefined
+      )
   )
   ipcMain.handle(IPC.addonsInstall, async (_event, instanceId: string, ref: unknown) => {
     const value = z
       .object({
         projectId: z.string().max(200),
-        versionId: z.string().max(200)
+        versionId: z.string().max(200),
+        type: addonTypeSchema.optional(),
+        world: z.string().max(200).optional()
       })
       .parse(ref)
     const instance = store.instance(instanceId)

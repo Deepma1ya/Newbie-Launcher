@@ -10,15 +10,24 @@ import {
   Star,
   WarningCircle
 } from '@phosphor-icons/react'
-import type { LoaderType, ModrinthProject, ModrinthVersion } from '@shared/types'
+import type { AddonType, LoaderType, ModrinthProject, ModrinthVersion } from '@shared/types'
 import { isPackCompatible } from '@shared/packCompatibility'
-import { useActiveInstance, useInstances, useProject, useProjectVersions, qk } from '../../hooks/queries'
+import {
+  useActiveInstance,
+  useInstances,
+  useProject,
+  useProjectVersions,
+  useWorlds,
+  qk
+} from '../../hooks/queries'
 import { toast, useUi } from '../../store/ui'
 import { addonTypeLabel, errorMessage, formatBytes, formatNumber, loaderLabel, relativeTime } from '../../lib/utils'
 import { Modal } from '../ui/Modal'
 import { Button } from '../ui/Button'
 import { Badge, Divider, Field, Select, Skeleton } from '../ui/primitives'
 import { ProjectIcon } from '../ui/BlockIcon'
+
+const STAGING_TARGET = '__instance_datapacks__'
 
 export function ModDetailModal() {
   const detail = useUi((state) => state.modal.modDetail)
@@ -29,17 +38,21 @@ export function ModDetailModal() {
   const instances = useInstances().data ?? []
   const projectQuery = useProject(detail?.id)
   const project = projectQuery.data
-  const projectType = project?.project_type
+  const projectType = detail?.type ?? project?.project_type
+  const worldsQuery = useWorlds(activeInstance?.id, projectType === 'datapack')
+  const worlds = worldsQuery.data ?? []
   const filterLoader = projectType === 'mod' ? activeInstance?.loader : undefined
   const versionsQuery = useProjectVersions(
     detail?.id,
     projectType === 'modpack' ? undefined : activeInstance?.versionId,
-    projectType === 'modpack' ? undefined : filterLoader
+    projectType === 'modpack' ? undefined : filterLoader,
+    projectType
   )
   const vanillaBlocked = projectType === 'mod' && activeInstance?.loader === 'vanilla'
   const versions = versionsQuery.data ?? []
   const [selectedVersion, setSelectedVersion] = useState('')
   const [selectedInstanceId, setSelectedInstanceId] = useState('')
+  const [selectedWorld, setSelectedWorld] = useState<string | null>(null)
   const [installing, setInstalling] = useState(false)
   const [installed, setInstalled] = useState(false)
   const queryClient = useQueryClient()
@@ -48,10 +61,25 @@ export function ModDetailModal() {
     if (!detail) {
       setSelectedVersion('')
       setSelectedInstanceId('')
+      setSelectedWorld(null)
       setInstalled(false)
       setInstalling(false)
     }
   }, [detail])
+
+  useEffect(() => {
+    if (projectType !== 'datapack') {
+      if (selectedWorld !== null) setSelectedWorld(null)
+      return
+    }
+    if (selectedWorld !== null) {
+      if (selectedWorld === STAGING_TARGET) return
+      if (worlds.some((world) => world.folder === selectedWorld)) return
+      setSelectedWorld(null)
+      return
+    }
+    if (worlds.length > 0) setSelectedWorld(worlds[0]!.folder)
+  }, [projectType, selectedWorld, worlds])
 
   useEffect(() => {
     if (versions.length === 0) return
@@ -131,12 +159,32 @@ export function ModDetailModal() {
       }
       await window.newbie.addons.install(activeInstance.id, {
         projectId: detail.id,
-        versionId: versionId(selected)
+        versionId: versionId(selected),
+        type: projectType,
+        world:
+          projectType === 'datapack'
+            ? selectedWorld === STAGING_TARGET
+              ? undefined
+              : selectedWorld ?? worlds[0]?.folder ?? undefined
+            : undefined
       })
       await queryClient.invalidateQueries({ queryKey: qk.instances })
       await queryClient.invalidateQueries({ queryKey: qk.instance(activeInstance.id) })
+      await queryClient.invalidateQueries({ queryKey: qk.worlds(activeInstance.id) })
       setInstalled(true)
-      toast('success', 'Installed', `${title} was added to ${activeInstance.name}`)
+      const installedWorld =
+        projectType === 'datapack'
+          ? selectedWorld === STAGING_TARGET
+            ? undefined
+            : selectedWorld ?? worlds[0]?.folder
+          : undefined
+      toast(
+        'success',
+        'Installed',
+        projectType === 'datapack'
+          ? `${title} was added to ${installedWorld || 'the instance datapacks folder'}`
+          : `${title} was added to ${activeInstance.name}`
+      )
     } catch (error) {
       toast('error', 'Install failed', errorMessage(error))
     } finally {
@@ -166,7 +214,12 @@ export function ModDetailModal() {
             <Button
               variant="primary"
               loading={installing}
-              disabled={!selected || (!activeInstance && projectType !== 'modpack') || vanillaBlocked}
+              disabled={
+                !selected ||
+                (!activeInstance && projectType !== 'modpack') ||
+                vanillaBlocked ||
+                (projectType === 'datapack' && worldsQuery.isLoading)
+              }
               onClick={() => void install()}
               icon={<DownloadSimple size={16} />}
             >
@@ -176,9 +229,13 @@ export function ModDetailModal() {
                   ? targetInstance
                     ? `Add to ${targetInstance.name}`
                     : 'Create instance from modpack'
-                  : activeInstance
-                    ? `Install to ${activeInstance.name}`
-                    : 'Create an instance first'}
+                  : projectType === 'datapack'
+                    ? activeInstance
+                      ? `Install datapack to ${activeInstance.name}`
+                      : 'Create an instance first'
+                    : activeInstance
+                      ? `Install to ${activeInstance.name}`
+                      : 'Create an instance first'}
             </Button>
           )}
         </>
@@ -274,7 +331,12 @@ export function ModDetailModal() {
                 {versionsQuery.isLoading && <Skeleton className="h-14 w-full" />}
                 {!versionsQuery.isLoading && versions.length === 0 && (
                   <div className="rounded-xl border border-dashed border-line/60 p-4 text-[11.5px] text-muted">
-                    No version of this project matches {activeInstance ? `${activeInstance.versionId} / ${loaderLabel(activeInstance.loader)}` : 'the current filters'}.
+                    No version of this project matches
+                    {activeInstance
+                      ? ` ${activeInstance.versionId}${
+                          projectType === 'mod' ? ` / ${loaderLabel(activeInstance.loader)}` : ''
+                        }`
+                      : ' the current filters'}.
                   </div>
                 )}
                 {versions.slice(0, 12).map((version) => {
@@ -310,7 +372,9 @@ export function ModDetailModal() {
                 {projectType === 'modpack'
                   ? 'Create a fresh instance, or add the pack to an existing instance with the same version and loader.'
                   : activeInstance
-                    ? `Target: ${activeInstance.name} · ${activeInstance.versionId} · ${loaderLabel(activeInstance.loader)}`
+                    ? `Target: ${activeInstance.name} · ${activeInstance.versionId}${
+                        projectType === 'mod' ? ` · ${loaderLabel(activeInstance.loader)}` : ''
+                      }`
                     : 'Create an instance first, then install this project into it.'}
               </p>
               <div className="mt-3">
@@ -325,6 +389,28 @@ export function ModDetailModal() {
                   </Select>
                 </Field>
               </div>
+              {projectType === 'datapack' && activeInstance && (
+                <div className="mt-3">
+                  <Field label="Install to">
+                    <Select
+                      value={selectedWorld ?? worlds[0]?.folder ?? STAGING_TARGET}
+                      onChange={setSelectedWorld}
+                    >
+                      <option value={STAGING_TARGET}>Instance datapacks folder (staging)</option>
+                      {worlds.map((world) => (
+                        <option key={world.folder} value={world.folder}>
+                          {world.name}
+                        </option>
+                      ))}
+                    </Select>
+                  </Field>
+                  <p className="mt-1.5 text-[10px] leading-relaxed text-muted/70">
+                    {worlds.length > 0
+                      ? 'World datapacks load from saves/<world>/datapacks. Reload the world or run /reload after installing.'
+                      : 'No worlds found yet. The pack goes to the instance datapacks staging folder; copy it into a world after creating one.'}
+                  </p>
+                </div>
+              )}
               {projectType === 'modpack' && (
                 <div className="mt-3">
                   <Field label="Install target">
@@ -439,7 +525,10 @@ function versionSize(version: ModrinthVersion): number {
 }
 
 function versionMeta(version: ModrinthVersion): string {
-  return `${version.game_versions.slice(-3).join(', ')} · ${version.loaders.join(', ')}`
+  const versions = version.game_versions
+  const gameVersions =
+    versions.length <= 3 ? versions.join(', ') : `${versions[0]} – ${versions[versions.length - 1]}`
+  return `${gameVersions} · ${version.loaders.join(', ')}`
 }
 
 function versionDate(version: ModrinthVersion): string {

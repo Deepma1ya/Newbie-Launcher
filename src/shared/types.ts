@@ -115,6 +115,8 @@ export interface AddonRecord {
   latestVersionId?: string
   latestVersionNumber?: string
   updateCheckedAt?: string
+  /** Folder relative to the game directory, used by world-specific datapacks. */
+  relativeFolder?: string
 }
 
 export interface RepairFailure {
@@ -186,13 +188,18 @@ export interface UpdateInstanceInput {
   tlauncherCape?: boolean
 }
 
+export interface WorldSummary {
+  folder: string
+  name: string
+  updatedAt: string
+}
+
 export interface MinecraftVersionSummary {
   id: string
   type: 'release' | 'snapshot' | 'old_beta' | 'old_alpha'
   releaseTime: string
   sha1?: string
 }
-
 export interface LoaderVersion {
   type: LoaderType
   version: string

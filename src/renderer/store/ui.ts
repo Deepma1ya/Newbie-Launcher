@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
 import type {
+  AddonType,
   InstallProgress,
   LaunchState,
   MicrosoftAuthState,
@@ -20,7 +21,7 @@ interface ModalState {
   createInstanceSeed?: { versionId?: string; loader?: string; projectId?: string; modpackVersionId?: string }
   addAccount: boolean
   addAccountTab: 'microsoft' | 'tlauncher' | 'offline' | 'authlib'
-  modDetail: { id: string } | null
+  modDetail: { id: string; type?: AddonType } | null
   loadout: { instanceId: string; loadoutId?: string } | null
   repair: { instanceId: string } | null
   console: { instanceId: string } | null

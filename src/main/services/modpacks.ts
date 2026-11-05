@@ -16,7 +16,7 @@ import { downloadFile } from './http'
 import { paths } from './paths'
 import { store } from './store'
 import { createInstance } from './instances'
-import { addonFolder } from './addonTypes'
+import { addonRecordFolder } from './addonTypes'
 import { ensureDir, safeJoin } from '../util/fs'
 import { mapLimit } from '../util/async'
 import { zipPaths } from '../util/archive'
@@ -288,7 +288,7 @@ function sameOrReplacedAddon(existing: AddonRecord, incoming: AddonRecord): bool
 }
 
 async function removeManagedFile(instance: Instance, record: AddonRecord): Promise<void> {
-  const base = path.join(instance.gameDir, addonFolder(record.type), record.filename)
+  const base = path.join(instance.gameDir, addonRecordFolder(record), record.filename)
   await fs.rm(base, { force: true }).catch(() => undefined)
   await fs.rm(`${base}.disabled`, { force: true }).catch(() => undefined)
 }

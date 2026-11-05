@@ -62,6 +62,7 @@ const api: NewbieApi = {
     running: () => ipcRenderer.invoke(IPC.instancesRunning),
     logs: (id) => ipcRenderer.invoke(IPC.instancesLogs, id),
     openFolder: (id, sub) => ipcRenderer.invoke(IPC.instancesOpenFolder, id, sub),
+    worlds: (id) => ipcRenderer.invoke(IPC.instancesWorlds, id),
     repair: (id, apply, allowDisable, reuseBackup) =>
       ipcRenderer.invoke(IPC.instancesRepair, id, apply, allowDisable, reuseBackup),
     clearRepairFailures: (id) => ipcRenderer.invoke(IPC.instancesClearRepairFailures, id),
@@ -70,8 +71,8 @@ const api: NewbieApi = {
   addons: {
     search: (query) => ipcRenderer.invoke(IPC.addonsSearch, query),
     project: (id) => ipcRenderer.invoke(IPC.addonsProject, id),
-    versions: (projectId, gameVersion, loader) =>
-      ipcRenderer.invoke(IPC.addonsVersions, projectId, gameVersion, loader),
+    versions: (projectId, gameVersion, loader, type) =>
+      ipcRenderer.invoke(IPC.addonsVersions, projectId, gameVersion, loader, type),
     install: (instanceId, ref) => ipcRenderer.invoke(IPC.addonsInstall, instanceId, ref),
     remove: (instanceId, addonId, deleteFile) => ipcRenderer.invoke(IPC.addonsRemove, instanceId, addonId, deleteFile),
     toggle: (instanceId, addonId, enabled) => ipcRenderer.invoke(IPC.addonsToggle, instanceId, addonId, enabled),

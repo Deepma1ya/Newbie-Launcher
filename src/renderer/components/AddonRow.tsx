@@ -68,6 +68,12 @@ export function AddonRow({
           <span>{formatBytes(record.size)}</span>
           <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
           <span>{relativeTime(record.updatedAt)}</span>
+          {record.type === 'datapack' && record.relativeFolder?.startsWith('saves/') && (
+            <>
+              <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
+              <span className="truncate">World: {record.relativeFolder.split('/')[1]}</span>
+            </>
+          )}
         </div>
       </div>
 
@@ -79,7 +85,14 @@ export function AddonRow({
               void window.newbie.addons
                 .install(instance.id, {
                   projectId: record.projectId,
-                  versionId: record.latestVersionId ?? ''
+                  versionId: record.latestVersionId ?? '',
+                  type: record.type,
+                  world:
+                    record.type === 'datapack' &&
+                    record.relativeFolder?.startsWith('saves/') &&
+                    record.relativeFolder.split('/')[2] === 'datapacks'
+                      ? record.relativeFolder.split('/')[1]
+                      : undefined
                 })
                 .then(onChanged)
                 .catch((error) => toast('error', 'Update failed', errorMessage(error)))

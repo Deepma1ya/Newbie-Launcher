@@ -1,31 +1,24 @@
-# Newbie Launcher 0.1.18
+# Newbie Launcher 0.1.19
 
-TLauncher skins and capes, powered by the real TLSkinCape plugin.
+Datapacks, installed as smoothly as mods.
 
-## TL skin and cape
+## Datapacks
 
-- Newbie can place TLauncher's official **TLSkinCape** mod into an instance before launch, exactly like TLauncher does.
-- The plugin is downloaded from TLauncher's official repository, checked against its published size and SHA-1, then copied into `mods/`.
-- It is only placed when a **TLauncher account** is active, the instance is **Fabric or Forge**, and an official build exists for the exact Minecraft version.
-- Vanilla, Quilt and NeoForge instances are not supported by the TLSkinCape builds, so they are marked **No TL skin**.
-- Newbie never bundles TLSkinCape in the installer. The mod is GPL-3.0-only and is fetched on demand.
+- Added a **Datapacks** tab to Browse with Modrinth search, version filters and dependency-aware installs.
+- Datapacks work on vanilla instances too — no mod loader required.
+- The project details window now has an **Install to** selector:
+  - choose any world in the instance and the pack is copied into `saves/<world>/datapacks`;
+  - choose **Instance datapacks folder** to keep a staging copy in the instance.
+- If the instance has worlds, the most recently used one is selected by default.
+- Required datapack dependencies are installed into the same world.
+- The Library and Instance add-ons views now have **Datapacks** filters.
+- Datapack rows show which world they belong to, and updates keep writing to that same world.
+- **Scan local** now finds datapacks in the instance folder and inside every world's `datapacks` folder.
+- Removing or disabling a datapack uses its real world-specific path, so other worlds are not touched.
 
-## Toggles
+## Notes
 
-- **Accounts → TL skin & cape plugin**: global switch for placing the plugin on supported instances.
-- **Instance → Settings → TLauncher skin & cape**: per-instance switch, plus the current managed file path.
-- **Settings → General → TLauncher skins**: global switches for skin/cape sync and the plugin.
-- Turning an instance switch off removes only the file Newbie placed. A manually installed TLSkinCape jar is never deleted or duplicated.
-- If the global switch is off, or the selected account is not a TLauncher account, Newbie removes its managed file instead of loading the plugin with the wrong identity.
+- Datapacks are world data. Minecraft loads them when the world loads; use `/reload` or reopen the world after installing.
+- Datapacks are Java Edition only. Bedrock behaviour packs are not part of this feature.
 
-## Version support tags
-
-- Instances now show **TL skin** or **No TL skin** before the instance name and in the header.
-- Minecraft version pickers in **Create instance** and **Change version** show a TL skin tag before every version, based on the selected loader.
-- Support covers the official Fabric and Forge TLSkinCape builds, including 1.16.5 through 1.21.11 and 26.1–26.3 where TLauncher publishes them.
-- The tag explains whether the plugin can be added; it does not claim that every TLauncher skin layout works on every listed version.
-
-## Included from earlier
-
-- Dependency-first Repair with confirmed disables (0.1.17).
-- Themed dropdowns (0.1.16), Bedrock support (0.1.15), instant instance deletion (0.1.14), crash-only console (0.1.13).
+Everything from 0.1.18 (TLSkinCape) and earlier is included.
