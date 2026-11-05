@@ -18,16 +18,71 @@ import appIcon from '../assets/app-icon.png'
 import { SkinFace } from './ui/BlockIcon'
 import { Tooltip } from './ui/primitives'
 
-const nav = [
-  { to: '/', label: 'Home', icon: House, end: true },
-  { to: '/instances', label: 'Instances', icon: SquaresFour },
-  { to: '/bedrock', label: 'Bedrock', icon: Cube },
-  { to: '/servers', label: 'Servers', icon: HardDrives },
-  { to: '/browse', label: 'Browse', icon: Compass },
-  { to: '/library', label: 'Library', icon: Books },
-  { to: '/downloads', label: 'Downloads', icon: DownloadSimple },
-  { to: '/accounts', label: 'Accounts', icon: UserCircle }
+const homeNav = { to: '/', label: 'Home', icon: House, end: true }
+
+interface NavItem {
+  to: string
+  label: string
+  icon: typeof House
+  end?: boolean
+}
+
+interface NavSection {
+  label: string
+  items: NavItem[]
+}
+
+const navSections: NavSection[] = [
+  {
+    label: 'Minecraft Java',
+    items: [
+      { to: '/instances', label: 'Instances', icon: SquaresFour },
+      { to: '/browse', label: 'Browse', icon: Compass },
+      { to: '/library', label: 'Library', icon: Books }
+    ]
+  },
+  {
+    label: 'Minecraft Bedrock',
+    items: [{ to: '/bedrock', label: 'Bedrock', icon: Cube }]
+  },
+  {
+    label: 'Minecraft Servers',
+    items: [{ to: '/servers', label: 'Servers', icon: HardDrives }]
+  },
+  {
+    label: 'Launcher',
+    items: [
+      { to: '/downloads', label: 'Downloads', icon: DownloadSimple },
+      { to: '/accounts', label: 'Accounts', icon: UserCircle }
+    ]
+  }
 ]
+
+function SidebarLink({ item }: { item: NavItem }) {
+  const Icon = item.icon
+  return (
+    <NavLink
+      to={item.to}
+      end={item.end}
+      className={({ isActive }) =>
+        cn(
+          'group relative flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition-all duration-200 [@media(max-height:760px)]:h-9',
+          isActive
+            ? 'bg-elevated text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
+            : 'text-muted hover:bg-white/[0.035] hover:text-ink'
+        )
+      }
+    >
+      {({ isActive }) => (
+        <>
+          <Icon size={19} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />
+          <span>{item.label}</span>
+          {isActive && <span className="absolute left-0 h-4 w-[2px] rounded-full bg-grass" />}
+        </>
+      )}
+    </NavLink>
+  )
+}
 
 export function Sidebar() {
   const accounts = useAccounts().data ?? []
@@ -49,33 +104,28 @@ export function Sidebar() {
         </div>
       </div>
 
-      <nav aria-label="Main navigation" className="space-y-1">
-        {nav.map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={item.end}
-            className={({ isActive }) =>
-              cn(
-                'group relative flex h-10 items-center gap-3 rounded-xl px-3 text-[13px] font-medium transition-all duration-200',
-                isActive
-                  ? 'bg-elevated text-ink shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]'
-                  : 'text-muted hover:bg-white/[0.035] hover:text-ink'
-              )
-            }
-          >
-            {({ isActive }) => (
-              <>
-                <item.icon size={19} weight={isActive ? 'fill' : 'regular'} aria-hidden="true" />
-                <span>{item.label}</span>
-                {isActive && <span className="absolute left-0 h-4 w-[2px] rounded-full bg-grass" />}
-              </>
-            )}
-          </NavLink>
+      <nav
+        aria-label="Main navigation"
+        className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-0.5"
+      >
+        <div className="space-y-1">
+          <SidebarLink item={homeNav} />
+        </div>
+        {navSections.map((section) => (
+          <div key={section.label}>
+            <div className="mb-1 px-3 text-[8.5px] font-semibold uppercase tracking-[0.18em] text-muted/60">
+              {section.label}
+            </div>
+            <div className="space-y-1">
+              {section.items.map((item) => (
+                <SidebarLink key={item.to} item={item} />
+              ))}
+            </div>
+          </div>
         ))}
       </nav>
 
-      <div className="mt-auto space-y-2 pt-5">
+      <div className="mt-3 shrink-0 space-y-2 border-t border-line/25 pt-3">
         {active ? (
           <NavLink
             to="/accounts"

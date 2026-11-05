@@ -3,6 +3,7 @@ import path from 'node:path'
 import { existsSync } from 'node:fs'
 import type { WindowState } from '@shared/types'
 import { emitWindowState } from './services/events'
+import { resolveBundleDir } from './services/bundlePaths'
 import { store } from './services/store'
 import { logger } from './util/log'
 
@@ -18,6 +19,22 @@ function appIconPath(): string {
   return path.join(app.getAppPath(), 'resources', 'icon.png')
 }
 
+/**
+ * Vite may place the window code in out/main or out/main/chunks. Never resolve
+ * the renderer/preload relative to __dirname alone or packaged builds open a
+ * blank window.
+ */
+function bundleDir(): string {
+  return (
+    resolveBundleDir([
+      path.join(__dirname, '..'),
+      path.join(__dirname, '..', '..'),
+      app.getAppPath(),
+      process.cwd()
+    ]) ?? path.join(app.getAppPath(), 'out')
+  )
+}
+
 export function getMainWindow(): BrowserWindow | null {
   return mainWindow
 }
@@ -31,6 +48,7 @@ export function windowState(): WindowState {
 
 export function createMainWindow(): BrowserWindow {
   const icon = appIconPath()
+  const outDir = bundleDir()
   mainWindow = new BrowserWindow({
     width: 1440,
     height: 900,
@@ -44,7 +62,7 @@ export function createMainWindow(): BrowserWindow {
     autoHideMenuBar: true,
     roundedCorners: true,
     webPreferences: {
-      preload: path.join(__dirname, '../preload/index.js'),
+      preload: path.join(outDir, 'preload', 'index.js'),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -84,7 +102,7 @@ export function createMainWindow(): BrowserWindow {
   if (process.env['ELECTRON_RENDERER_URL']) {
     void mainWindow.loadURL(process.env['ELECTRON_RENDERER_URL'])
   } else {
-    void mainWindow.loadFile(path.join(__dirname, '../renderer/index.html'))
+    void mainWindow.loadFile(path.join(outDir, 'renderer', 'index.html'))
   }
 
   mainWindow.webContents.on('render-process-gone', (_event, details) => {
