@@ -8,6 +8,7 @@ import { initUpdater } from './services/updater'
 import { stopAllServers, runningServerIds } from './services/serverProcess'
 import { initServerScheduler, stopServerScheduler } from './services/serverScheduler'
 import { stopPackShare } from './services/packTransfer'
+import { stopAllServerInternet } from './services/serverInternet'
 import { logger } from './util/log'
 
 const gotLock = app.requestSingleInstanceLock()
@@ -67,9 +68,11 @@ if (!gotLock) {
     if (shuttingDown) return
     shuttingDown = true
     const finish = (): void => {
-      void store.flush().finally(() => {
-        shutdownComplete = true
-        app.quit()
+      void stopAllServerInternet().finally(() => {
+        void store.flush().finally(() => {
+          shutdownComplete = true
+          app.quit()
+        })
       })
     }
     if (runningServerIds().length === 0) {

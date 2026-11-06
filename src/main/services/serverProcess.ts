@@ -164,6 +164,9 @@ export async function startServer(server: ServerRecord): Promise<ServerRuntimeSt
         .catch((error) => logger.warn('server', 'Could not save server stop time', error))
     )
     entry.resolveExited()
+    void import('./serverInternet')
+      .then(({ stopServerInternet }) => stopServerInternet(server.id))
+      .catch((error) => logger.warn('server', 'Could not close the internet relay after exit', error))
     logger.info('server', `${server.name} stopped (${signal ?? code ?? 'exit'})`)
   }
   child.on('error', (error) => {
@@ -180,6 +183,11 @@ export async function startServer(server: ServerRecord): Promise<ServerRuntimeSt
 }
 
 export async function stopServer(serverId: string, force = false): Promise<void> {
+  void import('./serverInternet')
+    .then(({ stopServerInternet }) => stopServerInternet(serverId))
+    .catch((error) => {
+      logger.warn('server', 'Could not close the internet relay for this server', error)
+    })
   const entry = running.get(serverId)
   if (!entry) return
   entry.stopping = true

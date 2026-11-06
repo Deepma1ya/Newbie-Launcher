@@ -31,7 +31,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Game versions** | Every Mojang release, snapshot, beta and alpha, installed from official metadata and verified files |
 | **Bedrock** | Minecraft for Windows versions: download official signed GDK packages, install through Windows/Gaming Services, launch the installed package, and switch versions without touching Java |
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
-| **Servers** | One-click local Java servers plus official Bedrock Dedicated Server, with a live console, GUI settings, Modrinth add-ons, server resource packs and scheduled restarts |
+| **Servers** | One-click local Java servers plus official Bedrock Dedicated Server, with a live console, GUI settings, Modrinth add-ons, server resource packs, scheduled restarts and one-click internet relays |
 | **Sharing** | Play with friends through playit.gg, port forwarding, Radmin VPN, ngrok or Cloudflare. Detects LAN/Radmin/public addresses, shows difficulty levels, and lets you copy and test the address. |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/11/17/21/25 from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, and generic authlib/Yggdrasil servers |
@@ -119,12 +119,14 @@ Servers are stored under `<dataDir>/servers/<id>`. Each folder contains `server.
 
 The server **Share** tab detects your LAN, Radmin VPN and public addresses, your router gateway and a remembered friends address. It can copy the address and test it: private addresses use a local TCP check, while public/tunnel addresses use the public Minecraft status API.
 
-- **playit.gg** — recommended for most groups. The host runs the free agent; friends only need the playit address and vanilla Minecraft. The tab shows the exact `127.0.0.1:<port>` target and opens the download/tunnel pages.
-- **Port forwarding** — shows the LAN target, public address, router-page shortcut, CGNAT warning and firewall/router steps.
+- **One-click playit.gg** — the Share tab downloads and verifies the signed playit.gg agent, opens the one-time claim page, creates a Java or Bedrock tunnel to the running server, and shows the public address. One free playit account is needed once; after that, starting a tunnel is one click. Friends only need vanilla Minecraft. Works behind CGNAT and on routers without port forwarding.
+- **Java quick relay** — a no-account fallback for Java servers through `bore.pub`. It gives a random public `bore.pub:<port>` address, is TCP-only, and depends on the free relay's uptime. Bedrock uses UDP, so it uses playit.gg instead.
+- **Port forwarding** — fallback when your connection has a real public IP. Shows the LAN target, public address, router-page shortcut, CGNAT warning and firewall/router steps.
 - **Radmin VPN** — detects the Radmin adapter and gives friends the exact `RadminIP:port`; everyone needs Radmin installed.
 - **ngrok** — shows the exact `ngrok tcp <port>` command and links; the host needs an ngrok account and TCP endpoints require card verification on the free plan.
 - **Cloudflare Tunnel** — honest advanced guidance: Cloudflare's public tunnel is HTTP-oriented, so Minecraft Java friends need cloudflared/WARP (or a client mod) and authentication.
 - **Same Wi-Fi** — LAN address for players on the same network.
+- Relays close automatically when the server stops or Newbie closes. Traffic goes through the relay, so friends connect to the relay address rather than your home IP.
 - A warning reminds you to enable online mode and the whitelist before sharing a public address.
 
 ## Accounts, honestly

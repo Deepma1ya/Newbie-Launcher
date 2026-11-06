@@ -833,6 +833,25 @@ export interface ServerShareInfo {
   gateway?: string
 }
 
+export type ServerInternetProvider = 'playit' | 'bore'
+
+export type ServerInternetStatus = 'offline' | 'claiming' | 'starting' | 'online' | 'error'
+
+export interface ServerInternetState {
+  serverId: string
+  provider: ServerInternetProvider | null
+  protocol: 'tcp' | 'udp'
+  status: ServerInternetStatus
+  /** Public address friends should use. */
+  address?: string
+  /** playit.gg claim details while waiting for browser approval. */
+  claimUrl?: string
+  claimCode?: string
+  message?: string
+  /** A saved playit agent secret exists, so setup is already done once. */
+  playitConnected: boolean
+}
+
 export interface ServerAddressTest {
   address: string
   online: boolean

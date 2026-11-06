@@ -23,6 +23,7 @@ import type {
   ServerResourcePackSearchQuery,
   ServerResourcePackState,
   ServerStats,
+  ServerInternetState,
   SystemInfo,
   TaskRecord,
   WorldSummary
@@ -56,6 +57,7 @@ export const qk = {
   serverStats: (id: string) => ['servers', id, 'stats'] as const,
   serverLogs: (id: string) => ['servers', id, 'logs'] as const,
   serverProperties: (id: string) => ['servers', id, 'properties'] as const,
+  serverInternet: (id: string) => ['servers', id, 'internet'] as const,
   serverAllowlist: (id: string) => ['servers', id, 'allowlist'] as const,
   serverShare: (id: string) => ['servers', id, 'share'] as const,
   serverSearch: (query: ServerSearchQuery) => ['server-search', query] as const,
@@ -170,6 +172,20 @@ export function useServerAllowlist(
     queryKey: qk.serverAllowlist(id ?? ''),
     queryFn: () => api.servers.allowlist(id!),
     enabled: Boolean(id) && enabled
+  })
+}
+
+export function useServerInternet(id?: string | null): UseQueryResult<ServerInternetState> {
+  return useQuery({
+    queryKey: qk.serverInternet(id ?? ''),
+    queryFn: () => api.servers.internetState(id!),
+    enabled: Boolean(id),
+    refetchInterval: (query) => {
+      const state = query.state.data
+      if (state?.status === 'claiming' || state?.status === 'starting') return 2_000
+      if (state?.status === 'online') return 5_000
+      return false
+    }
   })
 }
 

@@ -1,14 +1,16 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import {
   ArrowSquareOut,
   CheckCircle,
   Copy,
   GlobeSimple,
+  Plugs,
   Play,
-  ShieldWarning
+  ShieldWarning,
+  SpinnerGap
 } from '@phosphor-icons/react'
-import type { ServerAddressTest, ServerRecord } from '@shared/types'
-import { useServerShare } from '../hooks/queries'
+import type { ServerAddressTest, ServerInternetProvider, ServerInternetState, ServerRecord } from '@shared/types'
+import { useServerInternet, useServerShare } from '../hooks/queries'
 import { toast } from '../store/ui'
 import { errorMessage } from '../lib/utils'
 import { Badge, Card, Input, Skeleton } from './ui/primitives'
@@ -43,9 +45,12 @@ export function ServerSharePanel({
   onOpenSettings: () => void
 }) {
   const share = useServerShare(server.id)
+  const internet = useServerInternet(server.id)
   const [address, setAddress] = useState('')
   const [test, setTest] = useState<ServerAddressTest | null>(null)
   const [testing, setTesting] = useState(false)
+  const [relayBusy, setRelayBusy] = useState<ServerInternetProvider | null>(null)
+  const openedClaim = useRef<string | null>(null)
 
   const storageKey = `newbie:server-share:${server.id}`
 
@@ -60,6 +65,48 @@ export function ServerSharePanel({
     if (trimmed) localStorage.setItem(storageKey, trimmed)
     else localStorage.removeItem(storageKey)
   }, [address, storageKey])
+
+  useEffect(() => {
+    if (!running) void internet.refetch()
+  }, [running, internet.refetch])
+
+  const relayState = internet.data
+  useEffect(() => {
+    if (relayState?.status === 'online' && relayState.address) setAddress(relayState.address)
+  }, [relayState?.status, relayState?.address])
+
+  useEffect(() => {
+    if (relayState?.status !== 'claiming' || !relayState.claimUrl) return
+    if (openedClaim.current === relayState.claimUrl) return
+    openedClaim.current = relayState.claimUrl
+    void window.newbie.app.openExternal(relayState.claimUrl)
+  }, [relayState?.status, relayState?.claimUrl])
+
+  const startRelay = async (provider: ServerInternetProvider): Promise<void> => {
+    setRelayBusy(provider)
+    try {
+      const next = await window.newbie.servers.internetStart(server.id, provider)
+      if (next.claimUrl) {
+        openedClaim.current = next.claimUrl
+        void window.newbie.app.openExternal(next.claimUrl)
+      }
+      await internet.refetch()
+    } catch (failure) {
+      toast('error', 'Could not open internet access', errorMessage(failure))
+    } finally {
+      setRelayBusy(null)
+    }
+  }
+
+  const stopRelay = async (): Promise<void> => {
+    try {
+      await window.newbie.servers.internetStop(server.id)
+      await internet.refetch()
+      toast('success', 'Internet access closed')
+    } catch (failure) {
+      toast('error', 'Could not close internet access', errorMessage(failure))
+    }
+  }
 
   const copy = async (value: string, label: string): Promise<void> => {
     if (!value) return
@@ -145,6 +192,18 @@ export function ServerSharePanel({
           </Button>
         </Card>
       )}
+
+      <InternetAccessCard
+        server={server}
+        running={running}
+        state={internet.data}
+        loading={internet.isLoading}
+        busy={relayBusy}
+        onStart={(provider) => void startRelay(provider)}
+        onStop={() => void stopRelay()}
+        onCopy={(value, label) => void copy(value, label)}
+        onOpen={(url) => void window.newbie.app.openExternal(url)}
+      />
 
       <Card className="p-4">
         <div className="flex flex-wrap items-start justify-between gap-3">
@@ -253,16 +312,16 @@ export function ServerSharePanel({
 
       <div className="grid gap-4 xl:grid-cols-2">
         <MethodCard
-          title="playit.gg"
+          title="Manual playit.gg"
           difficulty="Easy"
           friends="Nothing"
-          recommended
-          description="Free account. Newbie gives you the exact local target; playit gives friends a public address without port forwarding."
+          description="Fallback if guided setup cannot claim the agent. Use the official playit agent and create the tunnel yourself."
         >
           <ol className="space-y-1.5 text-[11px] leading-relaxed text-muted">
             <li>1. Download and run the playit.gg agent on this PC, then claim it with a free account.</li>
             <li>
-              2. Create a <span className="text-ink">Minecraft Java</span> tunnel with local address{' '}
+              2. Create a <span className="text-ink">Minecraft Java</span> or{' '}
+              <span className="text-ink">Bedrock</span> tunnel with local address{' '}
               <code className="rounded bg-white/[0.055] px-1 py-0.5 font-mono text-[10px] text-ink">
                 127.0.0.1:{server.port}
               </code>
@@ -496,6 +555,230 @@ export function ServerSharePanel({
         </div>
       </Card>
     </div>
+  )
+}
+
+function InternetAccessCard({
+  server,
+  running,
+  state,
+  loading,
+  busy,
+  onStart,
+  onStop,
+  onCopy,
+  onOpen
+}: {
+  server: ServerRecord
+  running: boolean
+  state?: ServerInternetState
+  loading: boolean
+  busy: ServerInternetProvider | null
+  onStart: (provider: ServerInternetProvider) => void
+  onStop: () => void
+  onCopy: (value: string, label: string) => void
+  onOpen: (url: string) => void
+}) {
+  const status = state?.status ?? 'offline'
+  const isBedrock = server.type === 'bedrock'
+  const playitConnected = state?.playitConnected ?? false
+  const provider = state?.provider
+  const canStart = running && !loading && !busy && status !== 'online' && status !== 'starting' && status !== 'claiming'
+
+  return (
+    <Card className="border-grass/25 bg-grass/[0.035] p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="flex items-start gap-2.5">
+          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-grass/25 bg-grass/10 text-grass">
+            <Plugs size={18} weight="fill" />
+          </span>
+          <div>
+            <h2 className="font-display text-[14px] font-semibold text-ink">Play from the internet</h2>
+            <p className="mt-0.5 max-w-2xl text-[10.5px] leading-relaxed text-muted">
+              No public IP or router port forwarding needed. The relay works behind CGNAT; friends install
+              nothing and connect with the address below.
+            </p>
+          </div>
+        </div>
+        <Badge tone={status === 'online' ? 'green' : status === 'error' ? 'red' : 'neutral'} className="h-5 text-[8.5px]">
+          {status === 'online'
+            ? 'Online'
+            : status === 'claiming'
+              ? 'Waiting for approval'
+              : status === 'starting'
+                ? 'Opening'
+                : status === 'error'
+                  ? 'Needs attention'
+                  : 'Not shared'}
+        </Badge>
+      </div>
+
+      {loading ? (
+        <div className="mt-4 space-y-2">
+          <Skeleton className="h-9 w-full" />
+          <Skeleton className="h-9 w-2/3" />
+        </div>
+      ) : status === 'claiming' ? (
+        <div className="mt-4 rounded-xl border border-line/60 bg-canvas/40 p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <div className="text-[11px] font-semibold uppercase tracking-[0.08em] text-muted">
+                Approve this PC on playit.gg
+              </div>
+              <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
+                Open the page below and sign in with a free playit.gg account. This is a one-time setup;
+                after approval, starting a tunnel is one click.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => state?.claimUrl && onOpen(state.claimUrl)}
+              icon={<ArrowSquareOut size={14} />}
+            >
+              Open playit.gg
+            </Button>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className="rounded-lg border border-line/60 bg-[#080d09] px-3 py-2 font-mono text-[13px] tracking-[0.14em] text-grass">
+              {state?.claimCode ?? '—'}
+            </span>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => state?.claimCode && onCopy(state.claimCode, 'Claim code')}
+              icon={<Copy size={13} />}
+            >
+              Copy code
+            </Button>
+            <span className="flex items-center gap-1.5 text-[10.5px] text-muted">
+              <SpinnerGap size={13} className="animate-spin" />
+              Waiting for approval…
+            </span>
+          </div>
+          {state?.message && <p className="mt-2 text-[10.5px] text-muted/75">{state.message}</p>}
+          <Button variant="ghost" size="sm" className="mt-2" onClick={onStop}>
+            Cancel setup
+          </Button>
+        </div>
+      ) : status === 'starting' ? (
+        <div className="mt-4 flex flex-wrap items-center gap-3 rounded-xl border border-line/60 bg-canvas/40 p-3.5">
+          <SpinnerGap size={17} className="animate-spin text-grass" />
+          <div className="min-w-0 flex-1">
+            <div className="text-[11.5px] font-medium text-ink">
+              Opening the {provider === 'bore' ? 'bore.pub' : 'playit.gg'} tunnel…
+            </div>
+            <p className="mt-0.5 text-[10px] text-muted">
+              {provider === 'bore'
+                ? 'The free Java relay usually takes a few seconds.'
+                : 'The playit agent and tunnel address can take a few seconds.'}
+            </p>
+            {state?.message && <p className="mt-1 text-[10px] text-muted/70">{state.message}</p>}
+          </div>
+          <Button variant="ghost" size="sm" onClick={onStop}>
+            Cancel
+          </Button>
+        </div>
+      ) : status === 'online' && state?.address ? (
+        <div className="mt-4 rounded-xl border border-grass/25 bg-grass/[0.045] p-3.5">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[10px] font-semibold uppercase tracking-[0.08em] text-grass/80">
+              {provider === 'bore' ? 'bore.pub relay' : 'playit.gg tunnel'} · {state.protocol.toUpperCase()}
+            </span>
+            <Badge tone="green" className="h-4 px-1.5 text-[8px]">
+              Ready
+            </Badge>
+          </div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <code className="min-w-0 flex-1 break-all rounded-lg border border-line/50 bg-[#080d09] px-3 py-2 font-mono text-[12px] text-ink">
+              {state.address}
+            </code>
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => onCopy(state.address!, 'Server address')}
+              icon={<Copy size={14} />}
+            >
+              Copy
+            </Button>
+            <Button variant="ghost" size="sm" onClick={onStop}>
+              Stop sharing
+            </Button>
+          </div>
+          <p className="mt-2 text-[10px] leading-relaxed text-muted/70">
+            Send this address to friends. It closes automatically when you stop the server or Newbie closes.
+          </p>
+        </div>
+      ) : status === 'error' ? (
+        <div className="mt-4 rounded-xl border border-danger/25 bg-danger/[0.045] p-3.5">
+          <div className="text-[11.5px] font-medium text-danger">Internet access could not start</div>
+          <p className="mt-1 text-[10.5px] leading-relaxed text-muted">
+            {state?.message ?? 'The relay did not return an address.'}
+          </p>
+          <div className="mt-3 flex flex-wrap gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={busy === 'playit'}
+              disabled={!canStart}
+              onClick={() => onStart('playit')}
+              icon={<Plugs size={14} />}
+            >
+              {playitConnected ? 'Try playit again' : 'Set up playit'}
+            </Button>
+            {!isBedrock && (
+              <Button
+                variant="ghost"
+                size="sm"
+                loading={busy === 'bore'}
+                disabled={!canStart}
+                onClick={() => onStart('bore')}
+                icon={<Plugs size={14} />}
+              >
+                Try Java relay
+              </Button>
+            )}
+            <Button variant="ghost" size="sm" onClick={onStop}>
+              Clear
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-wrap items-center gap-2">
+          <Button
+            variant="primary"
+            size="sm"
+            loading={busy === 'playit'}
+            disabled={!canStart}
+            onClick={() => onStart('playit')}
+            icon={<Plugs size={14} />}
+          >
+            {playitConnected ? 'Go online with playit' : 'Set up playit (Java + Bedrock)'}
+          </Button>
+          {!isBedrock && (
+            <Button
+              variant="secondary"
+              size="sm"
+              loading={busy === 'bore'}
+              disabled={!canStart}
+              onClick={() => onStart('bore')}
+              icon={<Plugs size={14} />}
+            >
+              Java quick relay
+            </Button>
+          )}
+          <span className="text-[10px] text-muted/65">
+            {isBedrock
+              ? 'playit.gg is required for Bedrock UDP.'
+              : 'Java quick relay needs no account, but it is TCP-only and depends on bore.pub.'}
+          </span>
+        </div>
+      )}
+
+      {!running && status !== 'online' && status !== 'claiming' && status !== 'starting' && (
+        <p className="mt-2 text-[10px] text-gold/80">Start the server first, then open internet access.</p>
+      )}
+    </Card>
   )
 }
 

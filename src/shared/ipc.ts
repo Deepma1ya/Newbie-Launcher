@@ -51,7 +51,9 @@ import type {
   ServerResourcePackState,
   ServerResourcePackSearchQuery,
   ServerResourcePackImport,
-  ServerResourcePackInput
+  ServerResourcePackInput,
+  ServerInternetProvider,
+  ServerInternetState
 } from './types'
 import type { TlsCapeSyncResult } from './tlskincape'
 import type { CopyInstanceSettingsInput, CopyInstanceSettingsResult } from './instanceSettings'
@@ -130,6 +132,9 @@ export const IPC = {
   serversTestAddress: 'servers:test-address',
   serversProperties: 'servers:properties',
   serversSaveProperties: 'servers:save-properties',
+  serversInternetState: 'servers:internet-state',
+  serversInternetStart: 'servers:internet-start',
+  serversInternetStop: 'servers:internet-stop',
   serversAllowlist: 'servers:allowlist',
   serversAllowlistAdd: 'servers:allowlist-add',
   serversAllowlistRemove: 'servers:allowlist-remove',
@@ -264,6 +269,9 @@ export interface NewbieApi {
     testAddress(address: string): Promise<ServerAddressTest>
     properties(id: string): Promise<Record<string, string>>
     saveProperties(id: string, patch: Record<string, string>): Promise<Record<string, string>>
+    internetState(id: string): Promise<ServerInternetState>
+    internetStart(id: string, provider: ServerInternetProvider): Promise<ServerInternetState>
+    internetStop(id: string): Promise<ServerInternetState>
     allowlist(id: string): Promise<ServerAllowlistEntry[]>
     allowlistAdd(id: string, entry: ServerAllowlistEntry): Promise<ServerAllowlistEntry[]>
     allowlistRemove(id: string, xuid: string): Promise<ServerAllowlistEntry[]>

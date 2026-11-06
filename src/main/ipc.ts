@@ -95,6 +95,11 @@ import {
   serverAllowlist
 } from './services/serverAllowlist'
 import {
+  getServerInternetState,
+  startServerInternet,
+  stopServerInternet
+} from './services/serverInternet'
+import {
   bedrockServerBuilds,
   createServer,
   removeServer,
@@ -495,6 +500,18 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.serversSaveProperties, async (_event, id: string, patch: unknown) =>
     saveServerProperties(z.string().parse(id), serverPropertiesSchema.parse(patch))
+  )
+  ipcMain.handle(IPC.serversInternetState, async (_event, id: string) =>
+    getServerInternetState(z.string().parse(id))
+  )
+  ipcMain.handle(IPC.serversInternetStart, async (_event, id: string, provider: unknown) =>
+    startServerInternet(
+      z.string().parse(id),
+      z.enum(['playit', 'bore']).parse(provider) as 'playit' | 'bore'
+    )
+  )
+  ipcMain.handle(IPC.serversInternetStop, async (_event, id: string) =>
+    stopServerInternet(z.string().parse(id))
   )
   ipcMain.handle(IPC.serversAllowlist, async (_event, id: string) =>
     serverAllowlist(z.string().parse(id))
