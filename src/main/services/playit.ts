@@ -12,8 +12,8 @@ import { logger } from '../util/log'
 const execFileAsync = promisify(execFile)
 const API_BASE = 'https://api.playit.gg'
 const CLAIM_BASE = 'https://playit.gg/claim'
-const PLAYIT_DAEMON_URL =
-  'https://github.com/playit-cloud/playit-agent/releases/download/v1.2.0/playitd-windows-x86_64-signed.exe'
+const PLAYIT_AGENT_VERSION = '2.0.0-r1'
+const PLAYIT_DAEMON_URL = `https://github.com/playit-cloud/playit-agent/releases/download/v${PLAYIT_AGENT_VERSION}/playitd-windows-x86_64-signed.exe`
 const PLAYIT_DIR = () => path.join(paths.data, 'tools', 'playit')
 
 const POWERSHELL = path.join(
@@ -53,6 +53,7 @@ export interface PlayitTunnelOptions {
 let playitBinary: Promise<string> | null = null
 let agentProcess: ChildProcess | null = null
 let agentSecret: string | null = null
+let agentVersion: string | null = null
 let agentSecretFile: string | null = null
 let agentStart: Promise<void> | null = null
 
@@ -79,6 +80,9 @@ async function api<T>(
   })
   if (!response.ok) {
     const text = await response.text().catch(() => '')
+    if (text.includes('AgentVersionTooOld')) {
+      throw new Error('playit.gg requires a newer agent build. Update Newbie Launcher, then try again.')
+    }
     throw new Error(`playit.gg returned HTTP ${response.status}${text ? `: ${text.slice(0, 180)}` : ''}`)
   }
   const result = (await response.json()) as ApiResult<T>
@@ -112,18 +116,26 @@ async function ensurePlayitBinary(): Promise<string> {
   playitBinary = (async () => {
     const dir = PLAYIT_DIR()
     const file = path.join(dir, 'playitd.exe')
+    const versionFile = path.join(dir, 'agent.version')
     await ensureDir(dir)
-    if (await pathExists(file)) {
-      if (await signatureValid(file)) return file
-      await fs.rm(file, { force: true }).catch(() => undefined)
+    const installedVersion = (await fs.readFile(versionFile, 'utf8').catch(() => '')).trim()
+    if (
+      (await pathExists(file)) &&
+      installedVersion === PLAYIT_AGENT_VERSION &&
+      (await signatureValid(file))
+    ) {
+      return file
     }
-    logger.info('playit', 'Downloading the playit.gg agent')
+    await fs.rm(file, { force: true }).catch(() => undefined)
+    await fs.rm(versionFile, { force: true }).catch(() => undefined)
+    logger.info('playit', `Downloading playit.gg agent ${PLAYIT_AGENT_VERSION}`)
     await downloadFile(PLAYIT_DAEMON_URL, file, { retries: 4 })
     if (!(await signatureValid(file))) {
       await fs.rm(file, { force: true }).catch(() => undefined)
       throw new Error('The downloaded playit.gg agent did not have a valid signature.')
     }
-    logger.info('playit', 'playit.gg agent downloaded and verified')
+    await fs.writeFile(versionFile, PLAYIT_AGENT_VERSION, 'utf8')
+    logger.info('playit', `playit.gg agent ${PLAYIT_AGENT_VERSION} downloaded and verified`)
     return file
   })().catch((error) => {
     playitBinary = null
@@ -183,7 +195,14 @@ async function waitForAgent(secret: string, timeoutMs = 30_000): Promise<string>
 }
 
 export async function ensurePlayitAgent(secret: string): Promise<void> {
-  if (agentProcess && agentProcess.exitCode === null && agentSecret === secret) return
+  if (
+    agentProcess &&
+    agentProcess.exitCode === null &&
+    agentSecret === secret &&
+    agentVersion === PLAYIT_AGENT_VERSION
+  ) {
+    return
+  }
   if (agentStart) return agentStart
   agentStart = (async () => {
     await stopPlayitAgent()
@@ -198,6 +217,7 @@ export async function ensurePlayitAgent(secret: string): Promise<void> {
     })
     agentProcess = child
     agentSecret = secret
+    agentVersion = PLAYIT_AGENT_VERSION
     agentSecretFile = secretFile
     child.stderr.on('data', (chunk) => {
       const text = String(chunk).trim()
@@ -210,6 +230,7 @@ export async function ensurePlayitAgent(secret: string): Promise<void> {
       if (agentProcess === child) {
         agentProcess = null
         agentSecret = null
+        agentVersion = null
         agentSecretFile = null
       }
       if (code !== 0 && code !== null) logger.warn('playit', `playit agent exited with code ${code}`)
@@ -230,6 +251,7 @@ export async function stopPlayitAgent(): Promise<void> {
   const child = agentProcess
   agentProcess = null
   agentSecret = null
+  agentVersion = null
   if (agentSecretFile) {
     await fs.rm(agentSecretFile, { force: true }).catch(() => undefined)
     agentSecretFile = null
