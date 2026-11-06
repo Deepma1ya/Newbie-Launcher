@@ -51,6 +51,12 @@ const api: NewbieApi = {
     applyCatalog: (accountId, skinUrl) =>
       ipcRenderer.invoke(IPC.skinsApplyCatalog, accountId, skinUrl)
   },
+  maps: {
+    search: (input) => ipcRenderer.invoke(IPC.mapsSearch, input),
+    detail: (id) => ipcRenderer.invoke(IPC.mapsDetail, id),
+    install: (instanceId, mapId, fileId) =>
+      ipcRenderer.invoke(IPC.mapsInstall, instanceId, mapId, fileId)
+  },
   servers: {
     list: () => ipcRenderer.invoke(IPC.serversList),
     get: (id) => ipcRenderer.invoke(IPC.serversGet, id),

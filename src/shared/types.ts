@@ -229,6 +229,58 @@ export interface WorldSummary {
   updatedAt: string
 }
 
+export interface JavaMapSearchInput {
+  query: string
+  sort?: 'popular' | 'updated' | 'downloads'
+  offset?: number
+  limit?: number
+}
+
+export interface JavaMapProject {
+  id: number
+  slug: string
+  title: string
+  summary: string
+  imageUrl?: string
+  iconUrl?: string
+  author?: string
+  downloads: number
+  categories: string[]
+  updatedAt?: string
+  url: string
+}
+
+export interface JavaMapFile {
+  id: number
+  label: string
+  filename: string
+  url?: string
+  size: number
+  gameVersions: string[]
+  releaseType: number
+  publishedAt?: string
+}
+
+export interface JavaMapDetail extends JavaMapProject {
+  description: string
+  screenshots: string[]
+  files: JavaMapFile[]
+}
+
+export interface JavaMapSearchPage {
+  items: JavaMapProject[]
+  total: number
+  offset: number
+  limit: number
+}
+
+export interface JavaMapInstallResult {
+  folder: string
+  name: string
+  path: string
+  files: number
+}
+
 export interface MinecraftVersionSummary {
   id: string
   type: 'release' | 'snapshot' | 'old_beta' | 'old_alpha'

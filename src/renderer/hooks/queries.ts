@@ -10,6 +10,9 @@ import type {
   BedrockMarketSearchPage,
   BedrockServerBuild,
   Instance,
+  JavaMapDetail,
+  JavaMapSearchInput,
+  JavaMapSearchPage,
   JavaRuntime,
   LauncherSettings,
   LoaderType,
@@ -74,11 +77,35 @@ export const qk = {
   serverResourcePack: (id: string) => ['servers', id, 'resource-pack'] as const,
   serverResourcePackSearch: (query: ServerResourcePackSearchQuery) =>
     ['server-resource-pack-search', query] as const,
-  skinCatalog: (query: string, page: number) => ['skin-catalog', query, page] as const
+  skinCatalog: (query: string, page: number) => ['skin-catalog', query, page] as const,
+  javaMaps: (input: JavaMapSearchInput) => ['java-maps', input] as const,
+  javaMap: (id: number) => ['java-maps', id] as const
 }
 
 export function useInstances(): UseQueryResult<Instance[]> {
   return useQuery({ queryKey: qk.instances, queryFn: () => api.instances.list() })
+}
+
+export function useJavaMapSearch(
+  input: JavaMapSearchInput,
+  enabled = true
+): UseQueryResult<JavaMapSearchPage> {
+  return useQuery({
+    queryKey: qk.javaMaps(input),
+    queryFn: () => api.maps.search(input),
+    enabled,
+    staleTime: 60_000,
+    placeholderData: (previous) => previous
+  })
+}
+
+export function useJavaMapDetail(id?: number | null): UseQueryResult<JavaMapDetail> {
+  return useQuery({
+    queryKey: qk.javaMap(id ?? 0),
+    queryFn: () => api.maps.detail(id!),
+    enabled: Boolean(id),
+    staleTime: 5 * 60_000
+  })
 }
 
 export function useInstance(id?: string | null): UseQueryResult<Instance | null> {

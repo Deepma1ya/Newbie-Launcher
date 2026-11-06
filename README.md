@@ -36,6 +36,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/11/17/21/25 from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, generic authlib/Yggdrasil servers, in-app TLauncher account management and an online skin catalog |
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
+| **Maps** | Java worlds from CurseForge. Search and sort the map catalog, pick a file version and unpack it into the selected instance's `saves` folder. Installed maps appear in Minecraft's world list. |
 | **Datapacks** | Modrinth datapacks installed directly into a chosen world's `datapacks` folder, or kept in an instance staging folder. Required dependencies and updates follow the same target. |
 | **Library** | Review installed mods, resource packs, datapacks and shaders by section; update them or delete a whole section with confirmation. |
 | **Settings transfer** | Copy keybinds, video/audio options, resource pack order and Iris shader setup between instances, or make the selected settings the default for every other instance. |
@@ -102,6 +103,22 @@ Only these are excluded:
 Nothing is excluded without consent. Third-party DLLs, online fixes or cracks are never excluded. Newbie does not support them.
 
 If Windows Tamper Protection or a managed security policy blocks the exclusion, Newbie reports which folders were accepted and shows the exact paths with an **Open Windows Security** button and a **Copy paths** action so they can be added manually. A partial exclusion is never reported as a hard failure.
+
+## Java maps
+
+The **Maps** page downloads Java worlds from the public CurseForge catalog.
+
+<p align="center">
+  <img src="docs/images/java-maps.png" alt="Java maps page with CurseForge world downloads" width="900" />
+</p>
+
+- Search, sort by popularity, downloads or recent updates, and page through the catalog.
+- Open a map to see screenshots, categories and the available file versions.
+- Installing downloads the `.zip` and unpacks the world into the selected instance's `saves` folder. Minecraft lists it normally; Newbie does not launch a separate map runtime.
+- Map archives are validated before extraction. Downloads are capped at 1 GB and unpacked maps at 4 GB.
+- If a map author disables third-party downloads, Newbie reports it and links to the CurseForge page instead of bypassing the restriction.
+
+CurseForge is a third-party catalog. Newbie is not affiliated with CurseForge.
 
 ## Local servers
 
@@ -257,6 +274,6 @@ The TLauncher installer and its feature surface were inspected with REA for inte
 
 ## Legal
 
-Newbie Launcher is an independent project, not affiliated with Mojang, Microsoft, TLauncher, Modrinth or MCPEDL. “Minecraft” is a trademark of Mojang Synergies AB. Mods and packs remain the property of their authors and are downloaded from Modrinth's official API.
+Newbie Launcher is an independent project, not affiliated with Mojang, Microsoft, TLauncher, Modrinth, MCPEDL or CurseForge. “Minecraft” is a trademark of Mojang Synergies AB. Mods and packs remain the property of their authors and are downloaded from Modrinth's official API.
 
 Licensed under the [MIT License](LICENSE).

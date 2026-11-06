@@ -14,6 +14,7 @@ import type {
   BedrockMarketSearchInput,
   CreateInstanceInput,
   CreateServerInput,
+  JavaMapSearchInput,
   JavaRuntime,
   LauncherSettings,
   LoaderType,
@@ -172,6 +173,7 @@ import { addTLauncherAccount, refreshTLauncherAccount } from './auth/tlauncher'
 import { addAuthlibAccount, refreshAuthlibAccount } from './auth/authlib'
 import { removeAccountSkin, setAccountSkin } from './services/skins'
 import { applyCatalogSkin, searchSkinCatalog } from './services/skinCatalog'
+import { getJavaMapDetail, installJavaMap, searchJavaMaps } from './services/javaMaps'
 import { cancelMicrosoftFlow, refreshMicrosoftAccount, startMicrosoftFlow } from './auth/microsoft'
 import {
   getMainWindow,
@@ -456,6 +458,29 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.skinsApplyCatalog, async (_event, accountId: string, skinUrl: string) =>
     applyCatalogSkin(z.string().parse(accountId), z.string().url().max(2048).parse(skinUrl))
+  )
+  ipcMain.handle(IPC.mapsSearch, (_event, input: unknown) => {
+    const parsed = z
+      .object({
+        query: z.string().max(120),
+        sort: z.enum(['popular', 'updated', 'downloads']).optional(),
+        offset: z.number().int().min(0).max(5000).optional(),
+        limit: z.number().int().min(1).max(50).optional()
+      })
+      .parse(input) as JavaMapSearchInput
+    return searchJavaMaps(parsed)
+  })
+  ipcMain.handle(IPC.mapsDetail, (_event, id: unknown) =>
+    getJavaMapDetail(z.number().int().positive().parse(id))
+  )
+  ipcMain.handle(
+    IPC.mapsInstall,
+    (_event, instanceId: unknown, mapId: unknown, fileId?: unknown) =>
+      installJavaMap(
+        z.string().parse(instanceId),
+        z.number().int().positive().parse(mapId),
+        z.number().int().positive().optional().parse(fileId)
+      )
   )
   ipcMain.handle(IPC.accountsRefresh, async (_event, id: string): Promise<AccountSummary> => {
     const account = store.account(z.string().parse(id))

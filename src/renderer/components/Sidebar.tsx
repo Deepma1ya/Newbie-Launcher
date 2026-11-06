@@ -7,6 +7,7 @@ import {
   GearSix,
   HardDrives,
   House,
+  MapTrifold,
   SquaresFour,
   UserCircle
 } from '@phosphor-icons/react'
@@ -38,6 +39,7 @@ const navSections: NavSection[] = [
     items: [
       { to: '/instances', label: 'Instances', icon: SquaresFour },
       { to: '/browse', label: 'Browse', icon: Compass },
+      { to: '/maps', label: 'Maps', icon: MapTrifold },
       { to: '/library', label: 'Library', icon: Books }
     ]
   },

@@ -24,6 +24,10 @@ import type {
   PackCopyResult,
   PackExportResult,
   PackShareInfo,
+  JavaMapDetail,
+  JavaMapInstallResult,
+  JavaMapSearchInput,
+  JavaMapSearchPage,
   JavaRuntime,
   LaunchState,
   LauncherSettings,
@@ -98,6 +102,9 @@ export const IPC = {
   accountsRemoveSkin: 'accounts:remove-skin',
   skinsSearch: 'skins:search',
   skinsApplyCatalog: 'skins:apply-catalog',
+  mapsSearch: 'maps:search',
+  mapsDetail: 'maps:detail',
+  mapsInstall: 'maps:install',
 
   versionsMinecraft: 'versions:minecraft',
   versionsLoaders: 'versions:loaders',
@@ -277,6 +284,11 @@ export interface NewbieApi {
   skins: {
     search(query: string, page?: number): Promise<SkinCatalogPage>
     applyCatalog(accountId: string, skinUrl: string): Promise<AccountSummary>
+  }
+  maps: {
+    search(input: JavaMapSearchInput): Promise<JavaMapSearchPage>
+    detail(id: number): Promise<JavaMapDetail>
+    install(instanceId: string, mapId: number, fileId?: number): Promise<JavaMapInstallResult>
   }
   servers: {
     list(): Promise<ServerRecord[]>
