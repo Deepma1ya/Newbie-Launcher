@@ -1,3 +1,27 @@
+# Newbie Launcher 0.1.48
+
+Servers can now be opened to the internet without a public IP, router access or port forwarding.
+
+## One-click internet
+
+- The **Share** tab has a new **Play from the internet** card.
+- **Guided playit.gg setup** downloads the official signed playit.gg agent, verifies its Authenticode signature, opens the one-time claim page, saves the agent secret with Windows DPAPI, creates the Java or Bedrock tunnel, and shows the public address.
+- One free playit.gg account is needed once. After that, starting a playit tunnel for any server is one click.
+- playit.gg supports Java TCP and Bedrock UDP, so it works behind CGNAT and on routers where port forwarding is unavailable.
+- **Java quick relay** uses `bore.pub` with no account. It is TCP-only, uses a random public `bore.pub:<port>` address, and depends on the free relay's uptime.
+- The downloaded bore client is pinned and checked against a SHA-256 hash; the playit daemon is signature-checked before it runs.
+- The server address is filled into the Share field automatically, ready to copy.
+- Relays close when the server stops, when sharing is stopped, or when Newbie exits. playit tunnels are deleted through the API.
+- The existing manual playit.gg, port-forwarding, Radmin, ngrok, Cloudflare and LAN guidance remains below the one-click card.
+
+## Also included
+
+- Home page instance actions in a consistent footer, plus the 0.1.43–0.1.47 Bedrock fix-folder work.
+- Bedrock uninstall and version replacement preserve worlds and package data (0.1.42).
+- Editable instance resolution fields (0.1.41).
+- Hide-to-tray while a game runs (0.1.40).
+- `.mrpack` import and the earlier server tools.
+
 # Newbie Launcher 0.1.47
 
 The home page instance actions are aligned and moved into a footer.
