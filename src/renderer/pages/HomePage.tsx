@@ -375,7 +375,7 @@ export function HomePage() {
               <div className="space-y-2.5">
                 <SystemRow icon={<Cpu size={14} />} label="Java" value={system?.javaRuntimes[0] ? `${system.javaRuntimes[0].vendor} ${system.javaRuntimes[0].major}` : 'Not found'} ok={Boolean(system?.javaRuntimes.length)} />
                 <SystemRow icon={<HardDrives size={14} />} label="Free space" value={system ? `${(system.dataDirFreeMb / 1024).toFixed(0)} GB` : '—'} ok />
-                <SystemRow icon={<Lightning size={14} />} label="GPU profile" value={settings?.performance.profile ?? 'Balanced'} ok />
+                <SystemRow icon={<Lightning size={14} />} label="GPU profile" value={settings ? settings.performance.profile.replace(/^\w/, (c) => c.toUpperCase()) : 'Balanced'} ok />
                 <SystemRow icon={<Package size={14} />} label="Add-on cache" value={disk ? formatBytes(disk.cacheMb * 1024 * 1024) : '—'} ok />
               </div>
             </Card>

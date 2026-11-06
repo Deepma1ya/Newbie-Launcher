@@ -46,7 +46,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Repair** | Installs missing dependencies and re-enables disabled providers first. Essential mods such as Fabric API and Sodium are protected from conflict disables. Other duplicate, wrong-loader or incompatible mods are only disabled after a confirmation popup, with a backup |
 | **Launcher updates** | Built-in updater over free GitHub Releases: background download, live progress and speed, release notes, restart-and-install, stable or beta channel |
 | **Backups** | World ZIPs before launch, with retention and size limits |
-| **Performance** | Balanced/FPS/Quality profiles written to `options.txt`, plus the Windows high-performance GPU preference for Java |
+| **Performance** | Balanced/FPS/Quality presets applied when you pick one; in-game changes are kept and switch the preset to Custom. Windows high-performance GPU preference for Java |
 | **Comfort** | Home follows the last played Java or Bedrock profile, custom install location, optional Windows Defender exclusions for the launcher and game folders, hide-to-tray while a game runs with automatic reopen, close-to-tray, live console, crash hints, auto-updater |
 
 <p align="center">
@@ -183,11 +183,11 @@ A repair backup is always created before destructive fixes.
 
 Newbie does not install GPU drivers. “Optimal GPU settings” means:
 
-1. Applying a conservative `options.txt` profile (render distance, FPS cap, VSync, graphics mode, particles, shadows).
+1. Applying a conservative `options.txt` profile (render distance, FPS cap, VSync, graphics mode, particles, shadows) when you choose a preset.
 2. Registering the Java executable under Windows' `HKCU\Software\Microsoft\DirectX\UserGpuPreferences` with `GpuPreference=2` so hybrid laptops use the discrete GPU.
 3. Keeping a backup of the previous `options.txt`.
 
-The selected profile is shared by all instances and applied before launch when `Auto-apply` is enabled.
+The selected profile is shared by all instances. It is written once when you pick it (and for new instances); launches never overwrite Minecraft's own settings. If you change a preset-managed option in game, Newbie switches the preset to **Custom** after Minecraft exits and leaves `options.txt` alone.
 
 ## Install location
 

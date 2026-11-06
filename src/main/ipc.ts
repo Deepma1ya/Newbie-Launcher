@@ -221,7 +221,7 @@ const settingsPatchSchema = z
     performance: z
       .object({
         gpuPreference: z.enum(['default', 'high']).optional(),
-        profile: z.enum(['balanced', 'performance', 'quality']).optional(),
+        profile: z.enum(['balanced', 'performance', 'quality', 'custom']).optional(),
         autoApply: z.boolean().optional()
       })
       .partial()

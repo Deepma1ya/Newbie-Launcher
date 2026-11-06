@@ -115,7 +115,16 @@ class AppStore {
   }
 
   async updateSettings(patch: DeepPartial<LauncherSettings>): Promise<LauncherSettings> {
-    const next = mergeSettings({ ...this.state.settings, ...patch } as Partial<LauncherSettings>)
+    // Deep-merge the nested groups so saving one performance field does not
+    // reset gpuPreference/autoApply (or the java and backup groups).
+    const merged = {
+      ...this.state.settings,
+      ...patch,
+      java: { ...this.state.settings.java, ...(patch.java ?? {}) },
+      performance: { ...this.state.settings.performance, ...(patch.performance ?? {}) },
+      backups: { ...this.state.settings.backups, ...(patch.backups ?? {}) }
+    } as Partial<LauncherSettings>
+    const next = mergeSettings(merged)
     next.dataDir = paths.data
     this.state.settings = next
     this.scheduleSave()

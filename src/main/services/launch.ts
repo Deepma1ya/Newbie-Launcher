@@ -14,7 +14,7 @@ import { store } from './store'
 import { paths } from './paths'
 import { emit } from './events'
 import { tasks } from './tasks'
-import { prepareInstancePerformance } from './perf'
+import { prepareInstancePerformance, syncPerformancePreset } from './perf'
 import { maybeBackupWorlds } from './backups'
 import { ensureActiveLoadout } from './loadouts'
 import { applyOfflineSkin } from './skins'
@@ -293,6 +293,12 @@ async function finish(
       instance.totalPlayTimeSec = (instance.totalPlayTimeSec ?? 0) + durationSec
     })
     .catch(() => undefined)
+
+  // Minecraft writes options.txt while shutting down. If the player changed
+  // settings in game, keep them and switch the preset to Custom.
+  await syncPerformancePreset(entry.instanceId).catch((error) => {
+    logger.warn('launch', 'Could not check the performance preset after exit', error)
+  })
 
   const payload: LaunchExit = {
     instanceId: entry.instanceId,

@@ -22,7 +22,7 @@ import {
   WarningCircle,
   Wrench
 } from '@phosphor-icons/react'
-import type { Instance, LoaderType, PerformanceProfile } from '@shared/types'
+import type { Instance, LoaderType, PerformancePreset } from '@shared/types'
 import type { AddonBulkFilter } from '@shared/addonBulk'
 import { JAVA_MAJORS } from '@shared/constants'
 import { findTlsCapeArtifact } from '@shared/tlskincape'
@@ -550,7 +550,7 @@ function InstanceSettings({
   const [capeEnabled, setCapeEnabled] = useState(instance.tlauncherCape !== false)
   const [copySettingsOpen, setCopySettingsOpen] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [profile, setProfile] = useState<PerformanceProfile>(settings?.performance.profile ?? 'balanced')
+  const [profile, setProfile] = useState<PerformancePreset>(settings?.performance.profile ?? 'balanced')
   const widthValue = Number(width)
   const heightValue = Number(height)
   const widthValid = Number.isFinite(widthValue) && widthValue >= 320 && widthValue <= 7680
@@ -567,6 +567,12 @@ function InstanceSettings({
     setJvmArgs(instance.jvmArgs)
     setCapeEnabled(instance.tlauncherCape !== false)
   }, [instance])
+
+  // The main process switches the preset to Custom when Minecraft's settings
+  // change, so keep the control in sync while this page stays open.
+  useEffect(() => {
+    if (settings?.performance.profile) setProfile(settings.performance.profile)
+  }, [settings?.performance.profile])
 
   const save = async (): Promise<void> => {
     if (!resolutionValid) {
@@ -848,7 +854,9 @@ function InstanceSettings({
 
         <Card className="p-5">
           <h2 className="font-display text-[15px] font-semibold text-ink">Performance</h2>
-          <p className="mt-0.5 text-[11px] text-muted">Applies the shared performance preset and GPU preference.</p>
+          <p className="mt-0.5 text-[11px] text-muted">
+            Applies the shared preset once and the GPU preference. In-game changes switch the preset to Custom.
+          </p>
           <div className="mt-3">
             <Segmented
               value={profile}
@@ -861,7 +869,8 @@ function InstanceSettings({
               options={[
                 { value: 'performance', label: 'FPS' },
                 { value: 'balanced', label: 'Balanced' },
-                { value: 'quality', label: 'Quality' }
+                { value: 'quality', label: 'Quality' },
+                { value: 'custom', label: 'Custom' }
               ]}
               size="sm"
             />
@@ -871,7 +880,9 @@ function InstanceSettings({
               ? 'Lower render distance, VSync off, 144 FPS cap.'
               : profile === 'quality'
                 ? 'Higher render distance, shadows and particles.'
-                : 'A stable middle ground for most systems.'}
+                : profile === 'custom'
+                  ? 'Minecraft settings are left exactly as you changed them.'
+                  : 'A stable middle ground for most systems.'}
           </p>
           <Button variant="secondary" size="sm" className="mt-3" onClick={() => void applyGpu()} icon={<Cpu size={14} />}>
             Use high-performance GPU

@@ -28,9 +28,11 @@ export function useAppEvents(): void {
           break
         case 'launch-state':
           ui.setRunning(event.payload)
+          void queryClient.invalidateQueries({ queryKey: qk.settings })
           break
         case 'launch-exit':
           void queryClient.invalidateQueries({ queryKey: qk.instances })
+          void queryClient.invalidateQueries({ queryKey: qk.settings })
           if (event.payload.crashed) {
             ui.openModal('console', { instanceId: event.payload.instanceId })
           }

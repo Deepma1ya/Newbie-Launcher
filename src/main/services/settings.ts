@@ -2,11 +2,13 @@ import path from 'node:path'
 import { promises as fs } from 'node:fs'
 import type { LauncherSettings } from '@shared/types'
 import type { DeepPartial } from '@shared/ipc'
+import { isPerformanceProfile } from '@shared/performance'
 import { store } from './store'
 import { ensureLayout, paths, setDataDir } from './paths'
 import { directorySize, pathExists } from '../util/fs'
 import { logger } from '../util/log'
 import { runningStates } from './launch'
+import { applyPerformanceProfileToInstances } from './perf'
 import { assertBedrockDataDirMovable } from './bedrockInstances'
 
 export function getSettings(): LauncherSettings {
@@ -22,7 +24,19 @@ export async function updateSettings(patch: DeepPartial<LauncherSettings>): Prom
   if (sanitized.java?.defaultMemoryMb !== undefined) {
     sanitized.java.defaultMemoryMb = Math.max(1024, Math.min(65536, Math.round(Number(sanitized.java.defaultMemoryMb))))
   }
-  return store.updateSettings(sanitized)
+  const next = await store.updateSettings(sanitized)
+  // Picking a preset (or turning auto-apply on) writes it once. Launches never
+  // overwrite Minecraft's own settings: a changed options.txt flips the preset
+  // to Custom instead.
+  const performancePatch = sanitized.performance
+  const requestedPreset =
+    performancePatch?.profile !== undefined || performancePatch?.autoApply === true
+  if (next.performance.autoApply && requestedPreset && isPerformanceProfile(next.performance.profile)) {
+    await applyPerformanceProfileToInstances(next.performance.profile).catch((error) => {
+      logger.warn('settings', 'Could not apply the performance preset', error)
+    })
+  }
+  return next
 }
 
 export async function changeDataDir(target: string): Promise<LauncherSettings> {

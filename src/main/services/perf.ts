@@ -4,10 +4,17 @@ import path from 'node:path'
 import os from 'node:os'
 import { promises as fs } from 'node:fs'
 import type { GpuApplyResult, Instance, PerformanceProfile, SystemInfo } from '@shared/types'
+import {
+  applyPresetToOptions,
+  compareOptionsToPreset,
+  isPerformanceProfile,
+  type OptionsPresetState
+} from '@shared/performance'
 import { detectJavaRuntimes } from './java'
 import { directorySize, ensureDir, pathExists } from '../util/fs'
 import { paths, freeSpaceMb } from './paths'
 import { store } from './store'
+import { emit } from './events'
 import { logger } from '../util/log'
 
 const execFileAsync = promisify(execFile)
@@ -107,77 +114,94 @@ export async function applyGpuPreference(instance?: Instance): Promise<GpuApplyR
   }
 }
 
-export const PERFORMANCE_PRESETS: Record<
-  PerformanceProfile,
-  Record<string, string>
-> = {
-  balanced: {
-    renderDistance: '12',
-    simulationDistance: '10',
-    maxFps: '120',
-    enableVsync: 'true',
-    graphicsMode: '1',
-    ao: 'true',
-    entityShadows: 'true',
-    particles: '1',
-    mipmapLevels: '4'
-  },
-  performance: {
-    renderDistance: '8',
-    simulationDistance: '6',
-    maxFps: '144',
-    enableVsync: 'false',
-    graphicsMode: '0',
-    ao: 'false',
-    entityShadows: 'false',
-    particles: '2',
-    mipmapLevels: '2'
-  },
-  quality: {
-    renderDistance: '16',
-    simulationDistance: '12',
-    maxFps: '0',
-    enableVsync: 'true',
-    graphicsMode: '2',
-    ao: 'true',
-    entityShadows: 'true',
-    particles: '0',
-    mipmapLevels: '4'
-  }
-}
-
-export async function applyPerformanceProfile(instance: Instance, profile?: PerformanceProfile): Promise<void> {
-  const chosen = profile ?? store.settings().performance.profile
-  const preset = PERFORMANCE_PRESETS[chosen] ?? PERFORMANCE_PRESETS.balanced
+export async function applyPerformanceProfile(
+  instance: Instance,
+  profile: PerformanceProfile
+): Promise<void> {
   const file = path.join(instance.gameDir, 'options.txt')
   const backup = `${file}.newbie.bak`
   await ensureDir(instance.gameDir)
   if ((await pathExists(file)) && !(await pathExists(backup))) {
     await fs.copyFile(file, backup).catch(() => undefined)
   }
-  let lines: string[] = []
+  let raw = ''
   try {
-    lines = (await fs.readFile(file, 'utf8')).split(/\r?\n/)
+    raw = await fs.readFile(file, 'utf8')
   } catch {
-    lines = []
+    raw = ''
   }
-  const map = new Map<string, string>()
-  for (const line of lines) {
-    if (!line || line.startsWith('#')) continue
-    const index = line.indexOf(':')
-    if (index > 0) map.set(line.slice(0, index), line.slice(index + 1))
-  }
-  for (const [key, value] of Object.entries(preset)) map.set(key, value)
-  const output = [...map.entries()].map(([key, value]) => `${key}:${value}`).join('\n') + '\n'
-  await fs.writeFile(file, output, 'utf8')
-  logger.info('perf', `Applied ${chosen} performance profile to ${instance.name}`)
+  await fs.writeFile(file, applyPresetToOptions(raw, profile), 'utf8')
+  logger.info('perf', `Applied ${profile} performance profile to ${instance.name}`)
 }
 
+/** Applies an explicitly chosen preset to every Java instance. */
+export async function applyPerformanceProfileToInstances(profile: PerformanceProfile): Promise<void> {
+  for (const instance of store.instances()) {
+    await applyPerformanceProfile(instance, profile).catch((error) => {
+      logger.warn('perf', `Could not apply the ${profile} profile to ${instance.name}`, error)
+    })
+  }
+}
+
+async function compareInstanceOptions(
+  instance: Instance,
+  profile: PerformanceProfile
+): Promise<OptionsPresetState> {
+  let raw = ''
+  try {
+    raw = await fs.readFile(path.join(instance.gameDir, 'options.txt'), 'utf8')
+  } catch {
+    return 'missing'
+  }
+  return compareOptionsToPreset(raw, profile)
+}
+
+async function markPerformanceProfileCustom(instanceName: string): Promise<void> {
+  if (store.settings().performance.profile === 'custom') return
+  await store.updateSettings({ performance: { profile: 'custom' } })
+  logger.info('perf', `Performance preset switched to Custom because ${instanceName} changed Minecraft settings`)
+  emit({
+    type: 'toast',
+    payload: {
+      kind: 'info',
+      title: 'Performance preset set to Custom',
+      message: `Newbie found changed Minecraft settings for ${instanceName} and will not overwrite them again.`
+    }
+  })
+}
+
+/**
+ * The preset is only written when it is new (picked in Settings) or when the
+ * instance has no options.txt yet. If the file no longer matches the preset,
+ * Minecraft's own settings win and the preset becomes Custom instead of being
+ * forced back on every launch.
+ */
 export async function prepareInstancePerformance(instance: Instance): Promise<void> {
   const settings = store.settings()
   if (!settings.performance.autoApply) return
-  await applyPerformanceProfile(instance)
+  const chosen = settings.performance.profile
+  if (isPerformanceProfile(chosen)) {
+    const state = await compareInstanceOptions(instance, chosen)
+    if (state === 'custom') {
+      await markPerformanceProfileCustom(instance.name)
+    } else if (state === 'missing') {
+      await applyPerformanceProfile(instance, chosen)
+    }
+  }
   await applyGpuPreference(instance)
+}
+
+/** Called after Minecraft exits, once it has written options.txt. */
+export async function syncPerformancePreset(instanceId: string): Promise<void> {
+  const settings = store.settings()
+  if (!settings.performance.autoApply) return
+  const chosen = settings.performance.profile
+  if (!isPerformanceProfile(chosen)) return
+  const instance = store.instance(instanceId)
+  if (!instance) return
+  if ((await compareInstanceOptions(instance, chosen)) === 'custom') {
+    await markPerformanceProfileCustom(instance.name)
+  }
 }
 
 export async function diskUsage(): Promise<{

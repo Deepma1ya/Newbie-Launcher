@@ -6,6 +6,8 @@ export type LoadoutMode = 'offline' | 'download'
 export type AccountType = 'microsoft' | 'tlauncher' | 'offline' | 'authlib'
 export type ThemeMode = 'dark' | 'light' | 'system'
 export type PerformanceProfile = 'balanced' | 'performance' | 'quality'
+/** A profile Newbie can apply, or "custom" once Minecraft's own settings were changed. */
+export type PerformancePreset = PerformanceProfile | 'custom'
 export type GpuPreference = 'default' | 'high'
 
 export interface JavaRuntime {
@@ -26,7 +28,7 @@ export interface JavaSettings {
 
 export interface PerformanceSettings {
   gpuPreference: GpuPreference
-  profile: PerformanceProfile
+  profile: PerformancePreset
   autoApply: boolean
 }
 

@@ -14,11 +14,12 @@ import {
   Key,
   Lightning,
   ShieldCheck,
+  SlidersHorizontal,
   Sparkle,
   Trash,
   WarningCircle
 } from '@phosphor-icons/react'
-import type { DefenderExclusionsState, PerformanceProfile } from '@shared/types'
+import type { DefenderExclusionsState, PerformancePreset } from '@shared/types'
 import { APP_VERSION, GITHUB_URL, JAVA_MAJORS, WEBSITE_URL } from '@shared/constants'
 import { useDiskUsage, useJavaRuntimes, useSettings, useSystemInfo, qk } from '../hooks/queries'
 import { toast } from '../store/ui'
@@ -432,13 +433,18 @@ function PerformanceSection() {
     <>
       <Card className="p-5">
         <h2 className="font-display text-[15px] font-semibold text-ink">Performance preset</h2>
-        <p className="mt-0.5 text-[11.5px] text-muted">Applied to <span className="font-mono">options.txt</span> before each launch. A backup is kept.</p>
-        <div className="mt-3 grid gap-2 sm:grid-cols-3">
+        <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
+          Written once when you choose it, with a backup kept next to{' '}
+          <span className="font-mono">options.txt</span>. Your in-game settings are never overwritten: change them in
+          Minecraft and the preset switches to Custom.
+        </p>
+        <div className="mt-3 grid gap-2 sm:grid-cols-2">
           {([
             { value: 'performance', title: 'Performance', text: '8 chunks · 144 FPS · VSync off', icon: Lightning },
             { value: 'balanced', title: 'Balanced', text: '12 chunks · 120 FPS · shadows on', icon: Cpu },
-            { value: 'quality', title: 'Quality', text: '16 chunks · unlimited FPS · fancy', icon: Sparkle }
-          ] as { value: PerformanceProfile; title: string; text: string; icon: typeof Cpu }[]).map((preset) => (
+            { value: 'quality', title: 'Quality', text: '16 chunks · unlimited FPS · fancy', icon: Sparkle },
+            { value: 'custom', title: 'Custom', text: 'Keep the settings you changed in Minecraft', icon: SlidersHorizontal }
+          ] as { value: PerformancePreset; title: string; text: string; icon: typeof Cpu }[]).map((preset) => (
             <button
               key={preset.value}
               onClick={() => void save({ performance: { profile: preset.value } })}
@@ -458,8 +464,8 @@ function PerformanceSection() {
           <Switch
             checked={settings.performance.autoApply}
             onChange={(checked) => void save({ performance: { autoApply: checked } })}
-            label="Apply automatically on launch"
-            description="Writes the performance preset and Windows GPU preference before starting Minecraft."
+            label="Manage performance automatically"
+            description="Writes the chosen preset and the Windows GPU preference before starting Minecraft. In-game changes are kept and switch the preset to Custom."
           />
         </div>
       </Card>
