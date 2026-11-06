@@ -9,11 +9,15 @@ import { Badge, Switch } from './ui/primitives'
 export function AddonRow({
   record,
   instance,
-  onChanged
+  onChanged,
+  selected,
+  onSelectedChange
 }: {
   record: AddonRecord
   instance: Instance
   onChanged: () => void
+  selected?: boolean
+  onSelectedChange?: (selected: boolean) => void
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -48,32 +52,47 @@ export function AddonRow({
   return (
     <div
       className={cn(
-        'group flex items-center gap-3 rounded-xl border border-line/45 bg-canvas/30 px-3 py-2.5 transition-colors hover:border-line/70 hover:bg-canvas/50',
-        !record.enabled && 'opacity-55'
+        'group flex items-center gap-3 rounded-xl border px-3 py-2.5 transition-colors',
+        selected
+          ? 'border-grass/40 bg-grass/[0.045]'
+          : 'border-line/45 bg-canvas/30 hover:border-line/70 hover:bg-canvas/50'
       )}
     >
-      <ProjectIcon url={record.iconUrl} name={record.name} size={34} />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="truncate text-[12.5px] font-medium text-ink">{record.name}</span>
-          <Badge tone="neutral" className="h-4 px-1.5 text-[8.5px]">
-            {addonTypeLabel(record.type)}
-          </Badge>
-          {updateAvailable && <Badge tone="green" className="h-4 px-1.5 text-[8.5px]">Update</Badge>}
-          {!record.enabled && <Badge tone="gold" className="h-4 px-1.5 text-[8.5px]">Disabled</Badge>}
-        </div>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] text-muted/75">
-          <span className="font-mono">{record.versionNumber}</span>
-          <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
-          <span>{formatBytes(record.size)}</span>
-          <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
-          <span>{relativeTime(record.updatedAt)}</span>
-          {record.type === 'datapack' && record.relativeFolder?.startsWith('saves/') && (
-            <>
-              <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
-              <span className="truncate">World: {record.relativeFolder.split('/')[1]}</span>
-            </>
-          )}
+      {onSelectedChange && (
+        <input
+          type="checkbox"
+          checked={Boolean(selected)}
+          onChange={(event) => onSelectedChange(event.target.checked)}
+          aria-label={`Select ${record.name}`}
+          className="h-4 w-4 shrink-0 cursor-pointer rounded border-line bg-canvas accent-grass"
+        />
+      )}
+      {/* Dim only the icon and text. Keeping the actions opaque also keeps the
+          three-dot menu readable while the add-on is disabled. */}
+      <div className={cn('flex min-w-0 flex-1 items-center gap-3', !record.enabled && 'opacity-55')}>
+        <ProjectIcon url={record.iconUrl} name={record.name} size={34} />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="truncate text-[12.5px] font-medium text-ink">{record.name}</span>
+            <Badge tone="neutral" className="h-4 px-1.5 text-[8.5px]">
+              {addonTypeLabel(record.type)}
+            </Badge>
+            {updateAvailable && <Badge tone="green" className="h-4 px-1.5 text-[8.5px]">Update</Badge>}
+            {!record.enabled && <Badge tone="gold" className="h-4 px-1.5 text-[8.5px]">Disabled</Badge>}
+          </div>
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[10.5px] text-muted/75">
+            <span className="font-mono">{record.versionNumber}</span>
+            <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
+            <span>{formatBytes(record.size)}</span>
+            <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
+            <span>{relativeTime(record.updatedAt)}</span>
+            {record.type === 'datapack' && record.relativeFolder?.startsWith('saves/') && (
+              <>
+                <span className="h-0.5 w-0.5 rounded-full bg-muted/50" />
+                <span className="truncate">World: {record.relativeFolder.split('/')[1]}</span>
+              </>
+            )}
+          </div>
         </div>
       </div>
 

@@ -45,6 +45,7 @@ import { errorMessage, formatBytes, formatPlaytime, loaderLabel, relativeTime } 
 import { PageHeader } from '../components/PageHeader'
 import { PlayButton } from '../components/PlayButton'
 import { AddonRow } from '../components/AddonRow'
+import { AddonSelectionBar } from '../components/AddonSelectionBar'
 import { DeleteAllAddonsButton } from '../components/DeleteAllAddonsButton'
 import { LoadoutCard } from '../components/LoadoutCard'
 import { CopySettingsModal } from '../components/modals/CopySettingsModal'
@@ -72,12 +73,21 @@ export function InstancePage() {
   const [tab, setTab] = useState<Tab>('overview')
   const [addonQuery, setAddonQuery] = useState('')
   const [addonFilter, setAddonFilter] = useState<AddonFilter>('all')
+  const [selectedAddons, setSelectedAddons] = useState<Set<string>>(new Set())
   const [changeVersionOpen, setChangeVersionOpen] = useState(false)
   const [packOpen, setPackOpen] = useState(false)
   const [updating, setUpdating] = useState(false)
   const [scanning, setScanning] = useState(false)
   const backups = useBackups(id).data ?? []
   const disk = useDiskUsage().data?.instances.find((entry) => entry.id === id)
+
+  useEffect(() => {
+    setSelectedAddons(new Set())
+  }, [id])
+
+  useEffect(() => {
+    setSelectedAddons(new Set())
+  }, [addonFilter, addonQuery])
 
   useEffect(() => {
     if (!instance && !instanceQuery.isLoading) {
@@ -165,6 +175,16 @@ export function InstancePage() {
     if (addonQuery && !addon.name.toLowerCase().includes(addonQuery.toLowerCase())) return false
     return true
   })
+  const visibleAddonIds = filteredAddons.map((addon) => addon.id)
+
+  const toggleAddonSelection = (addonId: string, on: boolean): void => {
+    setSelectedAddons((previous) => {
+      const next = new Set(previous)
+      if (on) next.add(addonId)
+      else next.delete(addonId)
+      return next
+    })
+  }
 
   return (
     <div>
@@ -385,6 +405,15 @@ export function InstancePage() {
               onChanged={refresh}
             />
           </div>
+          <AddonSelectionBar
+            instance={instance}
+            addons={instance.addons}
+            selectedIds={selectedAddons}
+            visibleIds={visibleAddonIds}
+            onClear={() => setSelectedAddons(new Set())}
+            onSelectAll={() => setSelectedAddons(new Set(visibleAddonIds))}
+            onChanged={refresh}
+          />
           {filteredAddons.length === 0 ? (
             <EmptyState
               icon={<Package size={22} />}
@@ -395,7 +424,14 @@ export function InstancePage() {
           ) : (
             <div className="space-y-1.5">
               {filteredAddons.map((addon) => (
-                <AddonRow key={addon.id} record={addon} instance={instance} onChanged={() => void refresh()} />
+                <AddonRow
+                  key={addon.id}
+                  record={addon}
+                  instance={instance}
+                  onChanged={() => void refresh()}
+                  selected={selectedAddons.has(addon.id)}
+                  onSelectedChange={(on) => toggleAddonSelection(addon.id, on)}
+                />
               ))}
             </div>
           )}

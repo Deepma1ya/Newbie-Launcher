@@ -38,7 +38,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
 | **Maps** | The **Browse → Maps** tab lists Java worlds from CurseForge. Pick a file version and unpack it into the selected instance's `saves` folder; the **Browse maps** action on an instance opens the same catalog pre-targeted. Installed maps appear in Minecraft's world list. |
 | **Datapacks** | Modrinth datapacks installed directly into a chosen world's `datapacks` folder, or kept in an instance staging folder. Required dependencies and updates follow the same target. |
-| **Library** | Review installed mods, resource packs, datapacks and shaders by section; update them or delete a whole section with confirmation. |
+| **Library** | Review installed mods, resource packs, datapacks and shaders by section; select several to enable, disable or delete them together, update them or delete a whole section with confirmation. |
 | **Settings transfer** | Copy keybinds, video/audio options, resource pack order and Iris shader setup between instances, or make the selected settings the default for every other instance. |
 | **Loadouts** | Named add-on sets with **full offline backup** or **download on switch** storage modes |
 | **Pack sharing** | Bundle every enabled mod, resource pack, datapack and shader into a standard `.mrpack`, share a temporary LAN download link, import an `.mrpack` into a matching new instance, or copy the files into another instance |

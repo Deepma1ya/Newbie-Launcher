@@ -9,6 +9,9 @@ export const BULK_ADDON_TYPES: readonly BulkAddonType[] = [
 
 export type AddonBulkFilter = 'all' | BulkAddonType
 
+/** Actions the library selection bar can apply to several add-ons at once. */
+export type AddonBulkAction = 'enable' | 'disable' | 'delete'
+
 export function isBulkAddonType(type: string): type is BulkAddonType {
   return (BULK_ADDON_TYPES as readonly string[]).includes(type)
 }

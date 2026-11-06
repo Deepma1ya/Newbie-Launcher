@@ -147,6 +147,7 @@ const api: NewbieApi = {
     remove: (instanceId, addonId, deleteFile) => ipcRenderer.invoke(IPC.addonsRemove, instanceId, addonId, deleteFile),
     removeAll: (instanceId, type) => ipcRenderer.invoke(IPC.addonsRemoveAll, instanceId, type),
     toggle: (instanceId, addonId, enabled) => ipcRenderer.invoke(IPC.addonsToggle, instanceId, addonId, enabled),
+    bulk: (instanceId, addonIds, action) => ipcRenderer.invoke(IPC.addonsBulk, instanceId, addonIds, action),
     checkUpdates: (instanceId) => ipcRenderer.invoke(IPC.addonsCheckUpdates, instanceId),
     updateAll: (instanceId) => ipcRenderer.invoke(IPC.addonsUpdateAll, instanceId),
     scan: (instanceId) => ipcRenderer.invoke(IPC.addonsScan, instanceId)

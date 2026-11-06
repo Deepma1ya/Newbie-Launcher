@@ -68,6 +68,7 @@ import type {
   ServerInternetState,
   SkinCatalogPage
 } from './types'
+import type { AddonBulkAction } from './addonBulk'
 import type { TlsCapeSyncResult } from './tlskincape'
 import type { CopyInstanceSettingsInput, CopyInstanceSettingsResult } from './instanceSettings'
 
@@ -182,6 +183,7 @@ export const IPC = {
   addonsRemove: 'addons:remove',
   addonsRemoveAll: 'addons:remove-all',
   addonsToggle: 'addons:toggle',
+  addonsBulk: 'addons:bulk',
   addonsCheckUpdates: 'addons:check-updates',
   addonsUpdateAll: 'addons:update-all',
   addonsScan: 'addons:scan',
@@ -383,6 +385,7 @@ export interface NewbieApi {
     remove(instanceId: string, addonId: string, deleteFile: boolean): Promise<void>
     removeAll(instanceId: string, type?: BulkAddonType): Promise<number>
     toggle(instanceId: string, addonId: string, enabled: boolean): Promise<AddonRecord>
+    bulk(instanceId: string, addonIds: string[], action: AddonBulkAction): Promise<{ changed: number }>
     checkUpdates(instanceId: string): Promise<AddonRecord[]>
     updateAll(instanceId: string): Promise<AddonRecord[]>
     scan(instanceId: string): Promise<AddonRecord[]>

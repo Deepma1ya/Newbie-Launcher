@@ -52,6 +52,7 @@ import {
 } from './services/instances'
 import { launchInstance, runningStates, stopInstance, instanceLogs } from './services/launch'
 import {
+  bulkAddons,
   checkAddonUpdates,
   installAddon,
   removeAddon,
@@ -194,6 +195,7 @@ const pathSchema = z.string().min(3).max(4096)
 const loaderSchema = z.enum(['vanilla', 'fabric', 'quilt', 'forge', 'neoforge'])
 const addonTypeSchema = z.enum(['mod', 'resourcepack', 'shader', 'modpack', 'datapack', 'world', 'plugin'])
 const bulkAddonTypeSchema = z.enum(['mod', 'datapack', 'resourcepack', 'shader'])
+const addonBulkActionSchema = z.enum(['enable', 'disable', 'delete'])
 const bedrockChannelSchema = z.enum(['release', 'preview'])
 const bedrockIdSchema = z.string().min(3).max(200)
 
@@ -921,6 +923,15 @@ export function registerIpc(): void {
   )
   ipcMain.handle(IPC.addonsToggle, async (_event, instanceId: string, addonId: string, enabled: boolean) =>
     toggleAddon(instanceId, addonId, Boolean(enabled))
+  )
+  ipcMain.handle(
+    IPC.addonsBulk,
+    async (_event, instanceId: string, addonIds: unknown, action: unknown) =>
+      bulkAddons(
+        z.string().parse(instanceId),
+        z.array(z.string()).min(1).max(500).parse(addonIds),
+        addonBulkActionSchema.parse(action)
+      )
   )
   ipcMain.handle(IPC.addonsCheckUpdates, async (_event, instanceId: string) =>
     checkAddonUpdates(z.string().parse(instanceId))

@@ -9,7 +9,7 @@ import type {
   LoaderType,
   ModrinthVersion
 } from '@shared/types'
-import { isBulkAddonType } from '@shared/addonBulk'
+import { isBulkAddonType, type AddonBulkAction } from '@shared/addonBulk'
 import {
   getModrinthProject,
   getModrinthUpdatesByHashes,
@@ -285,15 +285,63 @@ export async function removeAllAddons(
   return targets.length
 }
 
-export async function toggleAddon(
+export async function bulkAddons(
   instanceId: string,
-  addonId: string,
-  enabled: boolean
-): Promise<AddonRecord> {
+  addonIds: string[],
+  action: AddonBulkAction
+): Promise<{ changed: number }> {
   const instance = store.instance(instanceId)
   if (!instance) throw new Error('Instance not found')
-  const record = instance.addons.find((addon) => addon.id === addonId)
-  if (!record) throw new Error('Add-on not found')
+  const ids = new Set(addonIds)
+  const targets = instance.addons.filter((addon) => ids.has(addon.id))
+  if (targets.length === 0) return { changed: 0 }
+
+  if (action === 'delete') {
+    const { isInstanceBusy } = await import('./launch')
+    if (isInstanceBusy(instanceId)) throw new Error('Close Minecraft before deleting add-ons')
+    for (const record of targets) await removeRecordFile(instance, record)
+    const removed = new Set(targets.map((record) => record.id))
+    instance.addons = instance.addons.filter((addon) => !removed.has(addon.id))
+    const now = new Date().toISOString()
+    for (const loadout of instance.loadouts) {
+      loadout.addonIds = loadout.addonIds.filter((addonId) => !removed.has(addonId))
+      loadout.updatedAt = now
+    }
+    await persistInstance(instance)
+    logger.info('addons', `Deleted ${targets.length} selected add-on(s) from ${instance.name}`)
+    return { changed: targets.length }
+  }
+
+  const enable = action === 'enable'
+  let changed = 0
+  const failed: string[] = []
+  for (const record of targets) {
+    try {
+      await setAddonEnabledFile(instance, record, enable)
+      changed += 1
+    } catch (error) {
+      failed.push(record.name)
+      logger.warn('addons', `Could not ${enable ? 'enable' : 'disable'} ${record.name}`, error)
+    }
+  }
+  await persistInstance(instance)
+  if (failed.length > 0) {
+    throw new Error(
+      `${failed.length} of ${targets.length} add-on(s) could not be ${enable ? 'enabled' : 'disabled'}: ${failed.slice(0, 4).join(', ')}`
+    )
+  }
+  logger.info(
+    'addons',
+    `${enable ? 'Enabled' : 'Disabled'} ${changed} selected add-on(s) in ${instance.name}`
+  )
+  return { changed }
+}
+
+async function setAddonEnabledFile(
+  instance: Instance,
+  record: AddonRecord,
+  enabled: boolean
+): Promise<void> {
   const active = addonFilePath(instance, record)
   const disabled = `${active}.disabled`
   if (enabled) {
@@ -303,6 +351,18 @@ export async function toggleAddon(
   }
   record.enabled = enabled
   record.updatedAt = new Date().toISOString()
+}
+
+export async function toggleAddon(
+  instanceId: string,
+  addonId: string,
+  enabled: boolean
+): Promise<AddonRecord> {
+  const instance = store.instance(instanceId)
+  if (!instance) throw new Error('Instance not found')
+  const record = instance.addons.find((addon) => addon.id === addonId)
+  if (!record) throw new Error('Add-on not found')
+  await setAddonEnabledFile(instance, record, enabled)
   await persistInstance(instance)
   return record
 }

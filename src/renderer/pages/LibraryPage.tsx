@@ -16,6 +16,7 @@ import { errorMessage, formatBytes } from '../lib/utils'
 import type { AddonBulkFilter } from '@shared/addonBulk'
 import { PageHeader } from '../components/PageHeader'
 import { AddonRow } from '../components/AddonRow'
+import { AddonSelectionBar } from '../components/AddonSelectionBar'
 import { DeleteAllAddonsButton } from '../components/DeleteAllAddonsButton'
 import { LoadoutCard } from '../components/LoadoutCard'
 import { BlockIcon } from '../components/ui/BlockIcon'
@@ -37,6 +38,15 @@ export function LibraryPage() {
   const [query, setQuery] = useState('')
   const [busy, setBusy] = useState(false)
   const [scanning, setScanning] = useState(false)
+  const [selected, setSelected] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    setSelected(new Set())
+  }, [instance?.id])
+
+  useEffect(() => {
+    setSelected(new Set())
+  }, [filter, query])
 
   useEffect(() => {
     if (!params.get('instance') && instance) setParams({ instance: instance.id }, { replace: true })
@@ -64,6 +74,16 @@ export function LibraryPage() {
   })
   const pending = addons.filter((addon) => addon.latestVersionId && addon.latestVersionId !== addon.versionId).length
   const totalSize = addons.reduce((total, addon) => total + addon.size, 0)
+  const visibleIds = filtered.map((addon) => addon.id)
+
+  const toggleSelected = (id: string, on: boolean): void => {
+    setSelected((previous) => {
+      const next = new Set(previous)
+      if (on) next.add(id)
+      else next.delete(id)
+      return next
+    })
+  }
 
   const refresh = async (): Promise<void> => {
     await queryClient.invalidateQueries({ queryKey: qk.instance(instance!.id) })
@@ -174,6 +194,15 @@ export function LibraryPage() {
 
       <div className="grid gap-5 xl:grid-cols-[1.35fr_0.65fr]">
         <div>
+          <AddonSelectionBar
+            instance={instance!}
+            addons={addons}
+            selectedIds={selected}
+            visibleIds={visibleIds}
+            onClear={() => setSelected(new Set())}
+            onSelectAll={() => setSelected(new Set(visibleIds))}
+            onChanged={refresh}
+          />
           {filtered.length === 0 ? (
             <EmptyState
               icon={<Package size={22} />}
@@ -184,7 +213,14 @@ export function LibraryPage() {
           ) : (
             <div className="space-y-1.5">
               {filtered.map((addon) => (
-                <AddonRow key={addon.id} record={addon} instance={instance!} onChanged={() => void refresh()} />
+                <AddonRow
+                  key={addon.id}
+                  record={addon}
+                  instance={instance!}
+                  onChanged={() => void refresh()}
+                  selected={selected.has(addon.id)}
+                  onSelectedChange={(on) => toggleSelected(addon.id, on)}
+                />
               ))}
             </div>
           )}
