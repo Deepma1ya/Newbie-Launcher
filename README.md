@@ -193,6 +193,10 @@ The selected profile is shared by all instances. It is written once when you pic
 
 `Settings → General → Change location` copies the launcher data (game files, libraries, assets, instances, runtimes, cache and backups) to an empty folder, updates all instance paths, and writes a new bootstrap config. The old copy is left in place so nothing is lost; you can delete it once the new location is verified. Minecraft cannot be running during the move.
 
+## Uninstall
+
+The uninstaller removes the app and, by default, every file the launcher created: game files, instances, worlds, mods, servers, backups, caches, logs, settings and the Windows Defender exclusions it added. The data folder is resolved from `bootstrap.json`, so a moved folder is deleted too. Uncheck the option in the uninstaller to keep your game files; scripted uninstalls can pass `/KEEPAPPDATA`.
+
 ## Development
 
 ```bash

@@ -19,6 +19,8 @@ extraResources:
       - '!**/.gitkeep'
   - from: resources/defender-exclusions.ps1
     to: defender-exclusions.ps1
+  - from: resources/uninstall-cleanup.ps1
+    to: uninstall-cleanup.ps1
 compression: maximum
 win:
   target:
