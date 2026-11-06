@@ -16,7 +16,6 @@ import { ServersPage } from './pages/ServersPage'
 import { ServerPage } from './pages/ServerPage'
 import { InstancePage } from './pages/InstancePage'
 import { BrowsePage } from './pages/BrowsePage'
-import { JavaMapsPage } from './pages/JavaMapsPage'
 import { LibraryPage } from './pages/LibraryPage'
 import { DownloadsPage } from './pages/DownloadsPage'
 import { AccountsPage } from './pages/AccountsPage'
@@ -113,7 +112,6 @@ export default function App() {
               <Route path="/servers" element={<ServersPage />} />
               <Route path="/servers/:id" element={<ServerPage />} />
               <Route path="/browse" element={<BrowsePage />} />
-              <Route path="/maps" element={<JavaMapsPage />} />
               <Route path="/library" element={<LibraryPage />} />
               <Route path="/downloads" element={<DownloadsPage />} />
               <Route path="/accounts" element={<AccountsPage />} />

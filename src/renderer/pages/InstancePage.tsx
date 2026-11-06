@@ -11,6 +11,7 @@ import {
   FolderOpen,
   HardDrives,
   MagnifyingGlass,
+  MapTrifold,
   Monitor,
   Package,
   Plus,
@@ -299,6 +300,7 @@ export function InstancePage() {
                 <ActionButton icon={<Package size={16} />} title="Scan local files" text="Match jars you added manually" onClick={() => void scan()} loading={scanning} />
                 <ActionButton icon={<HardDrives size={16} />} title="Backup worlds" text="Create a restore point now" onClick={async () => { try { await window.newbie.system.createBackup(instance.id); toast('success', 'World backup created'); await queryClient.invalidateQueries({ queryKey: qk.backups(instance.id) }) } catch (error) { toast('error', 'Backup failed', errorMessage(error)) } }} />
                 <ActionButton icon={<FolderOpen size={16} />} title="Open game folder" text="Worlds, mods, configs and logs" onClick={() => void window.newbie.instances.openFolder(instance.id)} />
+                <ActionButton icon={<MapTrifold size={16} />} title="Browse maps" text="Download Java worlds into saves" onClick={() => navigate(`/browse?type=world&instance=${instance.id}`)} />
                 <ActionButton icon={<Monitor size={16} />} title="Change version" text="Move to another Minecraft version" onClick={() => setChangeVersionOpen(true)} />
               </div>
             </Card>

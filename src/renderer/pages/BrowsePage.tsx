@@ -11,6 +11,7 @@ import {
   Funnel,
   Image,
   MagnifyingGlass,
+  MapTrifold,
   Package,
   Plus,
   Sparkle,
@@ -21,6 +22,7 @@ import { useActiveInstance, useInstances, useMinecraftVersions, useSearch, qk } 
 import { toast, useUi } from '../store/ui'
 import { addonTypeLabel, errorMessage, formatNumber, loaderLabel } from '../lib/utils'
 import { PageHeader } from '../components/PageHeader'
+import { JavaMapsBrowser } from '../components/JavaMapsBrowser'
 import { ProjectIcon } from '../components/ui/BlockIcon'
 import { Badge, Card, EmptyState, Input, Segmented, Select, Skeleton } from '../components/ui/primitives'
 import { Button } from '../components/ui/Button'
@@ -30,7 +32,8 @@ const types: { value: AddonType; label: string; icon: React.ReactNode }[] = [
   { value: 'modpack', label: 'Modpacks', icon: <SquaresFour size={14} /> },
   { value: 'datapack', label: 'Datapacks', icon: <BookOpen size={14} /> },
   { value: 'resourcepack', label: 'Resource packs', icon: <Image size={14} /> },
-  { value: 'shader', label: 'Shaders', icon: <Sparkle size={14} /> }
+  { value: 'shader', label: 'Shaders', icon: <Sparkle size={14} /> },
+  { value: 'world', label: 'Maps', icon: <MapTrifold size={14} /> }
 ]
 
 export function BrowsePage() {
@@ -90,7 +93,7 @@ export function BrowsePage() {
     [debounced, type, gameVersion, loader, sort, offset]
   )
 
-  const search = useSearch(searchQuery)
+  const search = useSearch(searchQuery, type !== 'world')
   const hideLoader = type === 'resourcepack' || type === 'shader' || type === 'datapack'
   const releaseVersions = versions.filter((version) => version.type === 'release').slice(0, 120)
 
@@ -156,7 +159,7 @@ export function BrowsePage() {
       <PageHeader
         eyebrow="Discover"
         title="Browse"
-        description="Mods, modpacks, datapacks, resource packs and shaders from Modrinth — installed with dependencies handled."
+        description="Mods, packs and shaders from Modrinth, plus Java maps from CurseForge — installed into the selected instance."
         actions={
           targetInstance ? (
             <button
@@ -175,6 +178,12 @@ export function BrowsePage() {
         }
       />
 
+      <div className="mb-4">
+        <Segmented value={type} onChange={changeType} options={types} />
+      </div>
+
+      {type !== 'world' ? (
+        <>
       <div className="mb-5 space-y-3">
         <div className="flex flex-wrap items-center gap-3">
           <div className="relative min-w-[260px] flex-1">
@@ -187,7 +196,6 @@ export function BrowsePage() {
               aria-label="Search projects"
             />
           </div>
-          <Segmented value={type} onChange={changeType} options={types} />
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -335,6 +343,25 @@ export function BrowsePage() {
         Modrinth is free and open. Newbie resolves required dependencies and picks the newest compatible release.
         Datapacks are copied into the world you choose, or into an instance staging folder.
       </div>
+        </>
+      ) : targetInstance ? (
+        <JavaMapsBrowser instance={targetInstance} />
+      ) : (
+        <EmptyState
+          icon={<MapTrifold size={22} />}
+          title="Choose an instance first"
+          description="Java maps are unpacked into the selected instance's saves folder. Create or select an instance, then browse maps."
+          action={
+            <Button
+              variant="primary"
+              onClick={() => openModal('createInstance', true)}
+              icon={<Plus size={15} />}
+            >
+              Create an instance
+            </Button>
+          }
+        />
+      )}
     </div>
   )
 }

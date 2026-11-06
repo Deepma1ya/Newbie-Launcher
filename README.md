@@ -36,7 +36,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/11/17/21/25 from Adoptium when a version needs it |
 | **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, generic authlib/Yggdrasil servers, in-app TLauncher account management and an online skin catalog |
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
-| **Maps** | Java worlds from CurseForge. Search and sort the map catalog, pick a file version and unpack it into the selected instance's `saves` folder. Installed maps appear in Minecraft's world list. |
+| **Maps** | The **Browse → Maps** tab lists Java worlds from CurseForge. Pick a file version and unpack it into the selected instance's `saves` folder; the **Browse maps** action on an instance opens the same catalog pre-targeted. Installed maps appear in Minecraft's world list. |
 | **Datapacks** | Modrinth datapacks installed directly into a chosen world's `datapacks` folder, or kept in an instance staging folder. Required dependencies and updates follow the same target. |
 | **Library** | Review installed mods, resource packs, datapacks and shaders by section; update them or delete a whole section with confirmation. |
 | **Settings transfer** | Copy keybinds, video/audio options, resource pack order and Iris shader setup between instances, or make the selected settings the default for every other instance. |
@@ -106,10 +106,10 @@ If Windows Tamper Protection or a managed security policy blocks the exclusion, 
 
 ## Java maps
 
-The **Maps** page downloads Java worlds from the public CurseForge catalog.
+The **Maps** tab in **Browse** downloads Java worlds from the public CurseForge catalog. Instances also have a **Browse maps** quick action that opens Browse with that instance already selected.
 
 <p align="center">
-  <img src="docs/images/java-maps.png" alt="Java maps page with CurseForge world downloads" width="900" />
+  <img src="docs/images/java-maps.png" alt="Browse Maps tab with CurseForge Java world downloads" width="900" />
 </p>
 
 - Search, sort by popularity, downloads or recent updates, and page through the catalog.
