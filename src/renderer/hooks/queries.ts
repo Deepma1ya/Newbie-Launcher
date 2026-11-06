@@ -24,6 +24,7 @@ import type {
   ServerResourcePackState,
   ServerStats,
   ServerInternetState,
+  SkinCatalogPage,
   SystemInfo,
   TaskRecord,
   WorldSummary
@@ -63,7 +64,8 @@ export const qk = {
   serverSearch: (query: ServerSearchQuery) => ['server-search', query] as const,
   serverResourcePack: (id: string) => ['servers', id, 'resource-pack'] as const,
   serverResourcePackSearch: (query: ServerResourcePackSearchQuery) =>
-    ['server-resource-pack-search', query] as const
+    ['server-resource-pack-search', query] as const,
+  skinCatalog: (query: string, page: number) => ['skin-catalog', query, page] as const
 }
 
 export function useInstances(): UseQueryResult<Instance[]> {
@@ -186,6 +188,19 @@ export function useServerInternet(id?: string | null): UseQueryResult<ServerInte
       if (state?.status === 'online') return 5_000
       return false
     }
+  })
+}
+
+export function useSkinCatalog(
+  query: string,
+  page: number,
+  enabled = true
+): UseQueryResult<SkinCatalogPage> {
+  return useQuery({
+    queryKey: qk.skinCatalog(query, page),
+    queryFn: () => api.skins.search(query, page),
+    enabled,
+    staleTime: 5 * 60_000
   })
 }
 

@@ -34,7 +34,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Servers** | One-click local Java servers plus official Bedrock Dedicated Server, with a live console, GUI settings, Modrinth add-ons, server resource packs, scheduled restarts and one-click internet relays |
 | **Sharing** | Play with friends through playit.gg, port forwarding, Radmin VPN, ngrok or Cloudflare. Detects LAN/Radmin/public addresses, shows difficulty levels, and lets you copy and test the address. |
 | **Java** | Detects installed JDKs/JREs, then downloads Eclipse Temurin JRE 8/11/17/21/25 from Adoptium when a version needs it |
-| **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, and generic authlib/Yggdrasil servers |
+| **Accounts** | Microsoft OAuth sign-in, TLauncher nickname + official TLSkinCape plugin, offline profiles, generic authlib/Yggdrasil servers, a TLauncher manage card and an online skin catalog |
 | **Browse** | Modrinth. Use the `+` button to install straight into the selected instance, with dependencies resolved. Modpacks install as new instances or into a matching existing instance. No API key required. |
 | **Datapacks** | Modrinth datapacks installed directly into a chosen world's `datapacks` folder, or kept in an instance staging folder. Required dependencies and updates follow the same target. |
 | **Library** | Review installed mods, resource packs, datapacks and shaders by section; update them or delete a whole section with confirmation. |
@@ -119,7 +119,7 @@ Servers are stored under `<dataDir>/servers/<id>`. Each folder contains `server.
 
 The server **Share** tab detects your LAN, Radmin VPN and public addresses, your router gateway and a remembered friends address. It can copy the address and test it: private addresses use a local TCP check, while public/tunnel addresses use the public Minecraft status API.
 
-- **One-click playit.gg** — the Share tab downloads and verifies the signed playit.gg agent, opens the one-time claim page, creates a Java or Bedrock tunnel to the running server, and shows the public address. One free playit account is needed once; after that, starting a tunnel is one click. Friends only need vanilla Minecraft. Works behind CGNAT and on routers without port forwarding.
+- **One-click playit.gg** — the Share tab downloads and verifies the signed playit.gg agent, opens the one-time claim page, creates a Java or Bedrock tunnel to the running server, and shows the public address. One free playit account is needed once; after that, starting a tunnel is one click. A successful tunnel also enables **Open playit automatically when this server starts**, so later server starts share it again without extra clicks. Works behind CGNAT and on routers without port forwarding.
 - **Java quick relay** — a no-account fallback for Java servers through `bore.pub`. It gives a random public `bore.pub:<port>` address, is TCP-only, and depends on the free relay's uptime. Bedrock uses UDP, so it uses playit.gg instead.
 - **Port forwarding** — fallback when your connection has a real public IP. Shows the LAN target, public address, router-page shortcut, CGNAT warning and firewall/router steps.
 - **Radmin VPN** — detects the Radmin adapter and gives friends the exact `RadminIP:port`; everyone needs Radmin installed.
@@ -133,7 +133,7 @@ The server **Share** tab detects your LAN, Radmin VPN and public addresses, your
 
 - **Microsoft** — opens Microsoft's real sign-in page in an embedded window. The resulting Minecraft token is used for licensed Java servers, and signing in makes that account the active player for the next launch. The Xbox gamertag and XUID are stored for Bedrock server allow lists. Tokens are encrypted with Windows DPAPI via Electron `safeStorage` and never reach the UI process.
 - **TLauncher** — stores your public TLauncher nickname and syncs your public skin/cape from `auth.tlauncher.org`. TLauncher does not issue Mojang/Microsoft game licences, so these profiles play in offline mode. In-game TLauncher skin rendering is on the roadmap; the launcher avatar sync is implemented.
-- **Offline** — a local username for single-player, LAN and offline-mode servers. You can upload a custom skin from the Accounts page; the launcher converts PNG, JPEG, WebP, BMP, GIF or TIFF images and applies it to the default player model through a local resource pack. Other players on servers will see the normal offline skin.
+- **Offline** — a local username for single-player, LAN and offline-mode servers. You can upload a custom skin from the Accounts page or browse the online skin catalog; the launcher converts PNG, JPEG, WebP, BMP, GIF or TIFF images and applies it to the default player model through a local resource pack. Other players on servers will see the normal offline skin. Custom skins are only visible to you when you are using an offline account (or a TLauncher account without the TL Skin & Cape mod/option); capes remain managed by TLauncher.
 - **Authlib** — third-party Yggdrasil servers (Ely.by, LittleSkin, private servers). The API root is resolved with the standard ALI header.
 
 Online-mode servers require Microsoft. This is a Minecraft platform rule, not a launcher restriction.

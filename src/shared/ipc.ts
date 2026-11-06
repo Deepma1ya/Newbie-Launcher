@@ -53,7 +53,8 @@ import type {
   ServerResourcePackImport,
   ServerResourcePackInput,
   ServerInternetProvider,
-  ServerInternetState
+  ServerInternetState,
+  SkinCatalogPage
 } from './types'
 import type { TlsCapeSyncResult } from './tlskincape'
 import type { CopyInstanceSettingsInput, CopyInstanceSettingsResult } from './instanceSettings'
@@ -87,6 +88,8 @@ export const IPC = {
   accountsRefresh: 'accounts:refresh',
   accountsSetSkin: 'accounts:set-skin',
   accountsRemoveSkin: 'accounts:remove-skin',
+  skinsSearch: 'skins:search',
+  skinsApplyCatalog: 'skins:apply-catalog',
 
   versionsMinecraft: 'versions:minecraft',
   versionsLoaders: 'versions:loaders',
@@ -249,6 +252,10 @@ export interface NewbieApi {
     refresh(id: string): Promise<AccountSummary>
     setSkin(id: string, filePath: string): Promise<AccountSummary>
     removeSkin(id: string): Promise<AccountSummary>
+  }
+  skins: {
+    search(query: string, page?: number): Promise<SkinCatalogPage>
+    applyCatalog(accountId: string, skinUrl: string): Promise<AccountSummary>
   }
   servers: {
     list(): Promise<ServerRecord[]>

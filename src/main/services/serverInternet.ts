@@ -5,7 +5,7 @@ import type {
   ServerInternetStatus,
   ServerRecord
 } from '@shared/types'
-import { getServer } from './serverStore'
+import { getServer, saveServer } from './serverStore'
 import { isServerRunning } from './serverProcess'
 import { startBoreRelay, stopBoreRelay } from './boreRelay'
 import {
@@ -196,6 +196,12 @@ async function runPlayitTunnel(relay: ActiveRelay, server: ServerRecord): Promis
     relay.address = tunnel.address
     relay.status = 'online'
     relay.message = undefined
+    const current = await getServer(server.id)
+    if (current && !current.autoPlayit) {
+      await saveServer({ ...current, autoPlayit: true }).catch((error) => {
+        logger.warn('relay', 'Could not enable automatic playit startup', error)
+      })
+    }
     logger.info('relay', `playit tunnel online for ${server.name}: ${tunnel.address}`)
   } catch (error) {
     if (relays.get(relay.serverId) !== relay) return
@@ -233,9 +239,17 @@ async function runBoreRelay(relay: ActiveRelay, server: ServerRecord): Promise<v
   }
 }
 
-export async function stopServerInternet(serverId: string): Promise<ServerInternetState> {
+export async function stopServerInternet(
+  serverId: string,
+  disableAuto = false
+): Promise<ServerInternetState> {
   const server = await getServer(serverId)
   if (!server) throw new Error('Server not found')
+  if (disableAuto && server.autoPlayit) {
+    await saveServer({ ...server, autoPlayit: false }).catch((error) => {
+      logger.warn('relay', 'Could not disable automatic playit startup', error)
+    })
+  }
   const relay = relays.get(serverId)
   if (!relay) return stateFor(server, undefined, Boolean(await getPlayitSecret()))
 
@@ -263,4 +277,18 @@ export async function stopAllServerInternet(): Promise<void> {
   const ids = [...relays.keys()]
   await Promise.all(ids.map((id) => stopServerInternet(id).catch(() => undefined)))
   await stopPlayitAgent().catch(() => undefined)
+}
+
+/**
+ * Called after a server process is ready. If playit was connected before and
+ * this server is marked for automatic sharing, open the tunnel without UI.
+ */
+export async function autoStartServerInternet(serverId: string): Promise<void> {
+  const server = await getServer(serverId)
+  if (!server?.autoPlayit || relays.has(serverId) || !isServerRunning(serverId)) return
+  const secret = await getPlayitSecret()
+  if (!secret) return
+  await startServerInternet(serverId, 'playit').catch((error) => {
+    logger.warn('relay', `Could not automatically open playit for ${server.name}`, error)
+  })
 }

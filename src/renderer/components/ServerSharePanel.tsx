@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowSquareOut,
   CheckCircle,
@@ -10,10 +11,10 @@ import {
   SpinnerGap
 } from '@phosphor-icons/react'
 import type { ServerAddressTest, ServerInternetProvider, ServerInternetState, ServerRecord } from '@shared/types'
-import { useServerInternet, useServerShare } from '../hooks/queries'
+import { useServerInternet, useServerShare, qk } from '../hooks/queries'
 import { toast } from '../store/ui'
 import { errorMessage } from '../lib/utils'
-import { Badge, Card, Input, Skeleton } from './ui/primitives'
+import { Badge, Card, Input, Skeleton, Switch } from './ui/primitives'
 import { Button } from './ui/Button'
 
 const PLAYIT_DOWNLOAD = 'https://playit.gg/download'
@@ -46,6 +47,8 @@ export function ServerSharePanel({
 }) {
   const share = useServerShare(server.id)
   const internet = useServerInternet(server.id)
+  const queryClient = useQueryClient()
+  const relayState = internet.data
   const [address, setAddress] = useState('')
   const [test, setTest] = useState<ServerAddressTest | null>(null)
   const [testing, setTesting] = useState(false)
@@ -67,10 +70,18 @@ export function ServerSharePanel({
   }, [address, storageKey])
 
   useEffect(() => {
-    if (!running) void internet.refetch()
+    const timers = [500, 2_500, 6_000].map((delay) =>
+      setTimeout(() => void internet.refetch(), delay)
+    )
+    return () => timers.forEach((timer) => clearTimeout(timer))
   }, [running, internet.refetch])
 
-  const relayState = internet.data
+  useEffect(() => {
+    if (relayState?.status !== 'online') return
+    void queryClient.invalidateQueries({ queryKey: qk.server(server.id) })
+    void queryClient.invalidateQueries({ queryKey: qk.servers })
+  }, [relayState?.status, queryClient, server.id])
+
   useEffect(() => {
     if (relayState?.status === 'online' && relayState.address) setAddress(relayState.address)
   }, [relayState?.status, relayState?.address])
@@ -102,9 +113,27 @@ export function ServerSharePanel({
     try {
       await window.newbie.servers.internetStop(server.id)
       await internet.refetch()
+      await queryClient.invalidateQueries({ queryKey: qk.server(server.id) })
       toast('success', 'Internet access closed')
     } catch (failure) {
       toast('error', 'Could not close internet access', errorMessage(failure))
+    }
+  }
+
+  const toggleAutoPlayit = async (checked: boolean): Promise<void> => {
+    try {
+      await window.newbie.servers.update(server.id, { autoPlayit: checked })
+      await queryClient.invalidateQueries({ queryKey: qk.server(server.id) })
+      await queryClient.invalidateQueries({ queryKey: qk.servers })
+      toast(
+        'success',
+        checked ? 'Automatic playit enabled' : 'Automatic playit disabled',
+        checked
+          ? 'Newbie will open the saved playit.gg tunnel whenever this server starts.'
+          : 'The tunnel will only open when you press Go online.'
+      )
+    } catch (failure) {
+      toast('error', 'Could not save that setting', errorMessage(failure))
     }
   }
 
@@ -201,6 +230,7 @@ export function ServerSharePanel({
         busy={relayBusy}
         onStart={(provider) => void startRelay(provider)}
         onStop={() => void stopRelay()}
+        onToggleAuto={(checked) => void toggleAutoPlayit(checked)}
         onCopy={(value, label) => void copy(value, label)}
         onOpen={(url) => void window.newbie.app.openExternal(url)}
       />
@@ -566,6 +596,7 @@ function InternetAccessCard({
   busy,
   onStart,
   onStop,
+  onToggleAuto,
   onCopy,
   onOpen
 }: {
@@ -576,6 +607,7 @@ function InternetAccessCard({
   busy: ServerInternetProvider | null
   onStart: (provider: ServerInternetProvider) => void
   onStop: () => void
+  onToggleAuto: (checked: boolean) => void
   onCopy: (value: string, label: string) => void
   onOpen: (url: string) => void
 }) {
@@ -777,6 +809,17 @@ function InternetAccessCard({
 
       {!running && status !== 'online' && status !== 'claiming' && status !== 'starting' && (
         <p className="mt-2 text-[10px] text-gold/80">Start the server first, then open internet access.</p>
+      )}
+
+      {playitConnected && provider !== 'bore' && (
+        <div className="mt-3 border-t border-line/40 pt-3">
+          <Switch
+            checked={Boolean(server.autoPlayit)}
+            onChange={onToggleAuto}
+            label="Open playit automatically when this server starts"
+            description="Uses the saved playit.gg connection. The tunnel still closes when the server stops."
+          />
+        </div>
       )}
     </Card>
   )

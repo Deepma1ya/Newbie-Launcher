@@ -1,6 +1,7 @@
 import path from 'node:path'
 import { promises as fs } from 'node:fs'
-import { spawn } from 'node:child_process'
+import { execFile, spawn } from 'node:child_process'
+import { promisify } from 'node:util'
 import type { BedrockServerBuild, CreateServerInput, ServerRecord, UpdateServerInput } from '@shared/types'
 import { BEDROCK_SERVER_LINKS_URL, FABRIC_META, QUILT_META } from '@shared/constants'
 import {
@@ -30,6 +31,18 @@ import { isServerRunning, stopServer } from './serverProcess'
 import { ensureDir, pathExists, sanitizeFilename } from '../util/fs'
 import { extractZip } from '../util/zip'
 import { logger } from '../util/log'
+
+const execFileAsync = promisify(execFile)
+const POWERSHELL = path.join(
+  process.env.SystemRoot || 'C:\\Windows',
+  'System32',
+  'WindowsPowerShell',
+  'v1.0',
+  'powershell.exe'
+)
+const CURL = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'curl.exe')
+const BEDROCK_DOWNLOAD_UA =
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36'
 
 interface PaperBuild {
   id: number
@@ -248,6 +261,7 @@ export async function updateServer(
   if (patch.memoryMb !== undefined && Number.isFinite(patch.memoryMb)) {
     next.memoryMb = Math.max(1024, Math.min(65536, Math.round(patch.memoryMb)))
   }
+  if (patch.autoPlayit !== undefined) next.autoPlayit = Boolean(patch.autoPlayit)
   if (patch.restartSchedule !== undefined) {
     const schedule = normalizeRestartSchedule(patch.restartSchedule)
     next.restartSchedule = {
@@ -332,6 +346,97 @@ export async function saveServerProperties(
   return Object.fromEntries(current)
 }
 
+async function isZipFile(file: string): Promise<boolean> {
+  try {
+    const handle = await fs.open(file, 'r')
+    try {
+      const buffer = Buffer.alloc(2)
+      await handle.read(buffer, 0, 2, 0)
+      return buffer[0] === 0x50 && buffer[1] === 0x4b
+    } finally {
+      await handle.close()
+    }
+  } catch {
+    return false
+  }
+}
+
+async function downloadBedrockServerZip(url: string, destination: string): Promise<void> {
+  if (await pathExists(destination)) {
+    if (!(await isZipFile(destination))) await fs.rm(destination, { force: true }).catch(() => undefined)
+    else return
+  }
+  let fetchError: unknown
+  try {
+    await downloadFile(url, destination, {
+      retries: 1,
+      headers: {
+        'User-Agent': BEDROCK_DOWNLOAD_UA,
+        Accept: 'application/octet-stream'
+      }
+    })
+    if (await isZipFile(destination)) return
+    fetchError = new Error('The downloaded file was not a ZIP archive')
+  } catch (error) {
+    fetchError = error
+  }
+  logger.warn('server', 'Node download failed; trying curl for the Bedrock server', fetchError)
+  await fs.rm(destination, { force: true }).catch(() => undefined)
+
+  let curlError: unknown
+  try {
+    await execFileAsync(
+      CURL,
+      [
+        '--location',
+        '--fail',
+        '--silent',
+        '--show-error',
+        '--retry',
+        '3',
+        '--retry-delay',
+        '2',
+        '--output',
+        destination,
+        url
+      ],
+      { windowsHide: true, timeout: 10 * 60_000, maxBuffer: 1024 * 1024 }
+    )
+    if (await isZipFile(destination)) return
+    curlError = new Error('curl returned a file that was not a ZIP archive')
+  } catch (error) {
+    curlError = error
+  }
+  logger.warn('server', 'curl download failed; trying PowerShell for the Bedrock server', curlError)
+  await fs.rm(destination, { force: true }).catch(() => undefined)
+
+  const quote = (value: string): string => value.replace(/'/g, "''")
+  try {
+    await execFileAsync(
+      POWERSHELL,
+      [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy',
+        'Bypass',
+        '-Command',
+        `$ProgressPreference = 'SilentlyContinue'; Invoke-WebRequest -Uri '${quote(url)}' -OutFile '${quote(
+          destination
+        )}' -UseBasicParsing`
+      ],
+      { windowsHide: true, timeout: 10 * 60_000, maxBuffer: 1024 * 1024 }
+    )
+    if (await isZipFile(destination)) return
+  } catch (error) {
+    throw new Error(
+      `Windows could not download the Bedrock server. ${
+        error instanceof Error ? error.message : String(error)
+      }`
+    )
+  }
+  throw new Error('Windows downloaded the Bedrock server, but the file was not a ZIP archive.')
+}
+
 async function installServerSoftware(
   dir: string,
   input: CreateServerInput,
@@ -348,7 +453,7 @@ async function installServerSoftware(
     if (!build) throw new Error('No Bedrock Dedicated Server build is available right now')
     onStage(`Downloading Bedrock Dedicated Server ${build.version}`, 30)
     const zip = path.join(dir, 'bedrock-server.zip')
-    await downloadFile(build.url, zip, { retries: 4 })
+    await downloadBedrockServerZip(build.url, zip)
     onStage('Extracting Bedrock Dedicated Server', 62)
     await extractZip(zip, dir)
     await fs.rm(zip, { force: true }).catch(() => undefined)

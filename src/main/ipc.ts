@@ -152,6 +152,7 @@ import { addOfflineAccount } from './auth/offline'
 import { addTLauncherAccount, refreshTLauncherAccount } from './auth/tlauncher'
 import { addAuthlibAccount, refreshAuthlibAccount } from './auth/authlib'
 import { removeAccountSkin, setAccountSkin } from './services/skins'
+import { applyCatalogSkin, searchSkinCatalog } from './services/skinCatalog'
 import { cancelMicrosoftFlow, refreshMicrosoftAccount, startMicrosoftFlow } from './auth/microsoft'
 import {
   getMainWindow,
@@ -297,6 +298,7 @@ const serverAllowlistEntrySchema = z.object({
 const updateServerSchema = z.object({
   name: z.string().trim().min(1).max(60).optional(),
   memoryMb: z.number().int().min(1024).max(65536).optional(),
+  autoPlayit: z.boolean().optional(),
   restartSchedule: z
     .object({
       enabled: z.boolean(),
@@ -426,6 +428,15 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.accountsRemoveSkin, async (_event, id: string) =>
     removeAccountSkin(z.string().parse(id))
   )
+  ipcMain.handle(IPC.skinsSearch, async (_event, query: unknown, page: unknown) =>
+    searchSkinCatalog(
+      z.string().max(80).parse(query ?? ''),
+      z.number().int().min(1).max(500).parse(page ?? 1)
+    )
+  )
+  ipcMain.handle(IPC.skinsApplyCatalog, async (_event, accountId: string, skinUrl: string) =>
+    applyCatalogSkin(z.string().parse(accountId), z.string().url().max(2048).parse(skinUrl))
+  )
   ipcMain.handle(IPC.accountsRefresh, async (_event, id: string): Promise<AccountSummary> => {
     const account = store.account(z.string().parse(id))
     if (!account) throw new Error('Account not found')
@@ -511,7 +522,7 @@ export function registerIpc(): void {
     )
   )
   ipcMain.handle(IPC.serversInternetStop, async (_event, id: string) =>
-    stopServerInternet(z.string().parse(id))
+    stopServerInternet(z.string().parse(id), true)
   )
   ipcMain.handle(IPC.serversAllowlist, async (_event, id: string) =>
     serverAllowlist(z.string().parse(id))

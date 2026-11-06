@@ -108,7 +108,7 @@ export function CreateServerModal({
         port,
         memoryMb,
         motd,
-        onlineMode,
+        onlineMode: edition === 'bedrock' ? true : onlineMode,
         javaPath: null,
         eulaAccepted
       })
@@ -330,12 +330,19 @@ export function CreateServerModal({
           </>
         )}
 
-        <Switch
-          checked={onlineMode}
-          onChange={setOnlineMode}
-          label="Online mode (Microsoft accounts)"
-          description="Turn off for TLauncher or offline friends. Turn on when the server is exposed to the internet."
-        />
+        {edition === 'java' ? (
+          <Switch
+            checked={onlineMode}
+            onChange={setOnlineMode}
+            label="Online mode (Microsoft accounts)"
+            description="Turn off for TLauncher or offline friends. Turn on when the server is exposed to the internet."
+          />
+        ) : (
+          <div className="rounded-xl border border-info/20 bg-info/[0.045] p-3 text-[10.5px] leading-relaxed text-muted">
+            <strong className="text-ink">Bedrock servers are always online.</strong> Players sign in with
+            their Xbox/Microsoft account, so online mode is fixed on.
+          </div>
+        )}
 
         <label className="flex cursor-pointer items-start gap-2.5 rounded-xl border border-line/55 bg-canvas/30 p-3">
           <input

@@ -179,6 +179,11 @@ export async function startServer(server: ServerRecord): Promise<ServerRuntimeSt
 
   await saveServer({ ...server, lastStartedAt: new Date().toISOString() })
   logger.info('server', `Started ${server.name} on port ${server.port}`)
+  if (server.autoPlayit) {
+    void import('./serverInternet')
+      .then(({ autoStartServerInternet }) => autoStartServerInternet(server.id))
+      .catch((error) => logger.warn('server', 'Could not auto-start the internet relay', error))
+  }
   return serverRuntimeStatus(server.id, server.port)
 }
 

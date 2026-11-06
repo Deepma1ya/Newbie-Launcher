@@ -744,6 +744,8 @@ export interface ServerRecord {
   paperBuild?: number
   /** Release or preview channel for a Bedrock Dedicated Server. */
   bedrockChannel?: BedrockChannel
+  /** Open a playit.gg tunnel automatically when this server starts. */
+  autoPlayit?: boolean
   addons: ServerAddonRecord[]
   resourcePack?: ServerResourcePackInfo
   restartSchedule?: ServerRestartSchedule
@@ -801,9 +803,27 @@ export interface ServerAllowlistEntry {
   xuid: string
 }
 
+export interface SkinCatalogEntry {
+  id: string
+  name: string
+  model: 'classic' | 'slim'
+  author?: string
+  skinUrl: string
+  renderUrl: string
+  pageUrl?: string
+}
+
+export interface SkinCatalogPage {
+  entries: SkinCatalogEntry[]
+  page: number
+  pages: number
+  total: number
+}
+
 export interface UpdateServerInput {
   name?: string
   memoryMb?: number
+  autoPlayit?: boolean
   restartSchedule?: ServerRestartSchedule
 }
 

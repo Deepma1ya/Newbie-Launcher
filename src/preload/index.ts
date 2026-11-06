@@ -45,6 +45,11 @@ const api: NewbieApi = {
     setSkin: (id, filePath) => ipcRenderer.invoke(IPC.accountsSetSkin, id, filePath),
     removeSkin: (id) => ipcRenderer.invoke(IPC.accountsRemoveSkin, id)
   },
+  skins: {
+    search: (query, page) => ipcRenderer.invoke(IPC.skinsSearch, query, page),
+    applyCatalog: (accountId, skinUrl) =>
+      ipcRenderer.invoke(IPC.skinsApplyCatalog, accountId, skinUrl)
+  },
   servers: {
     list: () => ipcRenderer.invoke(IPC.serversList),
     get: (id) => ipcRenderer.invoke(IPC.serversGet, id),
