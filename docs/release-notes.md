@@ -1,3 +1,20 @@
+# Newbie Launcher 0.1.60
+
+Minecraft's in-game settings now stay exactly the way you left them.
+
+## Performance presets no longer overwrite in-game settings
+
+- A preset is written **once** when you choose it (and for brand-new instances), not before every launch.
+- Change a preset-managed option in game (render distance, FPS cap, VSync, graphics mode, particles, shadows, mipmaps) and the launcher switches the preset to **Custom** after Minecraft exits instead of forcing the old values back.
+- **Custom** is now a preset option in Settings and on the instance page, so you can deliberately stop Newbie from touching `options.txt`.
+- Picking a preset still writes it to every Java instance immediately, with the `options.txt.newbie.bak` backup kept.
+- Options the preset does not manage (FOV, keybinds, GUI scale, language and so on) never affect the preset.
+- A toast confirms when the preset switches to Custom.
+
+## Also included
+
+- Saving one performance field no longer resets the other performance, Java or backup settings to their defaults.
+
 # Newbie Launcher 0.1.59
 
 The installer and the app can now keep Windows Defender out of the folders where Minecraft is installed and downloaded.
