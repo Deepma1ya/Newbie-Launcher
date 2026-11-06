@@ -1,3 +1,26 @@
+# Newbie Launcher 0.1.50
+
+Automatic playit sharing, Bedrock creation fixes, TLauncher management and a skin catalog.
+
+## Servers and Bedrock
+
+- A successful playit.gg tunnel now enables **Open playit automatically when this server starts**. Once playit is connected, starting the server opens the same tunnel without extra clicks. The switch is on the Share tab, and stopping sharing manually turns it off.
+- Bedrock server creation no longer shows the online-mode switch. Bedrock servers always use Xbox/Microsoft online mode, so the value is forced on.
+- Fixed **“Downloading Bedrock Dedicated Server … failed: fetch failed.”** The launcher now sends the headers minecraft.net expects and falls back to PowerShell/curl if Node’s downloader is refused. Existing partial ZIP files are detected and replaced.
+- Bedrock server creation keeps its automatic allow-list entry and player tools.
+
+## Accounts and skins
+
+- Added a **Manage TLauncher** card: refresh skin and cape, switch the active TLauncher profile, toggle texture sync, or open TLauncher.
+- Added an online **skin catalog** beside **Choose image**. Search the Photo2Skin library, browse pages, preview skins and install one directly on an offline or TLauncher profile.
+- Custom skin copy now explains exactly when a local skin is visible only to you. Capes remain managed by TLauncher and the TL Skin & Cape plugin; the catalog installs skins.
+
+## Also included
+
+- playit.gg agent 2.0.0-r1 and the `AgentVersionTooOld` fix.
+- One-click playit/bore relays from 0.1.48.
+- Hide-to-tray, `.mrpack` import, Bedrock package-data preservation and the earlier server tools.
+
 # Newbie Launcher 0.1.49
 
 Fixes the playit.gg tunnel failing after the account claim.
