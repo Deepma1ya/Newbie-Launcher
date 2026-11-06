@@ -47,7 +47,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | **Launcher updates** | Built-in updater over free GitHub Releases: background download, live progress and speed, release notes, restart-and-install, stable or beta channel |
 | **Backups** | World ZIPs before launch, with retention and size limits |
 | **Performance** | Balanced/FPS/Quality profiles written to `options.txt`, plus the Windows high-performance GPU preference for Java |
-| **Comfort** | Custom install location, hide-to-tray while a game runs with automatic reopen, close-to-tray, live console, crash hints, auto-updater |
+| **Comfort** | Home follows the last played Java or Bedrock profile, custom install location, hide-to-tray while a game runs with automatic reopen, close-to-tray, live console, crash hints, auto-updater |
 
 <p align="center">
   <img src="docs/images/browse.png" alt="Modrinth browsing" width="450" />

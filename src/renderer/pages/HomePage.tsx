@@ -1,4 +1,6 @@
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import { motion } from 'framer-motion'
 import {
   ArrowRight,
@@ -9,10 +11,12 @@ import {
   Clock,
   Cube,
   Cpu,
+  FolderOpen,
   Globe,
   HardDrives,
   Stack,
   Lightning,
+  MapTrifold,
   Package,
   Play,
   Plus,
@@ -21,9 +25,20 @@ import {
   Wrench
 } from '@phosphor-icons/react'
 import { APP_VERSION, GITHUB_URL, WEBSITE_URL } from '@shared/constants'
-import { useAccounts, useActiveInstance, useDiskUsage, useInstances, useSettings, useSystemInfo, useTasks } from '../hooks/queries'
-import { useUi } from '../store/ui'
-import { loaderLabel, formatPlaytime, relativeTime, formatBytes, cn } from '../lib/utils'
+import type { BedrockInstanceSummary } from '@shared/types'
+import {
+  useAccounts,
+  useActiveInstance,
+  useBedrockInstances,
+  useDiskUsage,
+  useInstances,
+  useSettings,
+  useSystemInfo,
+  useTasks,
+  qk
+} from '../hooks/queries'
+import { toast, useUi } from '../store/ui'
+import { loaderLabel, formatPlaytime, relativeTime, formatBytes, errorMessage, cn } from '../lib/utils'
 import { PageHeader, SectionTitle } from '../components/PageHeader'
 import { InstanceCard } from '../components/InstanceCard'
 import { TlsCapeBadge } from '../components/TlsCapeBadge'
@@ -34,8 +49,10 @@ import { Button } from '../components/ui/Button'
 
 export function HomePage() {
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const instancesQuery = useInstances()
-  const active = useActiveInstance()
+  const bedrockQuery = useBedrockInstances()
+  const activeInstance = useActiveInstance()
   const accounts = useAccounts().data ?? []
   const account = accounts.find((candidate) => candidate.active) ?? accounts[0]
   const system = useSystemInfo().data
@@ -43,9 +60,34 @@ export function HomePage() {
   const settings = useSettings().data
   const update = useUi((state) => state.update)
   const openModal = useUi((state) => state.openModal)
+  const askConfirm = useUi((state) => state.askConfirm)
   const tasks = useUi((state) => state.tasks)
   const running = useUi((state) => state.running)
   const instances = instancesQuery.data ?? []
+  const bedrockInstances = bedrockQuery.data ?? []
+  const [bedrockLaunching, setBedrockLaunching] = useState(false)
+
+  const lastJava = instances.reduce<(typeof instances)[number] | undefined>((best, instance) => {
+    if (!instance.lastPlayedAt) return best
+    return !best || Date.parse(instance.lastPlayedAt) > Date.parse(best.lastPlayedAt!)
+      ? instance
+      : best
+  }, undefined)
+  const lastBedrock = bedrockInstances.reduce<BedrockInstanceSummary | undefined>(
+    (best, instance) => {
+      if (!instance.lastPlayedAt) return best
+      return !best || Date.parse(instance.lastPlayedAt) > Date.parse(best.lastPlayedAt!)
+        ? instance
+        : best
+    },
+    undefined
+  )
+  const javaLastPlayed = lastJava?.lastPlayedAt ? Date.parse(lastJava.lastPlayedAt) : 0
+  const bedrockLastPlayed = lastBedrock?.lastPlayedAt ? Date.parse(lastBedrock.lastPlayedAt) : 0
+  const bedrockHome = lastBedrock && bedrockLastPlayed > javaLastPlayed ? lastBedrock : null
+  const active = lastJava ?? activeInstance
+  const javaIsLastPlayed = Boolean(lastJava)
+
   const addonCount = instances.reduce((total, instance) => total + instance.addons.length, 0)
   const loadoutCount = instances.reduce((total, instance) => total + instance.loadouts.length, 0)
   const pendingUpdates = active?.addons.filter((addon) => addon.latestVersionId && addon.latestVersionId !== addon.versionId).length ?? 0
@@ -64,36 +106,108 @@ export function HomePage() {
     : '0m'
   const greeting = greetingForNow()
 
+  const launchBedrockNow = async (instance: BedrockInstanceSummary): Promise<void> => {
+    setBedrockLaunching(true)
+    try {
+      await window.newbie.bedrock.launchInstance(instance.id)
+      void queryClient.invalidateQueries({ queryKey: qk.bedrockInstances })
+      toast('info', 'Starting Minecraft…', `${instance.name} is opening.`)
+    } catch (error) {
+      toast('error', 'Could not launch Bedrock', errorMessage(error))
+    } finally {
+      setBedrockLaunching(false)
+    }
+  }
+
+  const playBedrock = (): void => {
+    if (!bedrockHome) return
+    if (!bedrockHome.linked) {
+      askConfirm({
+        title: `Switch Minecraft to ${bedrockHome.name}?`,
+        description:
+          'Bedrock has one game data folder, so Newbie links the selected profile before launching.',
+        body: 'Your current worlds are kept as the protected “My Bedrock” profile, not deleted. Close Minecraft before continuing. Xbox cloud sync can still merge this profile with another PC using the same account.',
+        confirmLabel: 'Switch and play',
+        cancelLabel: 'Cancel',
+        action: () => launchBedrockNow(bedrockHome)
+      })
+      return
+    }
+    void launchBedrockNow(bedrockHome)
+  }
+
   return (
     <div>
       <div className="mb-6 flex flex-wrap items-end justify-between gap-3">
         <div>
-          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-grass/75">Java Edition</div>
+          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-grass/75">Java + Bedrock</div>
           <h1 className="mt-1.5 font-display text-[27px] font-semibold tracking-[-0.025em] text-ink">
             {greeting}
             {account ? `, ${account.username}` : ''}
           </h1>
           <p className="mt-1 text-[12.5px] text-muted">
-            {active ? `${active.name} is ready. ${formatPlaytime(active.totalPlayTimeSec)}.` : 'Set up your first instance and start playing.'}
+            {bedrockHome
+              ? `${bedrockHome.name} is ready. ${formatPlaytime(bedrockHome.totalPlayTimeSec)}.`
+              : active
+                ? `${active.name} is ready. ${formatPlaytime(active.totalPlayTimeSec)}.`
+                : 'Set up your first instance and start playing.'}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          <Button variant="secondary" onClick={() => navigate('/browse')} icon={<Books size={15} />}>
-            Browse add-ons
-          </Button>
-          <Button variant="primary" onClick={() => openModal('createInstance', true)} icon={<Plus size={15} />}>
-            New instance
-          </Button>
+          {bedrockHome ? (
+            <>
+              <Button
+                variant="secondary"
+                onClick={() => navigate('/bedrock/browse')}
+                icon={<Books size={15} />}
+              >
+                Browse Bedrock
+              </Button>
+              <Button
+                variant="primary"
+                onClick={() => navigate('/bedrock/instances')}
+                icon={<Plus size={15} />}
+              >
+                New Bedrock
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => navigate('/browse')} icon={<Books size={15} />}>
+                Browse add-ons
+              </Button>
+              <Button variant="primary" onClick={() => openModal('createInstance', true)} icon={<Plus size={15} />}>
+                New instance
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
-      {instancesQuery.isLoading ? (
+      {instancesQuery.isLoading || bedrockQuery.isLoading ? (
         <div className="grid gap-5 lg:grid-cols-[1.55fr_0.8fr]">
           <Skeleton className="h-[300px]" />
           <Skeleton className="h-[300px]" />
         </div>
-      ) : active ? (
+      ) : bedrockHome || active ? (
         <div className="grid gap-5 lg:grid-cols-[1.55fr_0.8fr]">
+          {bedrockHome ? (
+            <BedrockHomeCard
+              instance={bedrockHome}
+              launching={bedrockLaunching}
+              onPlay={playBedrock}
+              onManage={() => navigate('/bedrock/instances')}
+              onBrowse={() => navigate('/bedrock/browse')}
+              onFolder={() =>
+                void window.newbie.bedrock
+                  .openInstance(bedrockHome.id)
+                  .catch((error) =>
+                    toast('error', 'Could not open the Bedrock folder', errorMessage(error))
+                  )
+              }
+              onInstall={() => navigate('/bedrock')}
+            />
+          ) : active ? (
           <Card className="relative overflow-hidden p-0">
             <div
               className="relative min-h-[300px] p-6 sm:p-7"
@@ -115,7 +229,7 @@ export function HomePage() {
                         activeRunning && 'animate-pulse'
                       )}
                     />
-                    Active instance
+                    {javaIsLastPlayed ? 'Last played' : 'Active instance'}
                   </div>
                   <div className="flex flex-wrap items-center gap-1.5">
                     <Badge tone="green">
@@ -148,7 +262,7 @@ export function HomePage() {
                         </h2>
                         <p className="mt-1 text-[11px] text-muted">
                           {activeRunning ? 'Running now' : 'Ready to play'}
-                          <span className="mx-1.5 text-muted/40">·</span>
+                          {' · '}
                           {activeLoadout ? `Loadout: ${activeLoadout.name}` : 'No active loadout'}
                         </p>
                       </div>
@@ -223,6 +337,7 @@ export function HomePage() {
               </div>
             </div>
           </Card>
+          ) : null}
 
           <div className="space-y-4">
             <Card className="p-4">
@@ -434,6 +549,170 @@ function SystemRow({ icon, label, value, ok }: { icon: React.ReactNode; label: s
       <span className="text-muted">{label}</span>
       <span className="ml-auto text-right font-medium text-ink/85">{value}</span>
     </div>
+  )
+}
+
+function BedrockHomeCard({
+  instance,
+  launching,
+  onPlay,
+  onManage,
+  onBrowse,
+  onFolder,
+  onInstall
+}: {
+  instance: BedrockInstanceSummary
+  launching: boolean
+  onPlay: () => void
+  onManage: () => void
+  onBrowse: () => void
+  onFolder: () => void
+  onInstall: () => void
+}) {
+  const playtime =
+    instance.totalPlayTimeSec >= 60
+      ? formatPlaytime(instance.totalPlayTimeSec).replace(/ played$/, '')
+      : '0m'
+  const channel = instance.channel === 'preview' ? 'Preview' : 'Release'
+  return (
+    <Card className="relative overflow-hidden p-0">
+      <div
+        className="relative min-h-[300px] p-6 sm:p-7"
+        style={{
+          background: `radial-gradient(120% 130% at 82% 10%, ${instance.color}33 0%, transparent 55%), linear-gradient(135deg, #131D15 0%, #0B100C 65%)`
+        }}
+      >
+        <div className="block-art absolute inset-0 opacity-[0.14]" />
+        <div
+          className="absolute -right-12 -top-20 h-56 w-56 rotate-12 rounded-3xl opacity-[0.07]"
+          style={{ backgroundColor: instance.color }}
+        />
+        <div className="relative">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2 text-[9px] font-semibold uppercase tracking-[0.18em] text-grass/70">
+              <span
+                className={cn(
+                  'h-1.5 w-1.5 rounded-full bg-grass',
+                  instance.running && 'animate-pulse'
+                )}
+              />
+              Last played · Bedrock
+            </div>
+            <div className="flex flex-wrap items-center gap-1.5">
+              <Badge tone={instance.installed ? 'green' : 'gold'}>
+                <span
+                  className={cn(
+                    'h-1.5 w-1.5 rounded-full',
+                    instance.installed ? 'bg-grass' : 'bg-gold',
+                    instance.running && 'animate-pulse'
+                  )}
+                />
+                {instance.running ? 'Running' : instance.installed ? 'Ready' : 'Not installed'}
+              </Badge>
+              <Badge tone="neutral">Minecraft for Windows</Badge>
+              <Badge tone="neutral">{channel}</Badge>
+            </div>
+          </div>
+
+          <div className="mt-4 grid gap-6 xl:grid-cols-[minmax(0,1fr)_260px]">
+            <div className="min-w-0">
+              <div className="flex items-start gap-4">
+                <span
+                  className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-white/10"
+                  style={{ backgroundColor: `${instance.color}22`, color: instance.color }}
+                >
+                  <Cube size={30} weight="fill" />
+                </span>
+                <div className="min-w-0">
+                  <h2 className="truncate font-display text-[27px] font-semibold tracking-[-0.02em] text-ink">
+                    {instance.name}
+                  </h2>
+                  <p className="mt-1 text-[11px] text-muted">
+                    {instance.running
+                      ? 'Running now'
+                      : instance.linked
+                        ? 'Linked to Minecraft'
+                        : 'Switches on Play'}
+                    {' · '}
+                    {instance.worldCount} {instance.worldCount === 1 ? 'world' : 'worlds'} ·{' '}
+                    {instance.contentCount} {instance.contentCount === 1 ? 'pack' : 'packs'}
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 self-center">
+              <MiniStat
+                icon={<MapTrifold size={12} />}
+                label="Worlds"
+                value={String(instance.worldCount)}
+                detail="In this profile"
+              />
+              <MiniStat
+                icon={<Package size={12} />}
+                label="Packs"
+                value={String(instance.contentCount)}
+                detail="Installed"
+              />
+              <MiniStat
+                icon={<Clock size={12} />}
+                label="Playtime"
+                value={playtime}
+                detail="Total"
+              />
+              <MiniStat
+                icon={<CalendarBlank size={12} />}
+                label="Last played"
+                value={instance.lastPlayedAt ? relativeTime(instance.lastPlayedAt) : 'Never'}
+                detail={instance.lastPlayedAt ? 'Last session' : 'Not played yet'}
+              />
+            </div>
+          </div>
+
+          <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-white/[0.07] pt-5">
+            <div className="w-[148px]">
+              <Button
+                variant="primary"
+                size="lg"
+                fullWidth
+                loading={launching}
+                disabled={!instance.installed || instance.running}
+                onClick={onPlay}
+                icon={<Play size={16} weight="fill" />}
+              >
+                Play
+              </Button>
+            </div>
+            <Button
+              variant="secondary"
+              size="lg"
+              className="w-[148px]"
+              onClick={onManage}
+              icon={<Cube size={15} />}
+            >
+              Manage
+            </Button>
+            <div className="ml-auto flex flex-wrap items-center gap-2">
+              <Button variant="ghost" onClick={onFolder} icon={<FolderOpen size={15} />}>
+                Folder
+              </Button>
+              <Button variant="ghost" onClick={onBrowse} icon={<Books size={15} />}>
+                Browse
+              </Button>
+            </div>
+          </div>
+          {!instance.installed && (
+            <button
+              onClick={onInstall}
+              className="mt-2 flex items-center gap-1 text-left text-[10px] text-gold/80 hover:text-gold"
+            >
+              Install the {channel.toLowerCase()} package from the Bedrock page
+              <ArrowRight size={11} />
+            </button>
+          )}
+        </div>
+      </div>
+    </Card>
   )
 }
 

@@ -849,6 +849,15 @@ export async function launchBedrock(
     )
     bedrockSessionInstanceId = instanceId ?? null
     bedrockSessionStartedAt = Date.now()
+    if (instanceId) {
+      await store
+        .updateBedrockInstance(instanceId, (current) => {
+          current.lastPlayedAt = new Date().toISOString()
+        })
+        .catch((error) => {
+          logger.warn('bedrock', 'Could not mark the Bedrock instance as played', error)
+        })
+    }
     gameSessionStarted()
     monitorBedrockSession()
   } finally {
