@@ -1052,3 +1052,14 @@ export interface WindowState {
   maximized: boolean
   focused: boolean
 }
+
+export interface DefenderExclusionsState {
+  /** Windows and the helper script are both available. */
+  supported: boolean
+  /** Every launcher folder is covered by the exclusions recorded in the data folder. */
+  applied: boolean
+  appliedAt: string | null
+  paths: string[]
+  installDir: string
+  dataDir: string
+}

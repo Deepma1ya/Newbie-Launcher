@@ -13,11 +13,12 @@ import {
   Info,
   Key,
   Lightning,
+  ShieldCheck,
   Sparkle,
   Trash,
   WarningCircle
 } from '@phosphor-icons/react'
-import type { PerformanceProfile } from '@shared/types'
+import type { DefenderExclusionsState, PerformanceProfile } from '@shared/types'
 import { APP_VERSION, GITHUB_URL, JAVA_MAJORS, WEBSITE_URL } from '@shared/constants'
 import { useDiskUsage, useJavaRuntimes, useSettings, useSystemInfo, qk } from '../hooks/queries'
 import { toast } from '../store/ui'
@@ -47,13 +48,47 @@ export function SettingsPage() {
     requested && sections.some((entry) => entry.value === requested) ? requested : 'general'
   )
   const [busy, setBusy] = useState(false)
+  const [defender, setDefender] = useState<DefenderExclusionsState | null>(null)
+  const [defenderBusy, setDefenderBusy] = useState(false)
   const queryClient = useQueryClient()
 
   useEffect(() => {
     if (requested && sections.some((entry) => entry.value === requested)) setSection(requested)
   }, [requested])
 
+  useEffect(() => {
+    let active = true
+    void window.newbie.defender
+      .status()
+      .then((next) => {
+        if (active) setDefender(next)
+      })
+      .catch(() => undefined)
+    return () => {
+      active = false
+    }
+  }, [settings?.dataDir])
+
   if (!settings) return null
+
+  const changeDefender = async (apply: boolean): Promise<void> => {
+    setDefenderBusy(true)
+    try {
+      const next = apply ? await window.newbie.defender.apply() : await window.newbie.defender.remove()
+      setDefender(next)
+      toast(
+        'success',
+        apply ? 'Windows Defender exclusions added' : 'Windows Defender exclusions removed',
+        apply
+          ? 'The launcher and its download folders are no longer scanned.'
+          : 'Defender can scan the launcher folders again.'
+      )
+    } catch (error) {
+      toast('error', 'Windows Defender was not changed', errorMessage(error))
+    } finally {
+      setDefenderBusy(false)
+    }
+  }
 
   const save = async (patch: Parameters<typeof window.newbie.settings.update>[0]): Promise<void> => {
     try {
@@ -126,6 +161,59 @@ export function SettingsPage() {
                     Open folder
                   </Button>
                 </div>
+              </Card>
+
+              <Card className="space-y-4 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-grass/20 bg-grass/10 text-grass">
+                    <ShieldCheck size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h2 className="font-display text-[15px] font-semibold text-ink">Windows Defender</h2>
+                    <p className="mt-0.5 text-[11.5px] leading-relaxed text-muted">
+                      Skip antivirus scans for the launcher and the folders where Minecraft, Java runtimes, mods and updates
+                      are downloaded. Windows asks for administrator approval once.
+                    </p>
+                  </div>
+                  <Badge tone={defender?.applied ? 'green' : 'neutral'}>
+                    {defender?.applied ? 'Active' : 'Off'}
+                  </Badge>
+                </div>
+                <div className="rounded-xl border border-line/50 bg-canvas/35 p-3">
+                  <div className="flex items-center gap-2 text-[10px] uppercase tracking-[0.08em] text-muted/65">
+                    <FolderSimple size={13} /> Excluded folders
+                  </div>
+                  <div className="mt-1 space-y-0.5">
+                    {(defender?.paths ?? [settings.dataDir]).map((entry) => (
+                      <div key={entry} className="break-all font-mono text-[10.5px] leading-relaxed text-ink/80">
+                        {entry}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    loading={defenderBusy}
+                    onClick={() => void changeDefender(true)}
+                    icon={<ShieldCheck size={14} />}
+                  >
+                    {defender?.applied ? 'Update exclusions' : 'Add exclusions'}
+                  </Button>
+                  {defender?.applied && (
+                    <Button variant="secondary" size="sm" disabled={defenderBusy} onClick={() => void changeDefender(false)}>
+                      Remove
+                    </Button>
+                  )}
+                  <span className="ml-auto text-[10.5px] text-muted">
+                    {defender?.applied ? 'Launcher folders are excluded' : 'Not added yet'}
+                  </span>
+                </div>
+                <p className="text-[10.5px] leading-relaxed text-muted/80">
+                  These are standard Microsoft Defender folder exclusions and only apply to Defender. Third-party antivirus
+                  apps keep their own settings. The uninstaller offers to remove them again.
+                </p>
               </Card>
 
               <Card className="space-y-4 p-5">

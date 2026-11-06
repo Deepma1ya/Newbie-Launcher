@@ -31,6 +31,7 @@ import type {
 import { store } from './services/store'
 import { getSettings, updateSettings, changeDataDir } from './services/settings'
 import { paths } from './services/paths'
+import { applyDefenderExclusions, defenderState, removeDefenderExclusions } from './services/defender'
 import { safeJoin, slugify } from './util/fs'
 import {
   listMinecraftVersions,
@@ -424,6 +425,10 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.settingsRevealDataDir, async () => {
     await shell.openPath(paths.data)
   })
+
+  ipcMain.handle(IPC.defenderStatus, async () => defenderState())
+  ipcMain.handle(IPC.defenderApply, async () => applyDefenderExclusions())
+  ipcMain.handle(IPC.defenderRemove, async () => removeDefenderExclusions())
 
   ipcMain.handle(IPC.accountsList, (): AccountSummary[] => store.accounts())
   ipcMain.handle(IPC.accountsAddOffline, async (_event, username: string) =>

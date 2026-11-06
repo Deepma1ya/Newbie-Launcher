@@ -56,6 +56,7 @@ import type {
   ServerAddonType,
   ServerSearchQuery,
   CreateServerInput,
+  DefenderExclusionsState,
   ServerShareInfo,
   ServerAddressTest,
   UpdateServerInput,
@@ -87,6 +88,10 @@ export const IPC = {
   settingsPickDataDir: 'settings:pick-data-dir',
   settingsChangeDataDir: 'settings:change-data-dir',
   settingsRevealDataDir: 'settings:reveal-data-dir',
+
+  defenderStatus: 'defender:status',
+  defenderApply: 'defender:apply',
+  defenderRemove: 'defender:remove',
 
   accountsList: 'accounts:list',
   accountsAddOffline: 'accounts:add-offline',
@@ -266,6 +271,11 @@ export interface NewbieApi {
     pickDataDir(): Promise<string | null>
     changeDataDir(dir: string): Promise<LauncherSettings>
     revealDataDir(): Promise<void>
+  }
+  defender: {
+    status(): Promise<DefenderExclusionsState>
+    apply(): Promise<DefenderExclusionsState>
+    remove(): Promise<DefenderExclusionsState>
   }
   accounts: {
     list(): Promise<AccountSummary[]>

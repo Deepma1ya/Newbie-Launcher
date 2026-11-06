@@ -32,6 +32,11 @@ const api: NewbieApi = {
     changeDataDir: (dir) => ipcRenderer.invoke(IPC.settingsChangeDataDir, dir),
     revealDataDir: () => ipcRenderer.invoke(IPC.settingsRevealDataDir)
   },
+  defender: {
+    status: () => ipcRenderer.invoke(IPC.defenderStatus),
+    apply: () => ipcRenderer.invoke(IPC.defenderApply),
+    remove: () => ipcRenderer.invoke(IPC.defenderRemove)
+  },
   accounts: {
     list: () => ipcRenderer.invoke(IPC.accountsList),
     addOffline: (username) => ipcRenderer.invoke(IPC.accountsAddOffline, username),
