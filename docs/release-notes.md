@@ -1,3 +1,16 @@
+# Newbie Launcher 0.1.49
+
+Fixes the playit.gg tunnel failing after the account claim.
+
+## playit.gg
+
+- The launcher was bundling playit agent `1.2.0`; playit.gg now requires a newer agent, so tunnel creation failed with `AgentVersionTooOld` after login.
+- Updated the bundled agent to the current signed `2.0.0-r1` build.
+- A local agent version marker now invalidates older cached agents automatically, so existing installs download the new build on the next attempt.
+- The saved playit claim secret is reused; you do not need to claim the account again.
+- If playit.gg ever rejects a future agent version, the UI now says to update Newbie Launcher instead of showing the raw API error.
+- The Java `bore.pub` quick relay is unchanged.
+
 # Newbie Launcher 0.1.48
 
 Servers can now be opened to the internet without a public IP, router access or port forwarding.
