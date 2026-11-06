@@ -1,3 +1,20 @@
+# Newbie Launcher 0.1.62
+
+Library maintenance is faster: select several add-ons at once and enable, disable or delete them together.
+
+## Multi-select in the library
+
+- Every installed add-on now has a checkbox, in both **Library** and an instance's **Add-ons** tab.
+- Selecting one or more shows a toolbar with **Enable**, **Disable**, **Delete**, **Select more** and **Clear**.
+- Bulk delete asks for confirmation, deletes the installed files, keeps cached offline copies, leaves worlds alone and removes the add-ons from loadouts.
+- Bulk enable and disable rename the installed files exactly like the per-row switch.
+- The toolbar is blocked while Minecraft or another launcher task is running.
+- Selection clears automatically when you switch instance, type filter or search.
+
+## Fixed
+
+- The three-dot menu on a disabled add-on is no longer transparent. Only the icon and text are dimmed now, so the menu and its actions stay fully readable.
+
 # Newbie Launcher 0.1.61
 
 Uninstalling Newbie Launcher now leaves nothing behind.
