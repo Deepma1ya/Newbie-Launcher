@@ -1,3 +1,42 @@
+# Newbie Launcher 0.1.54
+
+Bedrock now has instances, a marketplace and a library.
+
+## Bedrock instances
+
+- The Bedrock section has its own **Instances**, **Browse** and **Library** pages, matching the Java setup.
+- Each instance keeps its own worlds, resource packs, behavior packs and skin packs.
+- Bedrock only reads one `com.mojang` folder, so Newbie links the selected instance with a Windows junction before launch.
+- The first switch keeps the existing data as a protected **My Bedrock** profile. Your worlds are moved aside, never deleted.
+- Newbie asks before the first profile switch and refuses to switch or install while Minecraft is running.
+- Instance cards show world and pack counts, playtime and the active/linked state. The protected My Bedrock profile cannot be deleted.
+- Instances share the installed Minecraft for Windows package. The Bedrock page still installs, replaces or uninstalls the game version itself.
+- Xbox cloud sync can still merge a profile with another PC using the same Microsoft account. Bedrock profiles are local to this PC.
+
+## Bedrock marketplace
+
+- Browse [MCPEDL](https://mcpedl.com/) add-ons, maps, texture packs and skin packs from inside Newbie.
+- Search, sort by trending or popularity, page through results and open a project detail window with its versions.
+- Install directly into the selected instance. Add-ons are unpacked into `resource_packs`, `behavior_packs` or `skin_packs`; worlds go to `minecraftWorlds`.
+- Installed packs appear in Minecraft's global resource settings or the world's resource/behavior pack screen. Newbie installs them but does not force them on.
+- Reinstalling the same pack UUID replaces the old copy instead of stacking duplicates.
+- Archive paths are validated, downloads are capped at 1 GB and unpacked archives at 4 GB.
+- Minecraft colour codes (`§`) in pack names are stripped for the library.
+- MCPEDL is a third-party community catalog. Newbie is not affiliated with MCPEDL.
+
+## Bedrock library
+
+- Review every installed pack and world for the selected instance.
+- Filter by resource packs, behavior packs, skin packs, worlds or templates.
+- Open the source page or remove an item from that instance only.
+
+## Also included
+
+- The Bedrock page shows which instance Play will use and links to the profile manager.
+- Moving the launcher data folder is blocked while a managed Bedrock instance is linked, so the game's junction cannot point at an old copy.
+- Existing version install, uninstall and Defender exclusion behaviour is unchanged.
+- Java and Bedrock still keep separate accounts, settings and data folders.
+
 # Newbie Launcher 0.1.53
 
 TLauncher accounts can now be managed without leaving Newbie.
