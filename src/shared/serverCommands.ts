@@ -1684,7 +1684,275 @@ export const SERVER_COMMAND_SNIPPETS: ServerCommandSnippet[] = [
   }
 ]
 
+const BEDROCK_COMMAND_SNIPPETS: ServerCommandSnippet[] = [
+  {
+    id: 'bedrock-list',
+    category: 'Basics',
+    label: 'List online players',
+    description: 'Show connected Bedrock players and the player limit.',
+    command: 'list'
+  },
+  {
+    id: 'bedrock-say',
+    category: 'Chat & display',
+    label: 'Broadcast a message',
+    description: 'Send a chat message to every player.',
+    command: 'say {message}',
+    fields: [text('message', 'Message', 'Server restarting soon')]
+  },
+  {
+    id: 'bedrock-difficulty',
+    category: 'Basics',
+    label: 'Set difficulty',
+    description: 'Change the world difficulty.',
+    command: 'difficulty {difficulty}',
+    fields: [
+      select('difficulty', 'Difficulty', [
+        { value: 'peaceful', label: 'Peaceful' },
+        { value: 'easy', label: 'Easy' },
+        { value: 'normal', label: 'Normal' },
+        { value: 'hard', label: 'Hard' }
+      ])
+    ]
+  },
+  {
+    id: 'bedrock-time-set',
+    category: 'World',
+    label: 'Set time of day',
+    description: 'Jump the world to day, noon, night or midnight.',
+    command: 'time set {time}',
+    fields: [
+      select('time', 'Time', [
+        { value: 'day', label: 'Day' },
+        { value: 'noon', label: 'Noon' },
+        { value: 'night', label: 'Night' },
+        { value: 'midnight', label: 'Midnight' }
+      ])
+    ]
+  },
+  {
+    id: 'bedrock-weather',
+    category: 'World',
+    label: 'Set weather',
+    description: 'Clear the sky or start rain/thunder.',
+    command: 'weather {weather}',
+    fields: [
+      select('weather', 'Weather', [
+        { value: 'clear', label: 'Clear' },
+        { value: 'rain', label: 'Rain' },
+        { value: 'thunder', label: 'Thunder' }
+      ])
+    ]
+  },
+  {
+    id: 'bedrock-gamerule',
+    category: 'World',
+    label: 'Set a gamerule',
+    description: 'Change a Bedrock world rule such as showcoordinates or keepinventory.',
+    command: 'gamerule {rule} {value}',
+    fields: [
+      text('rule', 'Gamerule', 'showcoordinates'),
+      select('value', 'Value', [
+        { value: 'true', label: 'True' },
+        { value: 'false', label: 'False' }
+      ])
+    ]
+  },
+  {
+    id: 'bedrock-setworldspawn',
+    category: 'World',
+    label: 'Set world spawn',
+    description: 'Move the world spawn point.',
+    command: 'setworldspawn {position}',
+    fields: [coords()]
+  },
+  {
+    id: 'bedrock-tp',
+    category: 'Players',
+    label: 'Teleport a player',
+    description: 'Teleport a Bedrock player to coordinates.',
+    command: 'tp {player} {position}',
+    fields: [target('player', 'Player', '@p'), coords()]
+  },
+  {
+    id: 'bedrock-gamemode',
+    category: 'Players',
+    label: 'Set game mode',
+    description: 'Change a player’s game mode.',
+    command: 'gamemode {mode} {player}',
+    fields: [
+      select('mode', 'Game mode', [
+        { value: 'survival', label: 'Survival' },
+        { value: 'creative', label: 'Creative' },
+        { value: 'adventure', label: 'Adventure' },
+        { value: 'spectator', label: 'Spectator' }
+      ]),
+      target('player', 'Player', '@p')
+    ]
+  },
+  {
+    id: 'bedrock-give',
+    category: 'Blocks & items',
+    label: 'Give an item',
+    description: 'Give a Bedrock item to a player.',
+    command: 'give {player} {item} {amount}',
+    fields: [
+      target('player', 'Player', '@p'),
+      text('item', 'Item', 'diamond'),
+      num('amount', 'Amount', 1, 1, 64)
+    ]
+  },
+  {
+    id: 'bedrock-clear',
+    category: 'Blocks & items',
+    label: 'Clear inventory',
+    description: 'Remove every item from a player.',
+    command: 'clear {player}',
+    fields: [target('player', 'Player', '@p')]
+  },
+  {
+    id: 'bedrock-effect',
+    category: 'Players',
+    label: 'Apply an effect',
+    description: 'Give a Bedrock effect for a number of seconds.',
+    command: 'effect {player} {effect} {seconds} {amplifier}',
+    fields: [
+      target('player', 'Player', '@p'),
+      text('effect', 'Effect', 'speed'),
+      num('seconds', 'Seconds', 30, 1, 1000000),
+      num('amplifier', 'Amplifier', 0, 0, 255)
+    ]
+  },
+  {
+    id: 'bedrock-op',
+    category: 'Moderation',
+    label: 'Make a player an operator',
+    description: 'Grant operator permissions to a Bedrock player.',
+    command: 'op {player}',
+    fields: [text('player', 'Player name', '', { required: true })]
+  },
+  {
+    id: 'bedrock-deop',
+    category: 'Moderation',
+    label: 'Remove operator',
+    description: 'Remove operator permissions from a player.',
+    command: 'deop {player}',
+    fields: [text('player', 'Player name', '', { required: true })]
+  },
+  {
+    id: 'bedrock-permissions',
+    category: 'Moderation',
+    label: 'Set player permission',
+    description: 'Set a player as visitor, member or operator.',
+    command: 'permissions set {player} {role}',
+    fields: [
+      text('player', 'Player name', '', { required: true }),
+      select('role', 'Role', [
+        { value: 'visitor', label: 'Visitor' },
+        { value: 'member', label: 'Member' },
+        { value: 'operator', label: 'Operator' }
+      ])
+    ]
+  },
+  {
+    id: 'bedrock-kick',
+    category: 'Moderation',
+    label: 'Kick a player',
+    description: 'Disconnect a player with a reason.',
+    command: 'kick {player} {reason}',
+    fields: [
+      text('player', 'Player name', '', { required: true }),
+      text('reason', 'Reason', 'Kicked by an operator')
+    ],
+    danger: true
+  },
+  {
+    id: 'bedrock-ban',
+    category: 'Moderation',
+    label: 'Ban a player',
+    description: 'Ban a player from the Bedrock server.',
+    command: 'ban {player} {reason}',
+    fields: [
+      text('player', 'Player name', '', { required: true }),
+      text('reason', 'Reason', 'Banned by an operator')
+    ],
+    danger: true
+  },
+  {
+    id: 'bedrock-pardon',
+    category: 'Moderation',
+    label: 'Pardon a player',
+    description: 'Remove a Bedrock ban.',
+    command: 'pardon {player}',
+    fields: [text('player', 'Player name', '', { required: true })]
+  },
+  {
+    id: 'bedrock-allowlist-add',
+    category: 'Players',
+    label: 'Allow a player',
+    description: 'Add a player to the Bedrock allow list by gamertag.',
+    command: 'allowlist add {player}',
+    fields: [text('player', 'Player name', '', { required: true })]
+  },
+  {
+    id: 'bedrock-allowlist-remove',
+    category: 'Players',
+    label: 'Remove from allow list',
+    description: 'Remove a player from the Bedrock allow list.',
+    command: 'allowlist remove {player}',
+    fields: [text('player', 'Player name', '', { required: true })]
+  },
+  {
+    id: 'bedrock-allowlist-list',
+    category: 'Players',
+    label: 'Show allow list',
+    description: 'Print every player allowed to join.',
+    command: 'allowlist list'
+  },
+  {
+    id: 'bedrock-save-hold',
+    category: 'Server admin',
+    label: 'Save hold',
+    description: 'Pause world saving and prepare a consistent backup.',
+    command: 'save hold'
+  },
+  {
+    id: 'bedrock-save-query',
+    category: 'Server admin',
+    label: 'Save query',
+    description: 'Show which files are ready while a save is held.',
+    command: 'save query'
+  },
+  {
+    id: 'bedrock-save-resume',
+    category: 'Server admin',
+    label: 'Save resume',
+    description: 'Resume world saving after a backup.',
+    command: 'save resume'
+  },
+  {
+    id: 'bedrock-changesetting',
+    category: 'Server admin',
+    label: 'Change a server setting',
+    description: 'Apply a Bedrock server.properties setting at runtime.',
+    command: 'changesetting {setting} {value}',
+    fields: [
+      text('setting', 'Setting', 'allow-cheats'),
+      text('value', 'Value', 'true')
+    ]
+  },
+  {
+    id: 'bedrock-stop',
+    category: 'Server admin',
+    label: 'Stop the server',
+    description: 'Save and shut down the Bedrock server.',
+    command: 'stop',
+    danger: true
+  }
+]
+
 export function snippetsForServer(type: ServerType): ServerCommandSnippet[] {
+  if (type === 'bedrock') return BEDROCK_COMMAND_SNIPPETS
   return SERVER_COMMAND_SNIPPETS.filter((snippet) => !snippet.types || snippet.types.includes(type))
 }
 

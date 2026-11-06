@@ -25,6 +25,20 @@ describe('server command snippets', () => {
     expect(snippetsForServer('paper').some((snippet) => snippet.id === 'forge-tps')).toBe(false)
   })
 
+  it('uses Bedrock-specific commands for Bedrock servers', () => {
+    const bedrock = snippetsForServer('bedrock')
+    expect(bedrock.some((snippet) => snippet.id === 'bedrock-allowlist-add')).toBe(true)
+    expect(bedrock.some((snippet) => snippet.id === 'bedrock-save-hold')).toBe(true)
+    expect(bedrock.some((snippet) => snippet.id === 'bedrock-changesetting')).toBe(true)
+    expect(bedrock.some((snippet) => snippet.id === 'tps')).toBe(false)
+    expect(bedrock.some((snippet) => snippet.id === 'whitelist-add')).toBe(false)
+    for (const snippet of bedrock) {
+      for (const field of snippet.fields ?? []) {
+        expect(snippet.command).toContain(`{${field.key}}`)
+      }
+    }
+  })
+
   it('keeps every snippet id unique and every required field present', () => {
     const ids = new Set<string>()
     for (const snippet of SERVER_COMMAND_SNIPPETS) {

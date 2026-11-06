@@ -37,11 +37,6 @@ import { logger } from '../util/log'
 import { gameSessionEnded, gameSessionStarted } from '../window'
 
 const execFileAsync = promisify(execFile)
-const TASKLIST = path.join(
-  process.env.SystemRoot || 'C:\\Windows',
-  'System32',
-  'tasklist.exe'
-)
 const POWERSHELL = path.join(
   process.env.SystemRoot || 'C:\\Windows',
   'System32',
@@ -70,7 +65,9 @@ interface ExclusionMarker {
 }
 
 const activeDownloads = new Map<string, AbortController>()
-let bedrockSessionToken = 0
+let bedrockMonitorActive = false
+let bedrockMonitorTimer: NodeJS.Timeout | null = null
+let bedrockLaunching = false
 
 function bedrockRoot(): string {
   return path.join(paths.data, 'bedrock')
@@ -809,49 +806,65 @@ export async function launchBedrock(channel: BedrockChannel): Promise<void> {
   if (!target) {
     throw new Error(`${channel === 'preview' ? 'Minecraft Preview' : 'Minecraft'} is not installed yet.`)
   }
+  if (bedrockMonitorActive || bedrockLaunching) {
+    throw new Error('Minecraft is already running or starting.')
+  }
   if (installations.some((entry) => entry.running)) {
     throw new Error('Minecraft is already running.')
   }
 
-  const fix = await applyBedrockFix(target)
-  if (fix.cancelled) {
-    throw new Error(
-      'The Windows administrator prompt was cancelled, so the Bedrock fix files were not copied. Minecraft was not started.'
-    )
-  }
-  if (fix.failures.length > 0) {
-    const first = fix.failures[0]!
-    const extra = fix.failures.length > 1 ? ` (+${fix.failures.length - 1} more)` : ''
-    throw new Error(
-      `Windows could not copy ${fix.failures.length} Bedrock fix file${
-        fix.failures.length === 1 ? '' : 's'
-      }: ${first.path}${extra}. ${first.error} Minecraft was not started.`
-    )
-  }
+  bedrockLaunching = true
+  try {
+    const fix = await applyBedrockFix(target)
+    if (fix.cancelled) {
+      throw new Error(
+        'The Windows administrator prompt was cancelled, so the Bedrock fix files were not copied. Minecraft was not started.'
+      )
+    }
+    if (fix.failures.length > 0) {
+      const first = fix.failures[0]!
+      const extra = fix.failures.length > 1 ? ` (+${fix.failures.length - 1} more)` : ''
+      throw new Error(
+        `Windows could not copy ${fix.failures.length} Bedrock fix file${
+          fix.failures.length === 1 ? '' : 's'
+        }: ${first.path}${extra}. ${first.error} Minecraft was not started.`
+      )
+    }
 
-  const targetUri = `shell:appsFolder\\${target.familyName}!${target.appId}`
-  const script = `Start-Process '${escapePowerShell(targetUri)}'`
-  const result = await runPowerShell(script, 90_000)
-  if (result.code !== 0) {
-    throw new Error(`Windows could not start Minecraft. ${cleanPowerShellError(result)}`)
+    const targetUri = `shell:appsFolder\\${target.familyName}!${target.appId}`
+    const script = `Start-Process '${escapePowerShell(targetUri)}'`
+    const result = await runPowerShell(script, 90_000)
+    if (result.code !== 0) {
+      throw new Error(`Windows could not start Minecraft. ${cleanPowerShellError(result)}`)
+    }
+    logger.info(
+      'bedrock',
+      `Launched ${target.packageFullName}${fix.copied > 0 ? ` after copying ${fix.copied} fix file(s)` : ''}`
+    )
+    gameSessionStarted()
+    monitorBedrockSession()
+  } finally {
+    bedrockLaunching = false
   }
-  logger.info(
-    'bedrock',
-    `Launched ${target.packageFullName}${fix.copied > 0 ? ` after copying ${fix.copied} fix file(s)` : ''}`
-  )
-  gameSessionStarted()
-  monitorBedrockSession()
 }
 
 async function bedrockClientRunning(): Promise<boolean> {
   if (process.platform !== 'win32') return false
   try {
+    // A closed UWP window can leave a suspended Minecraft.Windows process
+    // behind. Require a real game window instead of trusting the process list.
+    const script = `
+$games = @(Get-Process -Name 'Minecraft.Windows' -ErrorAction SilentlyContinue | Where-Object {
+  $_.MainWindowHandle -ne 0 -and $_.MainWindowTitle
+})
+if ($games.Count -gt 0) { 'running' } else { '' }
+`
     const { stdout } = await execFileAsync(
-      TASKLIST,
-      ['/FI', 'IMAGENAME eq Minecraft.Windows.exe', '/NH'],
+      POWERSHELL,
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
       { windowsHide: true, timeout: 15_000, maxBuffer: 1024 * 1024 }
     )
-    return /Minecraft\.Windows\.exe/i.test(String(stdout ?? ''))
+    return /running/i.test(String(stdout ?? ''))
   } catch {
     return false
   }
@@ -859,23 +872,33 @@ async function bedrockClientRunning(): Promise<boolean> {
 
 /**
  * Bedrock is launched through Windows rather than a child process we own.
- * Poll the Minecraft process so the launcher can come back after it closes.
+ * Poll the game window so the launcher can come back after it closes.
  */
 function monitorBedrockSession(): void {
-  const token = ++bedrockSessionToken
-  const deadline = Date.now() + 90_000
+  if (bedrockMonitorActive) return
+  bedrockMonitorActive = true
+  const startedAt = Date.now()
   let seen = false
+  logger.info('bedrock', 'Started monitoring the Bedrock game window')
   const poll = async (): Promise<void> => {
-    if (token !== bedrockSessionToken) return
+    if (!bedrockMonitorActive) return
     if (await bedrockClientRunning()) {
       seen = true
-    } else if (seen || Date.now() > deadline) {
+    } else if (seen || Date.now() - startedAt > 90_000) {
+      bedrockMonitorActive = false
+      if (bedrockMonitorTimer) {
+        clearTimeout(bedrockMonitorTimer)
+        bedrockMonitorTimer = null
+      }
+      logger.info('bedrock', 'Bedrock game window closed; restoring the launcher')
       gameSessionEnded()
       return
     }
-    setTimeout(() => void poll(), 4_000)
+    if (bedrockMonitorActive) {
+      bedrockMonitorTimer = setTimeout(() => void poll(), 3_000)
+    }
   }
-  setTimeout(() => void poll(), 2_000)
+  bedrockMonitorTimer = setTimeout(() => void poll(), 1_500)
 }
 
 /**

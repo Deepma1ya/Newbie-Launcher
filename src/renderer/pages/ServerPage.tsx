@@ -338,13 +338,7 @@ function ServerConsole({
           onRefresh={() => void refreshStats()}
         />
       )}
-      <div
-        className={
-          isBedrock
-            ? 'space-y-3'
-            : 'grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]'
-        }
-      >
+      <div className="grid items-start gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="min-w-0 space-y-3">
           <Card className="p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
@@ -435,13 +429,11 @@ function ServerConsole({
             </Card>
           )}
         </div>
-        {!isBedrock && (
-          <ServerCommandSnippets
-            serverType={server.type}
-            players={statsQuery.data?.players ?? []}
-            onInsert={insert}
-          />
-        )}
+        <ServerCommandSnippets
+          serverType={server.type}
+          players={statsQuery.data?.players ?? []}
+          onInsert={insert}
+        />
       </div>
     </div>
   )
