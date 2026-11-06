@@ -1,3 +1,18 @@
+# Newbie Launcher 0.1.61
+
+Uninstalling Newbie Launcher now leaves nothing behind.
+
+## Full uninstall
+
+- The uninstaller opens with a random farewell quote and a checked **delete game files, instances, worlds, mods, servers, backups, caches and launcher settings** option.
+- The data folder is read from `bootstrap.json`, so a data folder you moved is removed as well; the old default folder is cleaned too.
+- Electron caches (`%APPDATA%\newbie-launcher`), update downloads (`%LOCALAPPDATA%\newbie-launcher`), the Bedrock fix staging folder (`%PUBLIC%\NewbieLauncher`) and leftover temporary helper files are removed.
+- Windows Defender exclusions added by Newbie are removed with one last administrator prompt. If that prompt is cancelled, the game data is still deleted and the uninstaller tells you the exclusions were kept.
+- High-performance GPU preference entries that point at Newbie's own Java runtimes are removed.
+- Unchecking the option keeps the game files and launcher settings.
+- Scripted uninstalls can keep their data with `/KEEPAPPDATA`.
+- The installed Minecraft and Bedrock game packages themselves are never touched.
+
 # Newbie Launcher 0.1.60
 
 Minecraft's in-game settings now stay exactly the way you left them.
