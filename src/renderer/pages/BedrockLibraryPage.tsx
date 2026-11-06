@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowSquareOut,
@@ -41,10 +41,11 @@ const filters: { value: 'all' | BedrockContentKind; label: string }[] = [
 
 export function BedrockLibraryPage() {
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const queryClient = useQueryClient()
   const instances = useBedrockInstances().data ?? []
   const active = instances.find((instance) => instance.active) ?? instances[0] ?? null
-  const [targetId, setTargetId] = useState('')
+  const [targetId, setTargetId] = useState(params.get('instance') ?? '')
   const target = instances.find((instance) => instance.id === targetId) ?? active
   const contentQuery = useBedrockContent(target?.id)
   const content = contentQuery.data ?? []
@@ -55,6 +56,13 @@ export function BedrockLibraryPage() {
   useEffect(() => {
     if (!targetId && active) setTargetId(active.id)
   }, [active, targetId])
+
+  const selectTarget = (id: string): void => {
+    setTargetId(id)
+    const next = new URLSearchParams(params)
+    next.set('instance', id)
+    setParams(next, { replace: true })
+  }
 
   const filtered = useMemo(
     () => content.filter((item) => filter === 'all' || item.kind === filter),
@@ -118,7 +126,7 @@ export function BedrockLibraryPage() {
           <div className="mb-5 flex flex-wrap items-center gap-3">
             <Select
               value={target.id}
-              onChange={setTargetId}
+              onChange={selectTarget}
               className="w-[220px]"
               aria-label="Bedrock instance"
             >

@@ -10,6 +10,7 @@ import { HomePage } from './pages/HomePage'
 import { InstancesPage } from './pages/InstancesPage'
 import { BedrockPage } from './pages/BedrockPage'
 import { BedrockInstancesPage } from './pages/BedrockInstancesPage'
+import { BedrockInstancePage } from './pages/BedrockInstancePage'
 import { BedrockBrowsePage } from './pages/BedrockBrowsePage'
 import { BedrockLibraryPage } from './pages/BedrockLibraryPage'
 import { ServersPage } from './pages/ServersPage'
@@ -107,6 +108,7 @@ export default function App() {
               <Route path="/instances/:id" element={<InstancePage />} />
               <Route path="/bedrock" element={<BedrockPage />} />
               <Route path="/bedrock/instances" element={<BedrockInstancesPage />} />
+              <Route path="/bedrock/instances/:id" element={<BedrockInstancePage />} />
               <Route path="/bedrock/browse" element={<BedrockBrowsePage />} />
               <Route path="/bedrock/library" element={<BedrockLibraryPage />} />
               <Route path="/servers" element={<ServersPage />} />

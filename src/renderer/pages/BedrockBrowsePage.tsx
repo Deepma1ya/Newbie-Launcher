@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowClockwise,
@@ -51,10 +51,11 @@ const types = [
 
 export function BedrockBrowsePage() {
   const navigate = useNavigate()
+  const [params, setParams] = useSearchParams()
   const queryClient = useQueryClient()
   const instances = useBedrockInstances().data ?? []
   const active = instances.find((instance) => instance.active) ?? instances[0] ?? null
-  const [targetId, setTargetId] = useState('')
+  const [targetId, setTargetId] = useState(params.get('instance') ?? '')
   const target = instances.find((instance) => instance.id === targetId) ?? active
   const content = useBedrockContent(target?.id).data ?? []
   const installedSlugs = useMemo(
@@ -74,6 +75,13 @@ export function BedrockBrowsePage() {
   useEffect(() => {
     if (!targetId && active) setTargetId(active.id)
   }, [active, targetId])
+
+  const selectTarget = (id: string): void => {
+    setTargetId(id)
+    const next = new URLSearchParams(params)
+    next.set('instance', id)
+    setParams(next, { replace: true })
+  }
 
   useEffect(() => {
     const timer = setTimeout(() => setDebounced(query.trim()), 380)
@@ -185,7 +193,7 @@ export function BedrockBrowsePage() {
             <div className="flex flex-wrap items-center gap-2">
               <Select
                 value={target.id}
-                onChange={setTargetId}
+                onChange={selectTarget}
                 className="w-[210px]"
                 aria-label="Target Bedrock instance"
               >

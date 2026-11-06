@@ -176,7 +176,21 @@ export function BedrockInstancesPage() {
             const launching = busy === `launch:${instance.id}`
             const switching = busy === `switch:${instance.id}`
             return (
-              <Card key={instance.id} className="flex flex-col p-4">
+              <Card
+                key={instance.id}
+                role="button"
+                tabIndex={0}
+                aria-label={`Manage ${instance.name}`}
+                className="flex cursor-pointer flex-col p-4 transition-colors hover:border-grass/25"
+                onClick={() => navigate(`/bedrock/instances/${instance.id}`)}
+                onKeyDown={(event) => {
+                  if (event.target !== event.currentTarget) return
+                  if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault()
+                    navigate(`/bedrock/instances/${instance.id}`)
+                  }
+                }}
+              >
                 <div className="flex items-start gap-3">
                   <span
                     className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-white/10"
@@ -235,7 +249,10 @@ export function BedrockInstancesPage() {
                     size="sm"
                     loading={launching}
                     disabled={!instance.installed || Boolean(busy) || anyRunning}
-                    onClick={() => void launch(instance.id)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      launch(instance.id)
+                    }}
                     icon={<Play size={13} weight="fill" />}
                   >
                     Play
@@ -246,7 +263,10 @@ export function BedrockInstancesPage() {
                       size="sm"
                       loading={switching}
                       disabled={Boolean(busy) || anyRunning}
-                      onClick={() => void switchTo(instance.id)}
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        switchTo(instance.id)
+                      }}
                     >
                       Use
                     </Button>
@@ -255,7 +275,10 @@ export function BedrockInstancesPage() {
                     variant="ghost"
                     size="sm"
                     disabled={Boolean(busy)}
-                    onClick={() => void window.newbie.bedrock.openInstance(instance.id)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      void window.newbie.bedrock.openInstance(instance.id)
+                    }}
                     icon={<FolderOpen size={13} />}
                   >
                     Folder
@@ -266,14 +289,20 @@ export function BedrockInstancesPage() {
                     className="ml-auto text-danger/80 hover:text-danger"
                     loading={deleting === instance.id}
                     disabled={Boolean(busy) || anyRunning || instance.adopted || instance.linked}
-                    onClick={() => void remove(instance.id)}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      remove(instance.id)
+                    }}
                     icon={<Trash size={13} />}
                     aria-label={`Delete ${instance.name}`}
                   />
                 </div>
                 {!instance.installed && (
                   <button
-                    onClick={() => navigate('/bedrock')}
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      navigate('/bedrock')
+                    }}
                     className="mt-2 flex items-center gap-1 text-left text-[10px] text-gold/80 hover:text-gold"
                   >
                     Install the {instance.channel === 'preview' ? 'Preview' : 'release'} package
