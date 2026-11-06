@@ -1,3 +1,20 @@
+# Newbie Launcher 0.1.59
+
+The installer and the app can now keep Windows Defender out of the folders where Minecraft is installed and downloaded.
+
+## Windows Defender exclusions
+
+- The installer has a new page with a checked **Exclude the launcher and game folders from Microsoft Defender scans** checkbox.
+- The installer adds exclusions for the launcher install folder, the launcher data folder (game files, caches, downloads and Java runtimes) and the electron-updater cache.
+- Windows asks for administrator approval once; declining or cancelling the prompt never blocks the install.
+- **Settings → General → Windows Defender** shows the covered folders and lets you add, update or remove the exclusions later, for example after moving the data folder.
+- The uninstaller offers to remove the exclusions again. Updates do not ask again.
+- Exclusions only apply to Microsoft Defender; third-party antivirus apps keep their own settings.
+
+## Also included
+
+- The installer skips the new page when the exclusions are already recorded, so reinstalling and interactive updates stay silent.
+
 # Newbie Launcher 0.1.58
 
 Clicking a Bedrock instance now opens a management page.
