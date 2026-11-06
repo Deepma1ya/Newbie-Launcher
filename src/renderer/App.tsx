@@ -9,6 +9,9 @@ import { LogoMark } from './components/Sidebar'
 import { HomePage } from './pages/HomePage'
 import { InstancesPage } from './pages/InstancesPage'
 import { BedrockPage } from './pages/BedrockPage'
+import { BedrockInstancesPage } from './pages/BedrockInstancesPage'
+import { BedrockBrowsePage } from './pages/BedrockBrowsePage'
+import { BedrockLibraryPage } from './pages/BedrockLibraryPage'
 import { ServersPage } from './pages/ServersPage'
 import { ServerPage } from './pages/ServerPage'
 import { InstancePage } from './pages/InstancePage'
@@ -103,6 +106,9 @@ export default function App() {
               <Route path="/instances" element={<InstancesPage />} />
               <Route path="/instances/:id" element={<InstancePage />} />
               <Route path="/bedrock" element={<BedrockPage />} />
+              <Route path="/bedrock/instances" element={<BedrockInstancesPage />} />
+              <Route path="/bedrock/browse" element={<BedrockBrowsePage />} />
+              <Route path="/bedrock/library" element={<BedrockLibraryPage />} />
               <Route path="/servers" element={<ServersPage />} />
               <Route path="/servers/:id" element={<ServerPage />} />
               <Route path="/browse" element={<BrowsePage />} />

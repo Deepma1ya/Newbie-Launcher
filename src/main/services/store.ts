@@ -4,6 +4,7 @@ import { promises as fs } from 'node:fs'
 import type {
   AccountSummary,
   AuthAccount,
+  BedrockInstance,
   Instance,
   LauncherSettings,
   Loadout,
@@ -26,6 +27,8 @@ interface PersistedState {
   accounts: StoredAccount[]
   activeAccountId: string | null
   instances: Instance[]
+  bedrockInstances: BedrockInstance[]
+  bedrockActiveInstanceId: string | null
   recentTasks: TaskRecord[]
 }
 
@@ -66,6 +69,8 @@ const EMPTY_STATE: PersistedState = {
   accounts: [],
   activeAccountId: null,
   instances: [],
+  bedrockInstances: [],
+  bedrockActiveInstanceId: null,
   recentTasks: []
 }
 
@@ -91,6 +96,10 @@ class AppStore {
         accounts: Array.isArray(loaded.accounts) ? loaded.accounts : [],
         activeAccountId: loaded.activeAccountId ?? null,
         instances: Array.isArray(loaded.instances) ? loaded.instances.map(normaliseInstance) : [],
+        bedrockInstances: Array.isArray(loaded.bedrockInstances)
+          ? loaded.bedrockInstances.map(normaliseBedrockInstance)
+          : [],
+        bedrockActiveInstanceId: loaded.bedrockActiveInstanceId ?? null,
         recentTasks: Array.isArray(loaded.recentTasks) ? loaded.recentTasks.slice(-60) : []
       }
     }
@@ -196,6 +205,54 @@ class AppStore {
     this.scheduleSave()
   }
 
+  bedrockInstances(): BedrockInstance[] {
+    return structuredClone(this.state.bedrockInstances)
+  }
+
+  bedrockInstance(id: string): BedrockInstance | null {
+    const found = this.state.bedrockInstances.find((candidate) => candidate.id === id)
+    return found ? structuredClone(found) : null
+  }
+
+  async addBedrockInstance(instance: BedrockInstance): Promise<BedrockInstance> {
+    this.state.bedrockInstances.push(instance)
+    this.scheduleSave()
+    return structuredClone(instance)
+  }
+
+  async updateBedrockInstance(
+    id: string,
+    mutator: (instance: BedrockInstance) => void
+  ): Promise<BedrockInstance> {
+    const instance = this.state.bedrockInstances.find((candidate) => candidate.id === id)
+    if (!instance) throw new Error('Bedrock instance not found')
+    mutator(instance)
+    this.scheduleSave()
+    return structuredClone(instance)
+  }
+
+  async removeBedrockInstance(id: string): Promise<void> {
+    this.state.bedrockInstances = this.state.bedrockInstances.filter(
+      (candidate) => candidate.id !== id
+    )
+    if (this.state.bedrockActiveInstanceId === id) {
+      this.state.bedrockActiveInstanceId = this.state.bedrockInstances[0]?.id ?? null
+    }
+    this.scheduleSave()
+  }
+
+  bedrockActiveInstanceId(): string | null {
+    return this.state.bedrockActiveInstanceId
+  }
+
+  async setActiveBedrockInstance(id: string | null): Promise<void> {
+    if (id && !this.state.bedrockInstances.some((candidate) => candidate.id === id)) {
+      throw new Error('Bedrock instance not found')
+    }
+    this.state.bedrockActiveInstanceId = id
+    this.scheduleSave()
+  }
+
   recentTasks(): TaskRecord[] {
     return structuredClone(this.state.recentTasks)
   }
@@ -217,6 +274,11 @@ class AppStore {
     for (const instance of this.state.instances) {
       if (instance.gameDir.startsWith(oldDir)) {
         instance.gameDir = instance.gameDir.replace(oldDir, newDir)
+      }
+    }
+    for (const instance of this.state.bedrockInstances) {
+      if (instance.dataDir.startsWith(oldDir)) {
+        instance.dataDir = instance.dataDir.replace(oldDir, newDir)
       }
     }
     this.scheduleSave()
@@ -250,6 +312,17 @@ function mergeSettings(patch?: Partial<LauncherSettings> | DeepPartial<LauncherS
     backups: { ...DEFAULT_SETTINGS.backups, ...(patch?.backups ?? {}) }
   }
   return merged
+}
+
+function normaliseBedrockInstance(instance: BedrockInstance): BedrockInstance {
+  return {
+    ...instance,
+    channel: instance.channel === 'preview' ? 'preview' : 'release',
+    color: instance.color || '#6EE7A0',
+    totalPlayTimeSec: instance.totalPlayTimeSec ?? 0,
+    contentCount: instance.contentCount ?? 0,
+    worldCount: instance.worldCount ?? 0
+  }
 }
 
 function normaliseInstance(instance: Instance): Instance {

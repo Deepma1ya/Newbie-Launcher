@@ -7,6 +7,7 @@ import { ensureLayout, paths, setDataDir } from './paths'
 import { directorySize, pathExists } from '../util/fs'
 import { logger } from '../util/log'
 import { runningStates } from './launch'
+import { assertBedrockDataDirMovable } from './bedrockInstances'
 
 export function getSettings(): LauncherSettings {
   return store.settings()
@@ -37,6 +38,7 @@ export async function changeDataDir(target: string): Promise<LauncherSettings> {
   if (runningStates().length > 0) {
     throw new Error('Close Minecraft before moving the launcher data folder.')
   }
+  await assertBedrockDataDirMovable()
   const existing = await fs.readdir(resolved).catch(() => [])
   const allowedBootstrap = existing.filter((entry) => entry !== 'bootstrap.json' && entry !== 'logs')
   if (allowedBootstrap.length > 0) {

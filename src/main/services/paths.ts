@@ -77,6 +77,12 @@ export const paths = {
   get instances() {
     return path.join(dataDir(), 'instances')
   },
+  get bedrock() {
+    return path.join(dataDir(), 'bedrock')
+  },
+  get bedrockInstances() {
+    return path.join(dataDir(), 'bedrock', 'instances')
+  },
   get servers() {
     return path.join(dataDir(), 'servers')
   },
@@ -131,6 +137,12 @@ export const paths = {
   instanceLogs(id: string) {
     return path.join(dataDir(), 'instances', id, 'logs')
   },
+  bedrockInstance(id: string) {
+    return path.join(dataDir(), 'bedrock', 'instances', id)
+  },
+  bedrockInstanceData(id: string) {
+    return path.join(dataDir(), 'bedrock', 'instances', id, 'com.mojang')
+  },
   server(id: string) {
     return path.join(dataDir(), 'servers', id)
   },
@@ -161,6 +173,7 @@ export async function ensureLayout(dir: string): Promise<void> {
     ensureDir(path.join(dir, 'runtimes')),
     ensureDir(path.join(dir, 'meta')),
     ensureDir(path.join(dir, 'instances')),
+    ensureDir(path.join(dir, 'bedrock', 'instances')),
     ensureDir(path.join(dir, 'servers')),
     ensureDir(path.join(dir, 'cache', 'addons')),
     ensureDir(path.join(dir, 'cache', 'downloads')),

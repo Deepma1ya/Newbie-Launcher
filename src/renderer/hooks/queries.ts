@@ -3,6 +3,11 @@ import type {
   AccountSummary,
   AddonType,
   BackupRecord,
+  BedrockContentItem,
+  BedrockInstanceSummary,
+  BedrockMarketDetail,
+  BedrockMarketSearchInput,
+  BedrockMarketSearchPage,
   BedrockServerBuild,
   Instance,
   JavaRuntime,
@@ -53,6 +58,10 @@ export const qk = {
   servers: ['servers'] as const,
   server: (id: string) => ['servers', id] as const,
   bedrockServerVersions: ['servers', 'bedrock-versions'] as const,
+  bedrockInstances: ['bedrock', 'instances'] as const,
+  bedrockContent: (id: string) => ['bedrock', 'instances', id, 'content'] as const,
+  bedrockMarket: (input: BedrockMarketSearchInput) => ['bedrock', 'market', input] as const,
+  bedrockMarketDetail: (slug: string) => ['bedrock', 'market', slug] as const,
   serverStatuses: ['servers', 'statuses'] as const,
   serverStatus: (id: string) => ['servers', id, 'status'] as const,
   serverStats: (id: string) => ['servers', id, 'stats'] as const,
@@ -97,6 +106,45 @@ export function useActiveInstance(): Instance | null {
 
 export function useServers(): UseQueryResult<ServerRecord[]> {
   return useQuery({ queryKey: qk.servers, queryFn: () => api.servers.list() })
+}
+
+export function useBedrockInstances(): UseQueryResult<BedrockInstanceSummary[]> {
+  return useQuery({
+    queryKey: qk.bedrockInstances,
+    queryFn: () => api.bedrock.instances(),
+    staleTime: 5_000
+  })
+}
+
+export function useBedrockContent(id?: string | null): UseQueryResult<BedrockContentItem[]> {
+  return useQuery({
+    queryKey: qk.bedrockContent(id ?? ''),
+    queryFn: () => (id ? api.bedrock.content(id) : Promise.resolve([])),
+    enabled: Boolean(id),
+    staleTime: 5_000
+  })
+}
+
+export function useBedrockMarketSearch(
+  input: BedrockMarketSearchInput,
+  enabled = true
+): UseQueryResult<BedrockMarketSearchPage> {
+  return useQuery({
+    queryKey: qk.bedrockMarket(input),
+    queryFn: () => api.bedrock.marketSearch(input),
+    enabled,
+    staleTime: 60_000,
+    placeholderData: (previous) => previous
+  })
+}
+
+export function useBedrockMarketDetail(slug?: string | null): UseQueryResult<BedrockMarketDetail> {
+  return useQuery({
+    queryKey: qk.bedrockMarketDetail(slug ?? ''),
+    queryFn: () => api.bedrock.marketDetail(slug!),
+    enabled: Boolean(slug),
+    staleTime: 5 * 60_000
+  })
 }
 
 export function useBedrockServerBuilds(enabled = true): UseQueryResult<BedrockServerBuild[]> {

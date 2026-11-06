@@ -43,7 +43,12 @@ const navSections: NavSection[] = [
   },
   {
     label: 'Minecraft Bedrock',
-    items: [{ to: '/bedrock', label: 'Bedrock', icon: Cube }]
+    items: [
+      { to: '/bedrock', label: 'Bedrock', icon: Cube, end: true },
+      { to: '/bedrock/instances', label: 'Instances', icon: SquaresFour },
+      { to: '/bedrock/browse', label: 'Browse', icon: Compass },
+      { to: '/bedrock/library', label: 'Library', icon: Books }
+    ]
   },
   {
     label: 'Minecraft Servers',

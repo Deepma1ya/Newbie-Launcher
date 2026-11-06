@@ -598,6 +598,107 @@ export interface BedrockWindowsAccount {
   xboxAppInstalled: boolean
 }
 
+export type BedrockContentKind = 'resourcepack' | 'behaviorpack' | 'skinpack' | 'world' | 'template'
+
+export interface BedrockContentSource {
+  provider: 'mcpedl'
+  slug: string
+  title: string
+  url?: string
+  imageUrl?: string
+}
+
+export interface BedrockInstance {
+  id: string
+  name: string
+  channel: BedrockChannel
+  color: string
+  createdAt: string
+  lastPlayedAt?: string
+  totalPlayTimeSec: number
+  /** The com.mojang folder owned by this profile. */
+  dataDir: string
+  /** Owns the worlds that existed before Newbie started switching profiles. */
+  adopted?: boolean
+  contentCount: number
+  worldCount: number
+}
+
+export interface BedrockInstanceSummary extends BedrockInstance {
+  active: boolean
+  linked: boolean
+  installed: boolean
+  running: boolean
+}
+
+export interface BedrockSwitchResult {
+  instance: BedrockInstanceSummary
+  migrated: boolean
+  defaultInstance?: BedrockInstanceSummary
+}
+
+export interface BedrockContentItem {
+  id: string
+  kind: BedrockContentKind
+  name: string
+  folder: string
+  uuid?: string
+  version?: string
+  installedAt?: string
+  source?: BedrockContentSource
+}
+
+export interface BedrockMarketSearchInput {
+  query?: string
+  typeId: number
+  page?: number
+  sort?: 'popularity_week' | 'popularity_all'
+}
+
+export interface BedrockMarketProject {
+  slug: string
+  title: string
+  summary: string
+  imageUrl?: string
+  author?: string
+  downloads: number
+  rating?: number
+  typeId: number
+  typeLabel: string
+  tags: string[]
+  updatedAt?: string
+  url: string
+}
+
+export interface BedrockMarketDownload {
+  id: number
+  label: string
+  filename: string
+  url: string
+  sizeBytes?: number
+  publishedAt?: string
+  kind: BedrockContentKind | 'addon' | 'unknown'
+}
+
+export interface BedrockMarketDetail extends BedrockMarketProject {
+  description: string
+  versions: BedrockMarketDownload[]
+}
+
+export interface BedrockMarketSearchPage {
+  items: BedrockMarketProject[]
+  page: number
+  pageCount: number
+  total: number
+}
+
+export interface BedrockMarketInstallResult {
+  installed: BedrockContentItem[]
+  content: BedrockContentItem[]
+  contentCount: number
+  worldCount: number
+}
+
 export interface BedrockProgress {
   id: string
   version: string

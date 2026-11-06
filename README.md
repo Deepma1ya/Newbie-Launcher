@@ -10,7 +10,7 @@ A calm, stable Minecraft **Java Edition** and **Bedrock (Minecraft for Windows)*
   <img src="docs/images/home.png" alt="Newbie Launcher home screen" width="900" />
 </p>
 
-> Java and Bedrock are kept separate. Java supports mods, loadouts and Modrinth; Bedrock is the official Minecraft for Windows package and is not moddable.
+> Java and Bedrock are kept separate. Java supports mods, loadouts and Modrinth; Bedrock is the official Minecraft for Windows package and uses add-ons, not Java mods.
 
 ## Download
 
@@ -29,7 +29,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 | Area | What Newbie handles |
 | --- | --- |
 | **Game versions** | Every Mojang release, snapshot, beta and alpha, installed from official metadata and verified files |
-| **Bedrock** | Minecraft for Windows versions: download official signed GDK packages, install through Windows/Gaming Services, launch the installed package, and switch versions without touching Java |
+| **Bedrock** | Minecraft for Windows versions plus separate Bedrock instances, an MCPEDL catalog for add-ons, maps, texture packs and skin packs, and a per-instance library. Java and Bedrock stay independent. |
 | **Loaders** | Vanilla, Fabric, Quilt, Forge and NeoForge. Forge/NeoForge run the official installer and capture its result |
 | **Servers** | One-click local Java servers plus official Bedrock Dedicated Server, with a live console, GUI settings, Modrinth add-ons, server resource packs, scheduled restarts and one-click internet relays |
 | **Sharing** | Play with friends through playit.gg, port forwarding, Radmin VPN, ngrok or Cloudflare. Detects LAN/Radmin/public addresses, shows difficulty levels, and lets you copy and test the address. |
@@ -67,16 +67,23 @@ Newbie updates itself through the public GitHub Releases feed. There is no updat
 
 ## Bedrock
 
-The **Bedrock** page downloads and launches Minecraft for Windows separately from Java instances.
+The **Bedrock** section downloads and launches Minecraft for Windows separately from Java instances. It now has its own **Instances**, **Browse** and **Library** pages.
 
 - Lists release and preview builds from the public MIT-licensed [GdkLinks](https://github.com/MinecraftBedrockArchiver/GdkLinks) catalog.
 - Downloads the full Microsoft-signed GDK package with progress, resume and cancel.
 - Installs through Windows/Gaming Services with `Add-AppxPackage`. A different version replaces the installed package; Windows preserves worlds and settings.
 - Launches the installed package through its real Windows app identity.
 - Manage installed release/preview packages directly: **Folder** opens the package install location (falling back to the game data folder when Windows protects `WindowsApps`), and **Uninstall** removes only the selected channel while preserving worlds, Marketplace content and settings. Uninstall and version replacement move the package data aside before removal and restore it afterwards.
+- **Bedrock instances:** keep separate worlds, resource packs, behavior packs and skin packs. Bedrock has one game data folder, so Newbie switches it with a Windows junction when you play. The first switch keeps your existing data as the protected **My Bedrock** profile instead of deleting it. Instances share the installed Minecraft for Windows package; use the version manager to change that package. Close Minecraft before switching; Xbox cloud sync can still merge a profile with another PC using the same account.
+- **Bedrock marketplace:** browse [MCPEDL](https://mcpedl.com/) add-ons, maps, texture packs and skin packs, pick a file version and install it directly into the selected Bedrock instance. Downloads go to the instance's `com.mojang` folder, so packs and worlds stay separated. Enable the packs in Minecraft's global resource settings or the world's resource/behavior pack screen; Newbie installs them but does not force them on. The **Library** page lists installed content and removes it without touching another profile.
 - Requires a Microsoft account with **Minecraft for Windows** or **Game Pass**. The full package is listed; the in-game 90-minute trial still applies if the account does not own the game. Newbie does not bypass licensing.
 - The Bedrock page shows your Newbie Microsoft account next to the Windows/Xbox account found on the PC, with a button to open the Xbox app. Minecraft for Windows always uses the account signed into the Xbox app, so sign in there with the same Microsoft account before playing. Newbie cannot pass its Java token into the Store app.
-- Bedrock is not moddable. Modrinth, loadouts, shaders and repair are Java-only.
+- Bedrock uses add-ons, not Java mods. Modrinth, loadouts, shaders, datapacks and repair remain Java-only.
+
+<p align="center">
+  <img src="docs/images/bedrock-instances.png" alt="Bedrock instances with separate worlds and packs" width="450" />
+  <img src="docs/images/bedrock-marketplace.png" alt="Bedrock marketplace with MCPEDL add-ons, maps, texture packs and skin packs" width="450" />
+</p>
 
 <p align="center">
   <img src="docs/images/bedrock.png" alt="Bedrock version manager with installed version and download list" width="900" />
@@ -250,6 +257,6 @@ The TLauncher installer and its feature surface were inspected with REA for inte
 
 ## Legal
 
-Newbie Launcher is an independent project, not affiliated with Mojang, Microsoft, TLauncher or Modrinth. “Minecraft” is a trademark of Mojang Synergies AB. Mods and packs remain the property of their authors and are downloaded from Modrinth's official API.
+Newbie Launcher is an independent project, not affiliated with Mojang, Microsoft, TLauncher, Modrinth or MCPEDL. “Minecraft” is a trademark of Mojang Synergies AB. Mods and packs remain the property of their authors and are downloaded from Modrinth's official API.
 
 Licensed under the [MIT License](LICENSE).

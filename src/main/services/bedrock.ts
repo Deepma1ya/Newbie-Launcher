@@ -29,6 +29,7 @@ import {
 } from '@shared/bedrock'
 import { emit } from './events'
 import { fetchJson } from './http'
+import { store } from './store'
 import { paths, freeSpaceMb } from './paths'
 import { applyBedrockFix, bedrockFixFolder } from './bedrockFix'
 import { preservePackageData, restorePreservedData } from './bedrockData'
@@ -68,6 +69,8 @@ const activeDownloads = new Map<string, AbortController>()
 let bedrockMonitorActive = false
 let bedrockMonitorTimer: NodeJS.Timeout | null = null
 let bedrockLaunching = false
+let bedrockSessionInstanceId: string | null = null
+let bedrockSessionStartedAt = 0
 
 function bedrockRoot(): string {
   return path.join(paths.data, 'bedrock')
@@ -800,7 +803,10 @@ export async function installBedrockVersion(id: string, replaceInstalled = false
   }
 }
 
-export async function launchBedrock(channel: BedrockChannel): Promise<void> {
+export async function launchBedrock(
+  channel: BedrockChannel,
+  instanceId?: string
+): Promise<void> {
   const installations = await detectBedrockInstallations()
   const target = installations.find((entry) => entry.channel === channel)
   if (!target) {
@@ -841,11 +847,21 @@ export async function launchBedrock(channel: BedrockChannel): Promise<void> {
       'bedrock',
       `Launched ${target.packageFullName}${fix.copied > 0 ? ` after copying ${fix.copied} fix file(s)` : ''}`
     )
+    bedrockSessionInstanceId = instanceId ?? null
+    bedrockSessionStartedAt = Date.now()
     gameSessionStarted()
     monitorBedrockSession()
   } finally {
     bedrockLaunching = false
   }
+}
+
+export async function isBedrockGameRunning(): Promise<boolean> {
+  return bedrockClientRunning()
+}
+
+export function isBedrockSessionActive(): boolean {
+  return bedrockMonitorActive || bedrockLaunching
 }
 
 async function bedrockClientRunning(): Promise<boolean> {
@@ -891,6 +907,7 @@ function monitorBedrockSession(): void {
         bedrockMonitorTimer = null
       }
       logger.info('bedrock', 'Bedrock game window closed; restoring the launcher')
+      void recordBedrockPlaytime(seen)
       gameSessionEnded()
       return
     }
@@ -899,6 +916,24 @@ function monitorBedrockSession(): void {
     }
   }
   bedrockMonitorTimer = setTimeout(() => void poll(), 1_500)
+}
+
+async function recordBedrockPlaytime(seen: boolean): Promise<void> {
+  const instanceId = bedrockSessionInstanceId
+  const startedAt = bedrockSessionStartedAt
+  bedrockSessionInstanceId = null
+  bedrockSessionStartedAt = 0
+  if (!seen || !instanceId || startedAt <= 0) return
+  const seconds = Math.max(0, Math.round((Date.now() - startedAt) / 1000))
+  if (seconds <= 0) return
+  await store
+    .updateBedrockInstance(instanceId, (current) => {
+      current.totalPlayTimeSec = (current.totalPlayTimeSec ?? 0) + seconds
+      current.lastPlayedAt = new Date().toISOString()
+    })
+    .catch((error) => {
+      logger.warn('bedrock', 'Could not record Bedrock playtime', error)
+    })
 }
 
 /**

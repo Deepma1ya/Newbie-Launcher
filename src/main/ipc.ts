@@ -10,6 +10,8 @@ import type {
   AddonType,
   AppInfo,
   BackupRecord,
+  BedrockChannel,
+  BedrockMarketSearchInput,
   CreateInstanceInput,
   CreateServerInput,
   JavaRuntime,
@@ -148,6 +150,23 @@ import {
   openXboxApp,
   uninstallBedrockVersion
 } from './services/bedrock'
+import {
+  bedrockInstanceContent,
+  createBedrockInstance,
+  launchBedrockInstance,
+  listBedrockInstances,
+  openBedrockInstanceFolder,
+  prepareBedrockLaunch,
+  removeBedrockInstance,
+  switchBedrockInstance,
+  updateBedrockInstance
+} from './services/bedrockInstances'
+import {
+  getBedrockMarketDetail,
+  installBedrockMarketProject,
+  removeBedrockInstanceContent,
+  searchBedrockMarket
+} from './services/bedrockMarket'
 import { addOfflineAccount } from './auth/offline'
 import { addTLauncherAccount, refreshTLauncherAccount } from './auth/tlauncher'
 import { addAuthlibAccount, refreshAuthlibAccount } from './auth/authlib'
@@ -1053,9 +1072,11 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.bedrockUninstall, (_event, channel: unknown) =>
     uninstallBedrockVersion(bedrockChannelSchema.parse(channel))
   )
-  ipcMain.handle(IPC.bedrockLaunch, (_event, channel: unknown) =>
-    launchBedrock(bedrockChannelSchema.parse(channel))
-  )
+  ipcMain.handle(IPC.bedrockLaunch, async (_event, channel: unknown) => {
+    const parsed = bedrockChannelSchema.parse(channel) as BedrockChannel
+    const instanceId = await prepareBedrockLaunch(parsed)
+    await launchBedrock(parsed, instanceId ?? undefined)
+  })
   ipcMain.handle(IPC.bedrockDelete, (_event, id: unknown) => deleteBedrockDownload(bedrockIdSchema.parse(id)))
   ipcMain.handle(IPC.bedrockOpenFolder, (_event, channel: unknown) =>
     openBedrockInstallFolder(bedrockChannelSchema.parse(channel))
@@ -1064,6 +1085,72 @@ export function registerIpc(): void {
   ipcMain.handle(IPC.bedrockOpenSecurity, () => openWindowsSecurity())
   ipcMain.handle(IPC.bedrockWindowsAccount, () => bedrockWindowsAccount())
   ipcMain.handle(IPC.bedrockOpenXbox, () => openXboxApp())
+  ipcMain.handle(IPC.bedrockInstances, () => listBedrockInstances())
+  ipcMain.handle(IPC.bedrockInstanceCreate, (_event, input: unknown) =>
+    createBedrockInstance(
+      z
+        .object({
+          name: z.string().trim().min(1).max(60),
+          channel: bedrockChannelSchema,
+          color: z.string().max(20).optional()
+        })
+        .parse(input)
+    )
+  )
+  ipcMain.handle(IPC.bedrockInstanceUpdate, (_event, id: unknown, patch: unknown) =>
+    updateBedrockInstance(
+      z.string().parse(id),
+      z
+        .object({
+          name: z.string().trim().min(1).max(60).optional(),
+          color: z.string().max(20).optional()
+        })
+        .parse(patch)
+    )
+  )
+  ipcMain.handle(IPC.bedrockInstanceRemove, (_event, id: unknown) =>
+    removeBedrockInstance(z.string().parse(id))
+  )
+  ipcMain.handle(IPC.bedrockInstanceSwitch, (_event, id: unknown) =>
+    switchBedrockInstance(z.string().parse(id))
+  )
+  ipcMain.handle(IPC.bedrockInstanceLaunch, (_event, id: unknown) =>
+    launchBedrockInstance(z.string().parse(id))
+  )
+  ipcMain.handle(IPC.bedrockInstanceOpen, (_event, id: unknown) =>
+    openBedrockInstanceFolder(z.string().parse(id))
+  )
+  ipcMain.handle(IPC.bedrockInstanceContent, (_event, id: unknown) =>
+    bedrockInstanceContent(z.string().parse(id))
+  )
+  ipcMain.handle(
+    IPC.bedrockInstanceContentRemove,
+    (_event, id: unknown, contentId: unknown) =>
+      removeBedrockInstanceContent(z.string().parse(id), z.string().parse(contentId))
+  )
+  ipcMain.handle(IPC.bedrockMarketSearch, (_event, input: unknown) => {
+    const parsed = z
+      .object({
+        query: z.string().max(120).optional(),
+        typeId: z.number().int().min(1).max(20),
+        page: z.number().int().min(1).max(500).optional(),
+        sort: z.enum(['popularity_week', 'popularity_all']).optional()
+      })
+      .parse(input) as BedrockMarketSearchInput
+    return searchBedrockMarket(parsed)
+  })
+  ipcMain.handle(IPC.bedrockMarketDetail, (_event, slug: unknown) =>
+    getBedrockMarketDetail(z.string().trim().min(1).max(200).parse(slug))
+  )
+  ipcMain.handle(
+    IPC.bedrockMarketInstall,
+    (_event, instanceId: unknown, slug: unknown, downloadId?: unknown) =>
+      installBedrockMarketProject(
+        z.string().parse(instanceId),
+        z.string().trim().min(1).max(200).parse(slug),
+        z.number().int().min(0).optional().parse(downloadId)
+      )
+  )
 
   nativeTheme.themeSource = 'dark'
   logger.info('ipc', 'IPC handlers registered')

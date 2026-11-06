@@ -182,7 +182,20 @@ const api: NewbieApi = {
     addExclusion: () => ipcRenderer.invoke(IPC.bedrockAddExclusion),
     openSecurity: () => ipcRenderer.invoke(IPC.bedrockOpenSecurity),
     windowsAccount: () => ipcRenderer.invoke(IPC.bedrockWindowsAccount),
-    openXbox: () => ipcRenderer.invoke(IPC.bedrockOpenXbox)
+    openXbox: () => ipcRenderer.invoke(IPC.bedrockOpenXbox),
+    instances: () => ipcRenderer.invoke(IPC.bedrockInstances),
+    createInstance: (input) => ipcRenderer.invoke(IPC.bedrockInstanceCreate, input),
+    updateInstance: (id, patch) => ipcRenderer.invoke(IPC.bedrockInstanceUpdate, id, patch),
+    removeInstance: (id) => ipcRenderer.invoke(IPC.bedrockInstanceRemove, id),
+    switchInstance: (id) => ipcRenderer.invoke(IPC.bedrockInstanceSwitch, id),
+    launchInstance: (id) => ipcRenderer.invoke(IPC.bedrockInstanceLaunch, id),
+    openInstance: (id) => ipcRenderer.invoke(IPC.bedrockInstanceOpen, id),
+    content: (id) => ipcRenderer.invoke(IPC.bedrockInstanceContent, id),
+    removeContent: (id, contentId) => ipcRenderer.invoke(IPC.bedrockInstanceContentRemove, id, contentId),
+    marketSearch: (input) => ipcRenderer.invoke(IPC.bedrockMarketSearch, input),
+    marketDetail: (slug) => ipcRenderer.invoke(IPC.bedrockMarketDetail, slug),
+    marketInstall: (instanceId, slug, downloadId) =>
+      ipcRenderer.invoke(IPC.bedrockMarketInstall, instanceId, slug, downloadId)
   }
 }
 

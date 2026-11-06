@@ -6,9 +6,16 @@ import type {
   AppInfo,
   BackupRecord,
   BedrockChannel,
+  BedrockContentItem,
   BedrockExclusionResult,
+  BedrockInstanceSummary,
+  BedrockMarketDetail,
+  BedrockMarketInstallResult,
+  BedrockMarketSearchInput,
+  BedrockMarketSearchPage,
   BedrockServerBuild,
   BedrockState,
+  BedrockSwitchResult,
   BedrockWindowsAccount,
   CreateInstanceInput,
   GpuApplyResult,
@@ -202,7 +209,19 @@ export const IPC = {
   bedrockAddExclusion: 'bedrock:add-exclusion',
   bedrockOpenSecurity: 'bedrock:open-security',
   bedrockWindowsAccount: 'bedrock:windows-account',
-  bedrockOpenXbox: 'bedrock:open-xbox'
+  bedrockOpenXbox: 'bedrock:open-xbox',
+  bedrockInstances: 'bedrock:instances',
+  bedrockInstanceCreate: 'bedrock:instance-create',
+  bedrockInstanceUpdate: 'bedrock:instance-update',
+  bedrockInstanceRemove: 'bedrock:instance-remove',
+  bedrockInstanceSwitch: 'bedrock:instance-switch',
+  bedrockInstanceLaunch: 'bedrock:instance-launch',
+  bedrockInstanceOpen: 'bedrock:instance-open',
+  bedrockInstanceContent: 'bedrock:instance-content',
+  bedrockInstanceContentRemove: 'bedrock:instance-content-remove',
+  bedrockMarketSearch: 'bedrock:market-search',
+  bedrockMarketDetail: 'bedrock:market-detail',
+  bedrockMarketInstall: 'bedrock:market-install'
 } as const
 
 export type IpcChannel = (typeof IPC)[keyof typeof IPC]
@@ -396,5 +415,17 @@ export interface NewbieApi {
     openSecurity(): Promise<void>
     windowsAccount(): Promise<BedrockWindowsAccount>
     openXbox(): Promise<void>
+    instances(): Promise<BedrockInstanceSummary[]>
+    createInstance(input: { name: string; channel: BedrockChannel; color?: string }): Promise<BedrockInstanceSummary>
+    updateInstance(id: string, patch: { name?: string; color?: string }): Promise<BedrockInstanceSummary>
+    removeInstance(id: string): Promise<void>
+    switchInstance(id: string): Promise<BedrockSwitchResult>
+    launchInstance(id: string): Promise<void>
+    openInstance(id: string): Promise<void>
+    content(id: string): Promise<BedrockContentItem[]>
+    removeContent(id: string, contentId: string): Promise<BedrockMarketInstallResult>
+    marketSearch(input: BedrockMarketSearchInput): Promise<BedrockMarketSearchPage>
+    marketDetail(slug: string): Promise<BedrockMarketDetail>
+    marketInstall(instanceId: string, slug: string, downloadId?: number): Promise<BedrockMarketInstallResult>
   }
 }

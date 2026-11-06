@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ArrowClockwise,
   ArrowSquareOut,
@@ -38,14 +40,20 @@ import { PageHeader } from '../components/PageHeader'
 import { Button, IconButton } from '../components/ui/Button'
 import { Badge, Card, EmptyState, Input, Progress, Segmented, Skeleton } from '../components/ui/primitives'
 import appIcon from '../assets/app-icon.png'
-import { useAccounts } from '../hooks/queries'
+import { useAccounts, useBedrockInstances, qk } from '../hooks/queries'
 import { useUi, toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
 
 export function BedrockPage() {
+  const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const askConfirm = useUi((state) => state.askConfirm)
   const openModal = useUi((state) => state.openModal)
   const accounts = useAccounts().data ?? []
+  const bedrockInstancesQuery = useBedrockInstances()
+  const bedrockInstances = bedrockInstancesQuery.data ?? []
+  const activeInstance = bedrockInstances.find((instance) => instance.active) ?? null
+  const confirmedProfileSwitch = useRef<string | null>(null)
   const [state, setState] = useState<BedrockState | null>(null)
   const [windowsAccount, setWindowsAccount] = useState<BedrockWindowsAccount | null>(null)
   const [loading, setLoading] = useState(true)
@@ -323,6 +331,7 @@ export function BedrockPage() {
     setLaunching(target)
     try {
       await window.newbie.bedrock.launch(target)
+      void queryClient.invalidateQueries({ queryKey: qk.bedrockInstances })
       toast('info', 'Starting Minecraft…', 'The game window will open in a few seconds.')
     } catch (failure) {
       toast('error', 'Could not start Minecraft', errorMessage(failure))
@@ -332,6 +341,38 @@ export function BedrockPage() {
   }
 
   const launch = async (target: BedrockChannel): Promise<void> => {
+    if (bedrockInstancesQuery.isLoading) {
+      toast('info', 'Checking Bedrock profiles…', 'Try Play again in a moment.')
+      return
+    }
+    if (bedrockInstancesQuery.isError) {
+      toast(
+        'error',
+        'Could not check Bedrock profiles',
+        'Open Bedrock Instances and retry before launching, so Newbie does not switch the wrong data folder.'
+      )
+      return
+    }
+    const profileForTarget = activeInstance?.channel === target ? activeInstance : null
+    if (
+      profileForTarget &&
+      !profileForTarget.linked &&
+      confirmedProfileSwitch.current !== profileForTarget.id
+    ) {
+      askConfirm({
+        title: `Switch Minecraft to ${profileForTarget.name}?`,
+        description:
+          'Bedrock has one game data folder, so Newbie links the selected profile before launching.',
+        body: 'Your current worlds are kept as the protected “My Bedrock” profile, not deleted. Close Minecraft before continuing. Xbox cloud sync can still merge this profile with another PC using the same account.',
+        confirmLabel: 'Switch and play',
+        cancelLabel: 'Cancel',
+        action: async () => {
+          confirmedProfileSwitch.current = profileForTarget.id
+          await launch(target)
+        }
+      })
+      return
+    }
     const installation = state?.installations.find((entry) => entry.channel === target)
     const setup = state?.setup
     const needsExclusion =
@@ -505,6 +546,39 @@ export function BedrockPage() {
           </Button>
         }
       />
+
+      {activeInstance && (
+        <Card className="mb-4 flex flex-wrap items-center gap-3 p-3.5">
+          <span
+            className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-white/10"
+            style={{ backgroundColor: `${activeInstance.color}22`, color: activeInstance.color }}
+          >
+            <Cube size={18} weight="fill" />
+          </span>
+          <div className="min-w-0 flex-1">
+            <div className="text-[11.5px] font-medium text-ink">
+              Play uses {activeInstance.name}
+            </div>
+            <div className="mt-0.5 text-[9.5px] text-muted/65">
+              {activeInstance.worldCount} worlds · {activeInstance.contentCount} packs ·{' '}
+              {activeInstance.channel === 'preview' ? 'Preview' : 'Release'} channel ·{' '}
+              {activeInstance.channel !== channel
+                ? `active in ${activeInstance.channel === 'preview' ? 'Preview' : 'Release'}`
+                : activeInstance.linked
+                  ? 'linked now'
+                  : 'switches on Play'}
+            </div>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate('/bedrock/instances')}
+            icon={<Cube size={13} />}
+          >
+            Manage instances
+          </Button>
+        </Card>
+      )}
 
       <BedrockAccountCard
         account={
