@@ -1,3 +1,23 @@
+# Newbie Launcher 0.1.55
+
+Java Edition now has a Maps page.
+
+## Java maps
+
+- The Java sidebar has a new **Maps** page for Java worlds and adventure maps.
+- Search, sort by popularity, downloads or recent updates, and page through the CurseForge world catalog.
+- Open a map to see screenshots, categories, file versions and download size.
+- Installing downloads the selected `.zip` and unpacks the world into the selected instance's `saves` folder. The map then appears in Minecraft's normal world list.
+- Existing saves are never overwritten. If a world with the same name exists, Newbie creates a numbered folder.
+- Archives are checked for path traversal and a valid `level.dat`. Downloads are capped at 1 GB and unpacked maps at 4 GB.
+- If the author has disabled third-party downloads, Newbie reports it and links to the CurseForge page instead of bypassing the restriction.
+- The map catalog uses the public keyless `api.curse.tools` CurseForge proxy. CurseForge is a third-party catalog; Newbie is not affiliated with it.
+
+## Also included
+
+- The Maps page uses the active Java instance by default, with an instance selector and an Open game folder shortcut.
+- World queries refresh after a map is installed.
+
 # Newbie Launcher 0.1.54
 
 Bedrock now has instances, a marketplace and a library.
