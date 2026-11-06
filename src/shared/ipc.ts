@@ -86,6 +86,7 @@ export const IPC = {
   accountsRemove: 'accounts:remove',
   accountsSetActive: 'accounts:set-active',
   accountsRefresh: 'accounts:refresh',
+  accountsManageTlauncher: 'accounts:manage-tlauncher',
   accountsSetSkin: 'accounts:set-skin',
   accountsRemoveSkin: 'accounts:remove-skin',
   skinsSearch: 'skins:search',
@@ -250,6 +251,7 @@ export interface NewbieApi {
     remove(id: string): Promise<void>
     setActive(id: string): Promise<void>
     refresh(id: string): Promise<AccountSummary>
+    manageTlauncher(id: string): Promise<void>
     setSkin(id: string, filePath: string): Promise<AccountSummary>
     removeSkin(id: string): Promise<AccountSummary>
   }

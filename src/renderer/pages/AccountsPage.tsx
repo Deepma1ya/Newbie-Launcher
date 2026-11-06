@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQueryClient } from '@tanstack/react-query'
-import { ArrowSquareOut, ArrowsClockwise, CheckCircle, Image, Leaf, Plus, ShieldCheck, Trash, UploadSimple, UserCircle, WifiSlash, WindowsLogo } from '@phosphor-icons/react'
+import { ArrowsClockwise, CheckCircle, Image, Leaf, Plus, ShieldCheck, SignIn, Trash, UploadSimple, UserCircle, WifiSlash, WindowsLogo } from '@phosphor-icons/react'
 import type { AccountSummary } from '@shared/types'
 import { useAccounts, useSettings, qk } from '../hooks/queries'
 import { toast, useUi } from '../store/ui'
@@ -90,7 +90,8 @@ export function AccountsPage() {
               <p className="mt-1.5 text-[11px] leading-relaxed text-muted">
                 Microsoft refresh tokens and authlib passwords are encrypted with Windows DPAPI through Electron safeStorage.
                 They never reach the renderer and are only used by the launcher process. Removing an account deletes its
-                local token.
+                local token. TLauncher sign-in stays in a separate sandboxed browser session; Newbie never stores your
+                TLauncher password.
               </p>
             </Card>
           </div>
@@ -127,6 +128,25 @@ function TlauncherManageCard({
       toast('success', 'TLauncher profile refreshed', account.username)
     } catch (error) {
       toast('error', 'Could not refresh the TLauncher profile', errorMessage(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const manage = async (): Promise<void> => {
+    setBusy(true)
+    try {
+      await window.newbie.accounts.manageTlauncher(account.id)
+      onChanged()
+      if (settings?.tlauncherSkins ?? true) {
+        toast(
+          'success',
+          'TLauncher profile refreshed',
+          'Your skin and cape were checked after the TLauncher window closed.'
+        )
+      }
+    } catch (error) {
+      toast('error', 'Could not open TLauncher', errorMessage(error))
     } finally {
       setBusy(false)
     }
@@ -178,8 +198,8 @@ function TlauncherManageCard({
       </div>
 
       <p className="mt-2 text-[10.5px] leading-relaxed text-muted">
-        Refresh your public TLauncher skin and cape, choose whether this profile is active, or open TLauncher&apos;s
-        account page. The TLSkinCape plugin is controlled below.
+        Refresh your public TLauncher skin and cape, choose whether this profile is active, or sign in to TLauncher
+        in an app window to change your skin, cape and profile. Newbie never sees your password.
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
@@ -198,12 +218,13 @@ function TlauncherManageCard({
           </Button>
         )}
         <Button
-          variant="ghost"
+          variant={account.active ? 'primary' : 'secondary'}
           size="sm"
-          onClick={() => void window.newbie.app.openExternal('https://tlauncher.org/')}
-          icon={<ArrowSquareOut size={13} />}
+          loading={busy}
+          onClick={() => void manage()}
+          icon={<SignIn size={14} />}
         >
-          Open TLauncher
+          Sign in &amp; manage
         </Button>
       </div>
 

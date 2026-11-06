@@ -158,6 +158,7 @@ import {
   getMainWindow,
   minimizeWindow,
   openExternalSafe,
+  openTlauncherManager,
   pickDirectory,
   pickFile,
   pickSaveFile,
@@ -455,6 +456,21 @@ export function registerIpc(): void {
     }
     throw new Error('This account type does not need refreshing')
   })
+  ipcMain.handle(
+    IPC.accountsManageTlauncher,
+    async (_event, id: string): Promise<void> => {
+      const accountId = z.string().parse(id)
+      const account = store.account(accountId)
+      if (!account || account.type !== 'tlauncher') {
+        throw new Error('TLauncher account not found')
+      }
+      await openTlauncherManager()
+      if (!store.account(accountId) || !store.settings().tlauncherSkins) return
+      await refreshTLauncherAccount(accountId).catch((error) => {
+        logger.warn('auth', 'Could not refresh TLauncher textures after managing the account', error)
+      })
+    }
+  )
 
   ipcMain.handle(IPC.serversList, () => listServers())
   ipcMain.handle(IPC.serversGet, (_event, id: string) => getServer(z.string().parse(id)))

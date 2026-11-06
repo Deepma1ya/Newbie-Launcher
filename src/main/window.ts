@@ -13,6 +13,12 @@ let quitting = false
 let hiddenForGame = false
 let activeGameSessions = 0
 
+const TLAUNCHER_HOME_URL = 'https://tlauncher.org/en/'
+const TLAUNCHER_PARTITION = 'persist:newbie-tlauncher'
+const TLAUNCHER_WINDOW_TITLE = 'TLauncher account — Newbie Launcher'
+let tlauncherWindow: BrowserWindow | null = null
+let tlauncherWindowResolvers: (() => void)[] = []
+
 function appIconPath(): string {
   if (app.isPackaged) {
     const unpacked = path.join(process.resourcesPath, 'app.asar.unpacked', 'resources', 'icon.png')
@@ -128,6 +134,121 @@ export async function openExternalSafe(raw: string): Promise<void> {
   } catch {
     logger.warn('window', `Invalid external URL: ${raw}`)
   }
+}
+
+function isTlauncherPage(raw: string): boolean {
+  try {
+    const url = new URL(raw)
+    if (url.protocol !== 'https:') return false
+    return (
+      url.hostname === 'tlauncher.org' ||
+      url.hostname.endsWith('.tlauncher.org') ||
+      url.hostname === 'challenges.cloudflare.com'
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
+ * TLauncher owns the captcha-protected sign-in and profile editor, so use
+ * their real page in a sandboxed Newbie window. The persistent partition keeps
+ * the session between visits without Newbie ever seeing the password.
+ */
+export function openTlauncherManager(): Promise<void> {
+  if (tlauncherWindow && !tlauncherWindow.isDestroyed()) {
+    if (tlauncherWindow.isMinimized()) tlauncherWindow.restore()
+    tlauncherWindow.show()
+    tlauncherWindow.focus()
+    return new Promise((resolve) => tlauncherWindowResolvers.push(resolve))
+  }
+
+  const parent = mainWindow && !mainWindow.isDestroyed() ? mainWindow : undefined
+  const win = new BrowserWindow({
+    width: 1040,
+    height: 820,
+    minWidth: 860,
+    minHeight: 620,
+    parent,
+    modal: Boolean(parent),
+    show: false,
+    autoHideMenuBar: true,
+    title: TLAUNCHER_WINDOW_TITLE,
+    icon: appIconPath(),
+    backgroundColor: '#ECF4F7',
+    webPreferences: {
+      partition: TLAUNCHER_PARTITION,
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      spellcheck: false
+    }
+  })
+  tlauncherWindow = win
+  win.removeMenu()
+  win.webContents.setUserAgent(
+    win.webContents.getUserAgent().replace(/\sElectron\/[\d.]+/i, '')
+  )
+  win.webContents.session.setPermissionRequestHandler((_contents, _permission, callback) =>
+    callback(false)
+  )
+
+  win.on('page-title-updated', (event) => {
+    event.preventDefault()
+    win.setTitle(TLAUNCHER_WINDOW_TITLE)
+  })
+  win.webContents.setWindowOpenHandler(({ url }) => {
+    if (isTlauncherPage(url)) void win.loadURL(url)
+    else void openExternalSafe(url)
+    return { action: 'deny' }
+  })
+  win.webContents.on('will-navigate', (event, url) => {
+    if (isTlauncherPage(url)) return
+    event.preventDefault()
+    void openExternalSafe(url)
+  })
+  win.webContents.on('will-redirect', (event, url) => {
+    if (isTlauncherPage(url)) return
+    event.preventDefault()
+    void openExternalSafe(url)
+  })
+
+  let loginShown = false
+  win.webContents.on('did-finish-load', () => {
+    if (!win.isVisible()) win.show()
+    if (loginShown) return
+    void win.webContents
+      .executeJavaScript(`
+        (() => {
+          const link = document.querySelector('a[href="#login"]')
+          if (link instanceof HTMLElement) {
+            link.click()
+            return true
+          }
+          return false
+        })()
+      `)
+      .then((opened: unknown) => {
+        if (opened === true) loginShown = true
+      })
+      .catch(() => undefined)
+  })
+  win.webContents.on('did-fail-load', (_event, code, description) => {
+    logger.warn('tlauncher', `TLauncher page failed to load: ${code} ${description}`)
+  })
+  win.once('ready-to-show', () => win.show())
+  win.on('closed', () => {
+    if (tlauncherWindow === win) tlauncherWindow = null
+    const resolvers = tlauncherWindowResolvers
+    tlauncherWindowResolvers = []
+    for (const resolve of resolvers) resolve()
+    logger.info('tlauncher', 'TLauncher account window closed')
+  })
+
+  logger.info('tlauncher', 'Opened TLauncher account window')
+  void win.loadURL(TLAUNCHER_HOME_URL)
+  return new Promise((resolve) => tlauncherWindowResolvers.push(resolve))
 }
 
 export async function pickDirectory(defaultPath?: string): Promise<string | null> {
