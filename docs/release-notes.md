@@ -1,3 +1,30 @@
+# Newbie Launcher 0.1.51
+
+Fixes the Bedrock tray handoff and adds Bedrock console snippets.
+
+## Bedrock tray fix
+
+- The Bedrock monitor now tracks only one game session. Launching Bedrock twice can no longer leave the launcher hidden forever.
+- A second launch while the first window is starting is rejected instead of creating an unbalanced session count.
+- The monitor checks for the actual **Minecraft game window**, not just a leftover suspended `Minecraft.Windows.exe` process, and restores the launcher when the window closes.
+- Added monitor start/close logs so a future tray issue is traceable.
+
+## Bedrock console snippets
+
+- The Bedrock server console now has its own snippet panel:
+  - players and allow list: `list`, `allowlist add/remove/list`
+  - moderation: `op`, `deop`, `permissions set`, `kick`, `ban`, `pardon`
+  - world: `time set`, `weather`, `gamerule`, `setworldspawn`, `tp`, `gamemode`
+  - items and effects: `give`, `clear`, `effect`
+  - server admin: `save hold/query/resume`, `changesetting`, `stop`
+- Bedrock snippets replace Java-only commands such as `tps` and `whitelist`, so the console only shows commands that BDS understands.
+- Scheduled restarts already work for Bedrock and remain in Server Settings; the warning and restart use `say`, `stop` and the normal BDS start path.
+
+## Also included
+
+- Automatic playit sharing, Bedrock creation fixes, BDS download fallback, TLauncher management and the skin catalog from 0.1.50.
+- The 0.1.48/0.1.49 internet relay work, hide-to-tray and `.mrpack` import.
+
 # Newbie Launcher 0.1.50
 
 Automatic playit sharing, Bedrock creation fixes, TLauncher management and a skin catalog.
