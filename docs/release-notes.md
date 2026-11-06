@@ -1,3 +1,24 @@
+# Newbie Launcher 0.1.58
+
+Clicking a Bedrock instance now opens a management page.
+
+## Bedrock instance management
+
+- Click anywhere on a Bedrock instance card to open `/bedrock/instances/:id`.
+- The overview shows the profile status, channel, worlds, packs, playtime, last played time, creation time and data folder.
+- Rename the instance without touching the Xbox profile.
+- **Use this profile** links it to Minecraft with the same profile-switch confirmation as Play.
+- **Play** launches the instance and still handles the first-switch My Bedrock preservation.
+- **Installed content** lists worlds, resource packs, behavior packs and skin packs with their version, source and install date. Items can be removed from this page.
+- **Browse content** and **Open library** open the Bedrock marketplace or library with this instance pre-selected.
+- **Delete instance** is disabled for the protected My Bedrock profile, the currently linked profile and while Minecraft is running.
+- **Bedrock versions** jumps back to the package installer.
+
+## Also included
+
+- Bedrock Browse and Library now accept an `instance` query parameter and keep the selected profile in the URL.
+- Bedrock instance cards have a pointer/hover affordance and keyboard activation; action buttons no longer trigger the card navigation.
+
 # Newbie Launcher 0.1.57
 
 Java maps now live inside Browse and instances instead of their own sidebar page.
