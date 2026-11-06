@@ -1,3 +1,20 @@
+# Newbie Launcher 0.1.53
+
+TLauncher accounts can now be managed without leaving Newbie.
+
+## In-app TLauncher sign-in
+
+- The **Manage TLauncher** card now has **Sign in & manage**. It opens TLauncher's own sign-in page in a Newbie window, so you can change your skin, cape and profile without leaving Newbie.
+- TLauncher controls the login and captcha. Newbie never sees or stores your TLauncher password.
+- The window uses a persistent, sandboxed session. Sign in once, then return to the account page whenever you need to make a change.
+- Closing the window refreshes your public skin and cape automatically when TLauncher skin sync is enabled.
+- Only TLauncher and Cloudflare challenge pages stay inside the account window. Other links open in your normal browser.
+
+## Also included
+
+- The new button replaces the old external **Open TLauncher** shortcut.
+- The Accounts page explains that the TLauncher session is separate and the password is never stored by Newbie.
+
 # Newbie Launcher 0.1.52
 
 The installed Minecraft for Windows card now uses the Newbie Launcher app icon instead of the Minecraft block mark. The not-installed card uses the same app icon for consistency.
