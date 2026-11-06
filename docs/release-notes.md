@@ -1,3 +1,21 @@
+# Newbie Launcher 0.1.57
+
+Java maps now live inside Browse and instances instead of their own sidebar page.
+
+## Java maps in Browse
+
+- Removed the separate **Maps** sidebar entry and page.
+- **Browse** now has a **Maps** tab next to Mods, Modpacks, Datapacks, Resource packs and Shaders.
+- The type tabs stay visible in every mode, so switching between maps and Modrinth projects is one click.
+- The target instance chip still controls where maps are installed.
+- Instance **Quick actions** now include **Browse maps**, which opens Browse with that instance selected.
+- The map catalog, search, sorting, file versions, download validation and `saves/` installation behavior are unchanged.
+
+## Also included
+
+- The Java Maps screenshot now shows the Browse tab.
+- The release notes for 0.1.55 still describe the original standalone page; this release folds that UI into Browse.
+
 # Newbie Launcher 0.1.56
 
 The Home main card now follows whichever edition you played last.
