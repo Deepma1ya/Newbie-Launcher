@@ -1,3 +1,7 @@
+# Newbie Launcher 0.1.52
+
+The installed Minecraft for Windows card now uses the Newbie Launcher app icon instead of the Minecraft block mark. The not-installed card uses the same app icon for consistency.
+
 # Newbie Launcher 0.1.51
 
 Fixes the Bedrock tray handoff and adds Bedrock console snippets.
