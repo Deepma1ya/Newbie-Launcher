@@ -37,6 +37,7 @@ import {
 import { PageHeader } from '../components/PageHeader'
 import { Button, IconButton } from '../components/ui/Button'
 import { Badge, Card, EmptyState, Input, Progress, Segmented, Skeleton } from '../components/ui/primitives'
+import appIcon from '../assets/app-icon.png'
 import { useAccounts } from '../hooks/queries'
 import { useUi, toast } from '../store/ui'
 import { errorMessage, formatBytes } from '../lib/utils'
@@ -553,7 +554,7 @@ export function BedrockPage() {
           </div>
         ) : (
           <Card className="flex flex-wrap items-center gap-4 p-5">
-            <BedrockMark size={44} />
+            <NewbieMark size={44} />
             <div className="min-w-0 flex-1">
               <div className="font-display text-[14px] font-semibold text-ink">Minecraft for Windows is not installed</div>
               <p className="mt-1 text-[11.5px] leading-relaxed text-muted">
@@ -809,7 +810,7 @@ function InstalledCard({
   return (
     <Card className="p-4">
       <div className="flex items-start gap-3.5">
-        <BedrockMark size={42} />
+        <NewbieMark size={42} />
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             <h2 className="font-display text-[14px] font-semibold text-ink">
@@ -1147,24 +1148,15 @@ function Requirement({
   )
 }
 
-function BedrockMark({ size = 40 }: { size?: number }) {
+function NewbieMark({ size = 40 }: { size?: number }) {
   return (
-    <svg
+    <img
+      src={appIcon}
+      alt=""
       width={size}
       height={size}
-      viewBox="0 0 40 40"
-      fill="none"
-      xmlns="http://www.w3.org/2000/svg"
-      aria-hidden="true"
-      className="shrink-0 drop-shadow-[0_8px_18px_rgba(110,231,160,0.18)]"
-    >
-      <rect x="1" y="1" width="38" height="38" rx="11" fill="#101A12" stroke="#2C3A2E" />
-      <path d="M20 7L32 13.4L20 19.8L8 13.4L20 7Z" fill="#6EE7A0" />
-      <path d="M8 13.4L20 19.8V32.6L8 26.2V13.4Z" fill="#5B3A1E" />
-      <path d="M32 13.4L20 19.8V32.6L32 26.2V13.4Z" fill="#3E2914" />
-      <path d="M8 13.4L20 19.8L20 24.1L8 17.7V13.4Z" fill="#3E8E5C" />
-      <path d="M32 13.4L20 19.8L20 24.1L32 17.7V13.4Z" fill="#2C6B43" />
-      <path d="M14 22.5L17 24L20 22.5" stroke="#A7F3D0" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round" />
-    </svg>
+      className="shrink-0 rounded-xl object-cover"
+      draggable={false}
+    />
   )
 }
