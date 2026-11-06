@@ -1,3 +1,22 @@
+# Newbie Launcher 0.1.56
+
+The Home main card now follows whichever edition you played last.
+
+## Last played on Home
+
+- The main Home card compares the latest Java instance and Bedrock instance play time and shows the newest one.
+- A Java card keeps the existing instance details and changes its label to **Last played**.
+- A Bedrock card shows the profile name, channel, installed/running state, worlds, packs, playtime and last session.
+- The Bedrock card has **Play**, **Manage**, **Folder** and **Browse** actions. Play asks before switching the `com.mojang` profile when the instance is not linked yet.
+- If the Bedrock package is not installed, Play is disabled and the card links to the Bedrock version page.
+- The page header and quick actions switch between Java and Bedrock based on the selected card.
+- With no play history yet, Home falls back to the active Java instance.
+
+## Also included
+
+- Bedrock now records `lastPlayedAt` when the game starts and updates it again with playtime when the window closes, so the Home card stays current during a session.
+- The Home eyebrow now reads **Java + Bedrock**.
+
 # Newbie Launcher 0.1.55
 
 Java Edition now has a Maps page.
