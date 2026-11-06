@@ -21,7 +21,7 @@ Installers are published on the [Releases](https://github.com/Deepma1ya/Newbie-L
 - Built-in auto-updates over the public GitHub Releases feed — no update server, account or paid service. Checks at startup and every 30 minutes, downloads in the background with live progress, shows release notes, and installs silently and automatically once it is safe to restart.
 
 <p align="center">
-  <img src="docs/images/updates.png" alt="Built-in update center with download progress and release notes" width="900" />
+  <img src="docs/images/updates.png" alt="Built-in launcher update center with automatic checks and stable or beta channels" width="900" />
 </p>
 
 ## What it does
@@ -100,6 +100,10 @@ If Windows Tamper Protection or a managed security policy blocks the exclusion, 
 
 The **Servers** page creates and runs Minecraft servers on this PC. It is a launcher-managed alternative to downloading a server jar and editing text files by hand.
 
+<p align="center">
+  <img src="docs/images/servers.png" alt="Bedrock server console with Bedrock-specific command snippets" width="900" />
+</p>
+
 - **Server editions:** Java Edition and Bedrock. Java supports Vanilla, Paper, Fabric, Quilt, Forge and NeoForge; Bedrock uses the official Mojang Bedrock Dedicated Server for Windows.
 - **Create & start** downloads the server software, prepares the Java runtime named in the Minecraft version metadata, writes a starter configuration, writes `eula=true` only after you tick the EULA checkbox, and starts the server.
 - **Start, stop and restart** from the server list or the server page. Status is live, and servers are stopped gracefully when you quit or relaunch Newbie.
@@ -130,6 +134,10 @@ The server **Share** tab detects your LAN, Radmin VPN and public addresses, your
 - A warning reminds you to enable online mode and the whitelist before sharing a public address.
 
 ## Accounts, honestly
+
+<p align="center">
+  <img src="docs/images/accounts.png" alt="Accounts page with TLauncher management, custom skin and the skin catalog" width="900" />
+</p>
 
 - **Microsoft** — opens Microsoft's real sign-in page in an embedded window. The resulting Minecraft token is used for licensed Java servers, and signing in makes that account the active player for the next launch. The Xbox gamertag and XUID are stored for Bedrock server allow lists. Tokens are encrypted with Windows DPAPI via Electron `safeStorage` and never reach the UI process.
 - **TLauncher** — stores your public TLauncher nickname and syncs your public skin/cape from `auth.tlauncher.org`. TLauncher does not issue Mojang/Microsoft game licences, so these profiles play in offline mode. In-game TLauncher skin rendering is on the roadmap; the launcher avatar sync is implemented.
